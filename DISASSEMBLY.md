@@ -8,7 +8,7 @@ IDA will analyze the file. If the following steps cannot proceed, you may need t
 4. `qword_1848A7C68` is the offset address of `gEnv->pConsole`. The base address for x64 Windows DLL is `0x180000000`, so the address offset of `gEnv->pConsole` is `0x48A7C68`
 5. After knowing the address of pConsole, we can calculate the address of `gEnv` through the offset of pConsole in `gEnv`, thereby finding the addresses of all associated components
 6. However, `0x48A7C68` is not fixed and may change after game updates, so we need to find the address of `gEnv->pConsole` through byte pattern search
-7. By analyzing the hexadecimal and assembly code of the line `mov     rcx, cs:qword_1848A7C68` and subsequent lines (you can throw it to AI to help find the SIG), we can get `SIG = "48 8B 0D ?? ?? ?? ?? 48 8D 15 ?? ?? ?? ?? 45 33 C9 45 33 C0 4C 8B 11"`
+7. By analyzing the hexadecimal and assembly code of the line `mov     rcx, cs:qword_1848A7C68` and subsequent lines (you can throw it to AI to help find the SIG), we can get `SIG = "48 8B 0D ?? ?? ?? ?? 48 8D 15 ?? ?? ?? ?? 45 33 C9 45 33 C0 4C 8B 11 41 FF 92 ?? ?? ?? ?? 48 85 FF"`
 8. During game runtime, find the actual value of `qword_1848A7C68` through byte pattern search targeting `WHGame.dll`, and use RIP relative addressing to find the address of `pConsole`
 9. pConsole is the 22nd member of gEnv, with an offset of 21 pointers forward, 21 * 8 = 168 = 0xA8. Subtract 0xA8 from the address of `pConsole` to get the address of `gEnv`, and then find the addresses of all associated components by adding the offset to the address of `gEnv`
 
@@ -35,7 +35,7 @@ IDA会分析文件, 如果如下步骤无法进行,可以尝试等待分析完�
 4. 而`qword_1848A7C68`就是 `gEnv->pConsole` 的偏移地址,x64 windows dll 基址为 `0x180000000`,所以`gEnv->pConsole`的地址偏移就是`0x48A7C68`
 5. 知道pConsole的地址后,我们可以通过 pConsole 在`gEnv`中的偏移来计算`gEnv`的地址,从而找到所有关联组件的地址
 6. 但是`0x48A7C68`并不是固定的,游戏更新后可能会变化,所以我们需要通过字节模式搜索来找到`gEnv->pConsole`的地址
-7. 通过对`mov     rcx, cs:qword_1848A7C68`行以及之后行的16进制分析+汇编分析(你可以扔给AI让它帮你找出SIG), 我们可以得到`SIG = "48 8B 0D ?? ?? ?? ?? 48 8D 15 ?? ?? ?? ?? 45 33 C9 45 33 C0 4C 8B 11"`
+7. 通过对`mov     rcx, cs:qword_1848A7C68`行以及之后行的16进制分析+汇编分析(你可以扔给AI让它帮你找出SIG), 我们可以得到`SIG = "48 8B 0D ?? ?? ?? ?? 48 8D 15 ?? ?? ?? ?? 45 33 C9 45 33 C0 4C 8B 11 41 FF 92 ?? ?? ?? ?? 48 85 FF"`
 8. 在游戏运行时通过针对`WHGame.dll`的字节模式搜索找到`qword_1848A7C68`的实际值,使用RIP相对寻址找到`pConsole`的地址
 9. pConsole 是 gEnv 的第 22 个成员，往前偏移21个指针，21 * 8 = 168 = 0xA8 ,通过`pConsole`的地址 - 0xA8 得到`gEnv`的地址,然后通过`gEnv`的地址 + 偏移找到所有关联组件的地址
 
