@@ -46,7 +46,7 @@ The [LINKS](LINKS.md) contains a collection of links to online tutorials and res
 
 `CryEngine` 目录包含指向 CryEngine 仓库的链接：[https://github.com/ValtoGameEngines/CryEngine](https://github.com/ValtoGameEngines/CryEngine).
 
-**重要提示：** KCD2 使用的是 CryEngine 的早期版本（要么是小于 5.1 的未知源代码版本，要么是小于 5.4 的修改过的源代码版本）。 如果有人知道 KCD2 使用的 CryEngine 具体版本，请告诉我！
+**重要提示：** KCD2 使用的是 CryEngine 的早期版本（要么是小于 5.1 的未知源代码版本，要么是小于 5.4 的修改过的源代码版本）。 如果有人知道 KCD2 使用的 CryEngine 具体版本，请务必告知我！
 
 因此，提供的引擎源代码仅供参考。 许多函数偏移量已更改（已验证的偏移量位于 `Disassembly.md` 中）。 此信息主要用于创建 DLL 注入形式的 mod。
 
