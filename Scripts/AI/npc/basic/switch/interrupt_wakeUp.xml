@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_wakeUp" is_function="0">
+		<Variables>
+			<Variable name="anyDecoratorPreset" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="lookTargetPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="reachedTarget" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="wakeUpData" type="switch:interruptData:wakeUp" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<EntityContext context="crime_preventDespawn" target="">
+							<Sequence>
+								<Function_crime_getAnyDecoratorPreset tryToKeepItems="false" tryToKeepSecondaryWeapon="true" presetString="$anyDecoratorPreset" nodeLabel="69666390" />
+								<AnyDecorator preset="$anyDecoratorPreset" enabled="true">
+									<EntityContextElement context="crime_interrupt" enabled="true">
+										<EntityContext context="crime_interruptWakeUp" target="$this.id">
+											<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+												<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:wakeUp&apos;">
+													<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$wakeUpData.stimulusKind&apos;">
+														<Sequence>
+															<GetSpatialInfo In="$wakeUpData.target" Out="$lookTargetPos" What="Position" />
+															<ForceLook LookTarget="$lookTargetPos" DisableVariations="true">
+																<Sequence>
+																	<Function_crime_limits_confirmReactionLink reactionKind="$enum:crime_reactionKind.wakeUp" nodeLabel="12521836" />
+																	<Function_crime_checkInterruptInformation information="$wakeUpData.information" nodeLabel="71270240" />
+																	<RemoveBuffs SoulWUID="" BuffGUID="&apos;ffc20522-134d-4811-8bc5-e933b74b7081&apos;" BuffTagId="-1" />
+																	<IsLoadedGate saveVersion="2">
+																		<Else canSkip="1">
+																			<IfCondition failOnCondition="false" condition="$wakeUpData.initiatedBy ~= $enum:switch_interruptInitiator.scheduler">
+																				<Parallel successMode="All" failureMode="Any">
+																					<RecentlySkirmished NPC1="$this.id" NPC2="$wakeUpData.target" MaxTime="600" saveVersion="2">
+																						<Then canSkip="1">
+																							<Success />
+																						</Then>
+																						<Else canSkip="1">
+																							<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VIDI_CLOVEKA_V_BEZVEDOMI_(BEZVEDOMI__PRITEL)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="59833523" />
+																						</Else>
+																					</RecentlySkirmished>
+																					<Sequence>
+																						<WaitAction />
+																						<StopMovement waitUntilStopped="true" />
+																						<Turn target="$wakeUpData.target" align="false" />
+																					</Sequence>
+																				</Parallel>
+																			</IfCondition>
+																		</Else>
+																	</IsLoadedGate>
+																	<Parallel successMode="Any" failureMode="Any">
+																		<DeadUnconsciousGate Who="$wakeUpData.target" State="Dead" Negation="false" RunLogic="KeepRunning">
+																			<Success />
+																		</DeadUnconsciousGate>
+																		<DeadUnconsciousGate Who="$wakeUpData.target" State="Unconscious" Negation="true" RunLogic="KeepRunning">
+																			<Success />
+																		</DeadUnconsciousGate>
+																		<LinkGate from="$wakeUpData.target" to="$__player" tag="&apos;bodyCarrier&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																			<Success />
+																		</LinkGate>
+																		<Sequence>
+																			<MoveParamsDecorator speed="Run" pathFindingParams="" doorClosingPolicy="LeaveOpened">
+																				<Move stopWithinDistance="1.500000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$wakeUpData.target" destinationSpecification2="" destinationSpecification3="" speed="Run" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																			</MoveParamsDecorator>
+																			<Turn target="$wakeUpData.target" align="false" />
+																			<Expression expressions="$reachedTarget = true" />
+																		</Sequence>
+																	</Parallel>
+																	<IfCondition failOnCondition="false" condition="$reachedTarget">
+																		<EntityContext context="crime_greyOutGrabBody" target="$wakeUpData.target">
+																			<Sequence>
+																				<Parallel successMode="All" failureMode="Any">
+																					<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_BUDI_CLOVEKA_Z_BEZVEDOMI_(BEZVEDOMI__PRITEL)&apos;" priority="$enum:crime_barkPriority.flavor" nodeLabel="78401835" />
+																					<IsWeaponDrawn who="" WeaponSet="Oversized" saveVersion="2">
+																						<Then canSkip="1">
+																							<WaitAction />
+																						</Then>
+																						<Else canSkip="1">
+																							<AnimationAction fragment="&apos;GuardWakeup&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																						</Else>
+																					</IsWeaponDrawn>
+																				</Parallel>
+																				<AddBuff SoulWUID="$wakeUpData.target" BuffGUID="&apos;bd22f98a-e61f-4d83-b39c-79d1d85b6b91&apos;" />
+																				<Function_callInterrupt_watch assaultData="" corpseState="$enum:corpseState.undiscovered" criminalFreshness="$enum:crime_criminalFreshness.unknown" defenceMode="false" freshlyAttributedCrime="false" ignorePriority="true" information="" initiator="$enum:switch_interruptInitiator.scheduler" previousReaction="$enum:crime_reactionKind.wakeUp" source="$enum:crime_source.direct" stimulusKind="$enum:crime_stimulusKind.unconsciousBody" target="$wakeUpData.target" nodeLabel="53184043" />
+																			</Sequence>
+																		</EntityContext>
+																	</IfCondition>
+																	<Function_callFollowUpBehavior previousReaction="$enum:crime_reactionKind.wakeUp" nodeLabel="43641617" />
+																</Sequence>
+															</ForceLook>
+														</Sequence>
+													</LogToLabel>
+												</LogToLabel>
+											</AddPerceivableState>
+										</EntityContext>
+									</EntityContextElement>
+								</AnyDecorator>
+							</Sequence>
+						</EntityContext>
+					</Child>
+					<OnFail canSkip="1">
+						<Function_crime_limits_removeReactionLink information="$wakeUpData.information" reactionKind="$enum:crime_reactionKind.wakeUp" nodeLabel="15945495" />
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="wakeUp" EventSet="">
+			<Variables>
+				<Variable name="anyDecoratorPreset" comment="" />
+				<Variable name="lookTargetPos" comment="" />
+				<Variable name="reachedTarget" comment="" />
+				<Variable name="wakeUpData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-1410" editorPosY="-450" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_getAnyDecoratorPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_getAnyDecoratorPreset>
+									<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetSpatialInfo>
+																<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Function_crime_limits_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_crime_limits_confirmReactionLink>
+																		<Function_crime_checkInterruptInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_crime_checkInterruptInformation>
+																		<RemoveBuffs hasInputBreakpoint="0" comment="rm drunkeness" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</RemoveBuffs>
+																		<IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Else>
+																				<IfCondition hasInputBreakpoint="0" comment="when called as a follow-up, dont bark at the begging" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<RecentlySkirmished hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																							<OutputBreakpoints />
+																							<Then>
+																								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Success>
+																							</Then>
+																							<Else>
+																								<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_crime_crimeBark>
+																							</Else>
+																						</RecentlySkirmished>
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</WaitAction>
+																							<StopMovement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</StopMovement>
+																							<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Turn>
+																						</Sequence>
+																					</Parallel>
+																				</IfCondition>
+																			</Else>
+																		</IsLoadedGate>
+																		<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Success>
+																			</DeadUnconsciousGate>
+																			<DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Success>
+																			</DeadUnconsciousGate>
+																			<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Success>
+																			</LinkGate>
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Move>
+																				</MoveParamsDecorator>
+																				<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Turn>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Sequence>
+																		</Parallel>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_crimeBark>
+																						<IsWeaponDrawn hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																							<OutputBreakpoints />
+																							<Then>
+																								<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</WaitAction>
+																							</Then>
+																							<Else>
+																								<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</AnimationAction>
+																							</Else>
+																						</IsWeaponDrawn>
+																					</Parallel>
+																					<AddBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</AddBuff>
+																					<Function_callInterrupt_watch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_callInterrupt_watch>
+																				</Sequence>
+																			</EntityContext>
+																		</IfCondition>
+																		<Function_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_callFollowUpBehavior>
+																	</Sequence>
+																</ForceLook>
+															</Sequence>
+														</LogToLabel>
+													</LogToLabel>
+												</AddPerceivableState>
+											</EntityContext>
+										</EntityContextElement>
+									</AnyDecorator>
+								</Sequence>
+							</EntityContext>
+						</Child>
+						<OnFail>
+							<Function_crime_limits_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_limits_removeReactionLink>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

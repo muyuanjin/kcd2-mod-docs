@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="special_cheeringSpot_cheering" is_function="0">
+		<Variables>
+			<Variable name="animationFragment" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="animationTag" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="cheering_variant" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="disableForceLook" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="finish" type="special:cheering:finish" values="" isPersistent="0" form="single" />
+			<Variable name="finishing" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="forceLookTarget" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="metarole" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="reaction" type="special:cheering:reaction" values="" isPersistent="0" form="single" />
+			<Variable name="shoutingAllowedTimes" type="special:cheering:shoutingAllowedTimes" values="" isPersistent="0" form="single" />
+			<Variable name="shoutingConfiguration" type="special:cheering:shoutingConfiguration" values="" isPersistent="0" form="single" />
+			<Variable name="shoutingManager" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="time_now" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="time_reaction_limit" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="unstanceName" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Decision decisionLabel="cheeringSpot_variant" variable="$cheering_variant" saveVersion="2">
+					<Search canSkip="1">
+						<Success />
+					</Search>
+					<Exec canSkip="1">
+						<Sequence>
+							<ExecuteLua code="local cheeringEntity = XGenAIModule.GetEntityByWUID(data.__object.id) &#10; &#10;local variantData = cheeringEntity:GetVariantData(entity.soul:GetGender(), data.cheering_variant) &#10; &#10;data.cheering_variant = variantData.variant &#10;data.unstanceName = variantData.unstanceName &#10;data.animationTag = variantData.animationTag &#10; &#10;data.disableForceLook = cheeringEntity.Properties.CheeringSpot.bDisable_Force_Look" />
+							<UnstanceAction unstance="$unstanceName" locationObject="$__object.id" slaveObject="" />
+							<Parallel successMode="Any" failureMode="Any">
+								<LinkGate from="$this.id" to="" tag="&apos;cheering_shoutingManager&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+									<Sequence>
+										<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;cheering_shoutingManager&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;cheering_shoutingManager&apos;" prune="true" negprune="unknown" Parent="" Child="$shoutingManager" Data="$shoutingConfiguration" />
+										</GraphSearch>
+										<AtomicDecorator>
+											<Selector>
+												<GraphSearch Origin="$shoutingManager" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;cheering_shoutingAllowedTimes&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+													<AnyLinkFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+												</GraphSearch>
+												<AddLink From="$shoutingManager" To="$shoutingManager" Tag="&apos;cheering_shoutingAllowedTimes&apos;" Data="$shoutingAllowedTimes" LinkOpHandleMode="OverWrite" />
+											</Selector>
+										</AtomicDecorator>
+										<ClearInbox inbox="&apos;special_cheering&apos;" type="&apos;special:cheering:reaction&apos;" condition="" />
+										<Parallel successMode="Any" failureMode="Any">
+											<While doFail="false" propagateChildFail="false" condition="true">
+												<Sequence>
+													<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="&apos;2s&apos;" />
+													<InstantSemaphore SemaphoreCount="1" LockManagerType="Intellect" SemaphoreName="&apos;cheering_semaphore&apos;">
+														<Function_special_cheeringSpot_cheering_tryToShout metarole="&apos;FANDENI_PRUBEZNE&apos;" shoutingConfiguration="$shoutingConfiguration" shoutingManager="$shoutingManager" shoutingType="$enum:cheering_shoutingType.ongoing" nodeLabel="21419278" />
+													</InstantSemaphore>
+												</Sequence>
+											</While>
+											<While doFail="false" propagateChildFail="false" condition="true">
+												<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$reaction" senderInfo="" inbox="&apos;special_cheering&apos;" condition="" answerVar="">
+													<InstantSemaphore SemaphoreCount="1" LockManagerType="Intellect" SemaphoreName="&apos;cheering_semaphore&apos;">
+														<Sequence>
+															<IfElseCondition failOnCondition="false" condition="$reaction.type == $enum:cheering_reactionType.Happy" saveVersion="2">
+																<Then canSkip="1">
+																	<Expression expressions="$animationFragment = &apos;TournamentCrowdHappy&apos; &#10;$metarole = &apos;FANDENI_RADOSTNE&apos;" />
+																</Then>
+																<Else canSkip="1">
+																	<Expression expressions="$animationFragment = &apos;TournamentCrowdSad&apos; &#10;$metarole = &apos;FANDENI_SMUTNE&apos;" />
+																</Else>
+															</IfElseCondition>
+															<GetTime TimeType="GameTime" OutVar="$time_now" Delta="" />
+															<Expression expressions="$time_reaction_limit = $time_now + $shoutingConfiguration.reaction_delay_limit" />
+															<Wait duration="&apos;0s&apos;" timeType="GameTime" doFail="false" variation="&apos;800ms&apos;" />
+															<Parallel successMode="All" failureMode="Any">
+																<UnstanceElement unstance="$unstanceName" locationObject="$__object.id" slaveObject="" enabled="true">
+																	<AnimationAction fragment="$animationFragment" tags="$animationTag" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																</UnstanceElement>
+																<LoopUntil until="Success" attemptCount="0">
+																	<Selector>
+																		<Function_special_cheeringSpot_cheering_tryToShout metarole="$metarole" shoutingConfiguration="$shoutingConfiguration" shoutingManager="$shoutingManager" shoutingType="$enum:cheering_shoutingType.reaction" nodeLabel="12469454" />
+																		<Parallel successMode="Any" failureMode="Any">
+																			<Sequence>
+																				<Wait duration="&apos;500ms&apos;" timeType="GameTime" doFail="false" variation="&apos;1s&apos;" />
+																				<GetTime TimeType="GameTime" OutVar="$time_now" Delta="" />
+																				<IfCondition failOnCondition="true" condition="$time_now &gt; $time_reaction_limit">
+																					<Success />
+																				</IfCondition>
+																			</Sequence>
+																			<IfGate atomic="false" condition="$finishing" RunLogic="KeepRunning">
+																				<Success />
+																			</IfGate>
+																		</Parallel>
+																	</Selector>
+																</LoopUntil>
+															</Parallel>
+															<ClearInbox inbox="&apos;special_cheering&apos;" type="&apos;special:cheering:reaction&apos;" condition="" />
+														</Sequence>
+													</InstantSemaphore>
+												</ProcessMessage>
+											</While>
+											<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$finish" senderInfo="" inbox="&apos;special_cheering&apos;" condition="" answerVar="">
+												<Sequence>
+													<Expression expressions="$finishing = true" />
+													<Semaphore SemaphoreCount="1" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;cheering_semaphore&apos;">
+														<Sequence>
+															<Wait duration="&apos;0s&apos;" timeType="GameTime" doFail="false" variation="&apos;3s&apos;" />
+															<UrgencyDecorator Urgency="Slow">
+																<WaitAction />
+															</UrgencyDecorator>
+														</Sequence>
+													</Semaphore>
+												</Sequence>
+											</ProcessMessage>
+											<Sequence>
+												<Wait duration="&apos;30s&apos;" timeType="GameTime" doFail="false" variation="" />
+												<Semaphore SemaphoreCount="1" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;cheering_semaphore&apos;">
+													<Success />
+												</Semaphore>
+											</Sequence>
+										</Parallel>
+									</Sequence>
+								</LinkGate>
+								<IfElseCondition failOnCondition="false" condition="$disableForceLook" saveVersion="2">
+									<Then canSkip="1">
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Then>
+									<Else canSkip="1">
+										<Sequence>
+											<Selector>
+												<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;forceLookTarget&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+													<AnyLinkFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="$forceLookTarget" />
+												</GraphSearch>
+												<Expression expressions="$forceLookTarget = $__player" />
+											</Selector>
+											<ForceLook LookTarget="$forceLookTarget" DisableVariations="false">
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</ForceLook>
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+								<Sequence>
+									<Wait duration="&apos;30s&apos;" timeType="GameTime" doFail="false" variation="" />
+									<IfCondition failOnCondition="false" condition="$shoutingManager ~= $__null">
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</IfCondition>
+								</Sequence>
+							</Parallel>
+						</Sequence>
+					</Exec>
+				</Decision>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="animationFragment" comment="" />
+				<Variable name="animationTag" comment="" />
+				<Variable name="cheering_variant" comment="" />
+				<Variable name="disableForceLook" comment="" />
+				<Variable name="finish" comment="" />
+				<Variable name="finishing" comment="" />
+				<Variable name="forceLookTarget" comment="" />
+				<Variable name="metarole" comment="" />
+				<Variable name="reaction" comment="" />
+				<Variable name="shoutingAllowedTimes" comment="" />
+				<Variable name="shoutingConfiguration" comment="" />
+				<Variable name="shoutingManager" comment="" />
+				<Variable name="time_now" comment="" />
+				<Variable name="time_reaction_limit" comment="" />
+				<Variable name="unstanceName" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Decision hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Search>
+							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Success>
+						</Search>
+						<Exec>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</ExecuteLua>
+								<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</UnstanceAction>
+								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+											<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<AnyLinkFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</AnyLinkFilter>
+													</GraphSearch>
+													<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</AddLink>
+												</Selector>
+											</AtomicDecorator>
+											<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</ClearInbox>
+											<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Wait>
+														<InstantSemaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_special_cheeringSpot_cheering_tryToShout hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_special_cheeringSpot_cheering_tryToShout>
+														</InstantSemaphore>
+													</Sequence>
+												</While>
+												<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<InstantSemaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</Then>
+																	<Else>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</Else>
+																</IfElseCondition>
+																<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetTime>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+																<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<UnstanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</AnimationAction>
+																	</UnstanceElement>
+																	<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Function_special_cheeringSpot_cheering_tryToShout hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_special_cheeringSpot_cheering_tryToShout>
+																			<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																					<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GetTime>
+																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Success>
+																					</IfCondition>
+																				</Sequence>
+																				<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Success>
+																				</IfGate>
+																			</Parallel>
+																		</Selector>
+																	</LoopUntil>
+																</Parallel>
+																<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</ClearInbox>
+															</Sequence>
+														</InstantSemaphore>
+													</ProcessMessage>
+												</While>
+												<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<Semaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+																<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</WaitAction>
+																</UrgencyDecorator>
+															</Sequence>
+														</Semaphore>
+													</Sequence>
+												</ProcessMessage>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+													<Semaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Success>
+													</Semaphore>
+												</Sequence>
+											</Parallel>
+										</Sequence>
+									</LinkGate>
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Then>
+										<Else>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<AnyLinkFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</AnyLinkFilter>
+													</GraphSearch>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Selector>
+												<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</ForceLook>
+											</Sequence>
+										</Else>
+									</IfElseCondition>
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</IfCondition>
+									</Sequence>
+								</Parallel>
+							</Sequence>
+						</Exec>
+					</Decision>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

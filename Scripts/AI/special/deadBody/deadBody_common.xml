@@ -1,0 +1,589 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="special_deadBody_common" is_function="0">
+		<Variables>
+			<Variable name="deadBody_linkedReference" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="fastForwardIntoInteracting" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="interactable" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="item_left" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="noose" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="pickedUpByPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="pickedUpByPlayer_clearState" type="_bool" values="" isPersistent="1" form="single" />
+			<Variable name="ragdollOnly" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="ragdollOnly_dontPosition" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="ragdollOnly_positioned" type="_bool" values="" isPersistent="1" form="single" />
+			<Variable name="unstanceName" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="unstanceName_beingInteracted" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="useItem_left" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<ExecuteLua code="local deadBodyEntity = XGenAIModule.GetEntityByWUID(data.__object.id) &#10;data.unstanceName = deadBodyEntity.unstanceName &#10;data.ragdollOnly = deadBodyEntity.Properties.DeadBody.bRagdollOnly &#10;data.ragdollOnly_dontPosition = deadBodyEntity.Properties.DeadBody.bRagdollOnly_DontPosition &#10;deadBodyEntity:ApplyDirtAndBlood(entity.actor) &#10; &#10;if deadBodyEntity.class == &apos;SO_DeadBody_Human_Hanged&apos; then &#10;    data.useItem_left = deadBodyEntity.useItem_left &#10;    data.ragdollOnly = false &#10;end &#10; &#10;if deadBodyEntity.class == &apos;SO_DeadBody_Human_Interactable&apos; then &#10;    data.unstanceName_beingInteracted = deadBodyEntity.unstanceName_beingInteracted &#10;    data.ragdollOnly = false &#10;    data.interactable = true &#10;    data.fastForwardIntoInteracting = deadBodyEntity.Properties.DeadBody.bAlwaysFastForwardIntoInteracting &#10;end" />
+					<AddBuff SoulWUID="$this.id" BuffGUID="&apos;3702b27b-2591-4dd7-9353-4ae569151d98&apos;" />
+					<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;noose&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<AnyLinkFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="$noose" />
+					</GraphSearch>
+					<SuppressFailure>
+						<Sequence>
+							<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;deadBody_pickedUpByPlayer&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<AnyLinkFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="$deadBody_linkedReference" />
+							</GraphSearch>
+							<IfElseCondition failOnCondition="false" condition="$deadBody_linkedReference == $__object.id" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$pickedUpByPlayer = true" />
+								</Then>
+								<Else canSkip="1">
+									<RemoveLink From="$this.id" To="$deadBody_linkedReference" Tag="&apos;deadBody_pickedUpByPlayer&apos;" LinkOpHandleMode="Success" />
+								</Else>
+							</IfElseCondition>
+						</Sequence>
+					</SuppressFailure>
+					<SetExternalLock LockManagerType="Intellect" Locked="true" LockName="&apos;deadBody_haltBehavior&apos;" />
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<EntityContext context="deadBody_allowActorAnimsForDeadNPC" target="">
+					<EntityContextPreset preset="switch_unresponsive" target="">
+						<EntityContext context="npcSchedulerPriorityBoostPrevention" target="">
+							<Parallel successMode="Any" failureMode="Any">
+								<ContinuousSwitch>
+									<IfCondition failOnCondition="false" condition="$pickedUpByPlayer">
+										<Sequence>
+											<IfCondition failOnCondition="false" condition="$pickedUpByPlayer_clearState">
+												<Sequence>
+													<UrgencyDecorator Urgency="Slow">
+														<WaitAction />
+													</UrgencyDecorator>
+													<Expression expressions="$pickedUpByPlayer_clearState = false" />
+												</Sequence>
+											</IfCondition>
+											<Selector>
+												<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;bodyCarrier&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+													<AnyLinkFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+												</GraphSearch>
+												<ActorStateCheck Who="$this.id" State="ragdoll" FailWithSubtreeMissing="false" saveVersion="2">
+													<Else canSkip="1">
+														<SuppressFailure>
+															<AnimationAction fragment="&apos;DeadBody_Ragdoll&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+														</SuppressFailure>
+													</Else>
+												</ActorStateCheck>
+											</Selector>
+											<IfCondition failOnCondition="false" condition="!$allowedMLOD">
+												<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;deadBody_haltBehavior&apos;" />
+											</IfCondition>
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="$ragdollOnly">
+										<Sequence>
+											<IfCondition failOnCondition="false" condition="!$ragdollOnly_dontPosition &amp; !$ragdollOnly_positioned">
+												<Sequence>
+													<TeleportAction Position="$__object.id" EndInterruptOnActionStart="false" />
+													<Expression expressions="$ragdollOnly_positioned = true" />
+												</Sequence>
+											</IfCondition>
+											<IsDeadCheck SoulWUID="" FailSubtMissing="false" saveVersion="2">
+												<Else canSkip="1">
+													<ExecuteLua code="entity.soul:DealDamage(999, 999, entity.this.id, true)" />
+												</Else>
+											</IsDeadCheck>
+											<SuppressFailure>
+												<AnimationAction fragment="&apos;DeadBody_Ragdoll&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+											</SuppressFailure>
+											<IfCondition failOnCondition="false" condition="!$allowedMLOD">
+												<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;deadBody_haltBehavior&apos;" />
+											</IfCondition>
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="true">
+										<AddLinkElement from="$this.id" to="$__object.id" tag="&apos;deadBody_lyingDead&apos;" data="" enabled="true">
+											<EnableRoleOnHubElement Role="&apos;interactant&apos;" Target="$__object.id" enabled="true">
+												<HandContentElement hand="Left" item="$item_left" allowAny="false" allowHomeSlotAutoReturn="false" decisionLabel="deadBody_item_left" useDecision="true" enabled="$useItem_left" saveVersion="2">
+													<Search canSkip="1">
+														<Function_item_getItemFromLinkedHomeSlot linkTag="&apos;item_left_slot&apos;" searchOrigin="$__object.id" foundItem="$item_left" nodeLabel="53240255" />
+													</Search>
+													<Exec canSkip="1">
+														<Sequence>
+															<IsFastForwarded failOnCondition="false" saveVersion="2">
+																<Then canSkip="1">
+																	<Sequence>
+																		<EntityContextCheck context="animation_fastForwardIntoJoinedUnstance" target="" saveVersion="2">
+																			<Then canSkip="1">
+																				<Expression expressions="$fastForwardIntoInteracting = true" />
+																			</Then>
+																		</EntityContextCheck>
+																		<IfCondition failOnCondition="false" condition="$fastForwardIntoInteracting">
+																			<RelationContextDecorator context="behavior_deadBody_beingInteracted" target="$__object.id" reverse="false" enabled="true">
+																				<JoinedUnstanceAction lockContext="$__object.id" lockName="&apos;deadBody_interactable_joinedAction&apos;" lockCount="2" timeout="&apos;-1&apos;" ignoreOthersLeaving="true" unstance="$unstanceName_beingInteracted" locationObject="$__object.id" slaveObject="" />
+																			</RelationContextDecorator>
+																		</IfCondition>
+																	</Sequence>
+																</Then>
+															</IsFastForwarded>
+															<RelationContextCheck context="behavior_deadBody_beingInteracted" from="$this.id" to="$__object.id" saveVersion="2">
+																<Else canSkip="1">
+																	<IfElseCondition failOnCondition="false" condition="$noose == $__null" saveVersion="2">
+																		<Then canSkip="1">
+																			<UnstanceAction unstance="$unstanceName" locationObject="$__object.id" slaveObject="" />
+																		</Then>
+																		<Else canSkip="1">
+																			<UnstanceAction unstance="$unstanceName" locationObject="$__object.id" slaveObject="$noose" />
+																		</Else>
+																	</IfElseCondition>
+																</Else>
+															</RelationContextCheck>
+															<IsDeadCheck SoulWUID="" FailSubtMissing="false" saveVersion="2">
+																<Else canSkip="1">
+																	<Sequence>
+																		<ExecuteLua code="entity.soul:DealDamage(999, 999, entity.this.id, true)" />
+																		<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																	</Sequence>
+																</Else>
+															</IsDeadCheck>
+															<IfCondition failOnCondition="false" condition="!$allowedMLOD">
+																<Sequence>
+																	<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;deadBody_haltBehavior&apos;" />
+																	<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																</Sequence>
+															</IfCondition>
+															<IfElseCondition failOnCondition="false" condition="$interactable" saveVersion="2">
+																<Then canSkip="1">
+																	<While doFail="false" propagateChildFail="false" condition="true">
+																		<Sequence>
+																			<RelationContextDecorator context="behavior_deadBody_beingInteracted" target="$__object.id" reverse="false" enabled="true">
+																				<JoinedUnstanceAction lockContext="$__object.id" lockName="&apos;deadBody_interactable_joinedAction&apos;" lockCount="2" timeout="&apos;-1&apos;" ignoreOthersLeaving="true" unstance="$unstanceName_beingInteracted" locationObject="$__object.id" slaveObject="" />
+																			</RelationContextDecorator>
+																			<SuppressFailure>
+																				<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;3s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;deadBody_interactable_behavior&apos;" RunLogic="Halt">
+																					<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																				</Synchronize>
+																			</SuppressFailure>
+																			<UrgencyDecorator Urgency="Slow">
+																				<UnstanceAction unstance="$unstanceName" locationObject="$__object.id" slaveObject="" />
+																			</UrgencyDecorator>
+																		</Sequence>
+																	</While>
+																</Then>
+																<Else canSkip="1">
+																	<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																</Else>
+															</IfElseCondition>
+														</Sequence>
+													</Exec>
+												</HandContentElement>
+											</EnableRoleOnHubElement>
+										</AddLinkElement>
+									</IfCondition>
+								</ContinuousSwitch>
+								<DeadUnconsciousGate Who="$this.id" State="Dead" Negation="false" RunLogic="KeepRunning">
+									<IfGate atomic="false" condition="!$pickedUpByPlayer" RunLogic="KeepRunning">
+										<LinkGate from="$__player" to="$this.id" tag="&apos;carriedBody&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+											<Sequence>
+												<AtomicDecorator>
+													<Sequence>
+														<AddLink From="$this.id" To="$__object.id" Tag="&apos;deadBody_pickedUpByPlayer&apos;" Data="" LinkOpHandleMode="Success" />
+														<Expression expressions="$pickedUpByPlayer = true &#10;$pickedUpByPlayer_clearState = true" />
+													</Sequence>
+												</AtomicDecorator>
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Sequence>
+										</LinkGate>
+									</IfGate>
+								</DeadUnconsciousGate>
+								<While doFail="false" propagateChildFail="false" condition="true">
+									<IfGate atomic="false" condition="!$lootableByPlayer" RunLogic="Halt">
+										<DecoratorBuff BuffId="&apos;d096efbd-54cd-4ebd-b6e9-669802ec5f03&apos;" SoulWUID="">
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</DecoratorBuff>
+									</IfGate>
+								</While>
+								<While doFail="false" propagateChildFail="false" condition="true">
+									<IfGate atomic="false" condition="!$pickableByPlayer" RunLogic="Halt">
+										<EntityContext context="CarryUnpickableActor" target="">
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</EntityContext>
+									</IfGate>
+								</While>
+								<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;deadBody_haltBehavior&apos;" RunLogic="KeepRunning">
+									<Success />
+								</ExternalLock>
+							</Parallel>
+						</EntityContext>
+					</EntityContextPreset>
+				</EntityContext>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="deadBody_linkedReference" comment="" />
+				<Variable name="fastForwardIntoInteracting" comment="" />
+				<Variable name="interactable" comment="" />
+				<Variable name="item_left" comment="" />
+				<Variable name="noose" comment="" />
+				<Variable name="pickedUpByPlayer" comment="" />
+				<Variable name="pickedUpByPlayer_clearState" comment="" />
+				<Variable name="ragdollOnly" comment="" />
+				<Variable name="ragdollOnly_dontPosition" comment="" />
+				<Variable name="ragdollOnly_positioned" comment="" />
+				<Variable name="unstanceName" comment="" />
+				<Variable name="unstanceName_beingInteracted" comment="" />
+				<Variable name="useItem_left" comment="" />
+				<Variable name="allowedMLOD" comment="" />
+				<Variable name="lootableByPlayer" comment="" />
+				<Variable name="pickableByPlayer" comment="" />
+			</Variables>
+			<ForwardDeclarations>
+				<Variable name="allowedMLOD" type="_bool" values="" isPersistent="0" form="single" requirementType="ForwardDeclaration" />
+				<Variable name="lootableByPlayer" type="_bool" values="" isPersistent="0" form="single" requirementType="ForwardDeclaration" />
+				<Variable name="pickableByPlayer" type="_bool" values="" isPersistent="0" form="single" requirementType="ForwardDeclaration" />
+			</ForwardDeclarations>
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</ExecuteLua>
+						<AddBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</AddBuff>
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<AnyLinkFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</AnyLinkFilter>
+						</GraphSearch>
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AnyLinkFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AnyLinkFilter>
+								</GraphSearch>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+									<Else>
+										<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</RemoveLink>
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+						</SuppressFailure>
+						<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</SetExternalLock>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<EntityContextPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<UrgencyDecorator hasInputBreakpoint="0" comment="Only slow urgency because instant caused the body (if it was using ragdoll only) to instantenously switch animation when player starts picking it up" breakpointFlags="0">
+															<OutputBreakpoints />
+															<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</WaitAction>
+														</UrgencyDecorator>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Sequence>
+												</IfCondition>
+												<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<AnyLinkFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</AnyLinkFilter>
+													</GraphSearch>
+													<ActorStateCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Else>
+															<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</AnimationAction>
+															</SuppressFailure>
+														</Else>
+													</ActorStateCheck>
+												</Selector>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</SetExternalLock>
+												</IfCondition>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<TeleportAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</TeleportAction>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Sequence>
+												</IfCondition>
+												<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Else>
+														<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ExecuteLua>
+													</Else>
+												</IsDeadCheck>
+												<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</AnimationAction>
+												</SuppressFailure>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</SetExternalLock>
+												</IfCondition>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<AddLinkElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<EnableRoleOnHubElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<HandContentElement hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Search>
+															<Function_item_getItemFromLinkedHomeSlot hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_item_getItemFromLinkedHomeSlot>
+														</Search>
+														<Exec>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IsFastForwarded hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Then>
+																			</EntityContextCheck>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<RelationContextDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<JoinedUnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</JoinedUnstanceAction>
+																				</RelationContextDecorator>
+																			</IfCondition>
+																		</Sequence>
+																	</Then>
+																</IsFastForwarded>
+																<RelationContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Else>
+																		<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</UnstanceAction>
+																			</Then>
+																			<Else>
+																				<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</UnstanceAction>
+																			</Else>
+																		</IfElseCondition>
+																	</Else>
+																</RelationContextCheck>
+																<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Else>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</ExecuteLua>
+																			<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Wait>
+																		</Sequence>
+																	</Else>
+																</IsDeadCheck>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</SetExternalLock>
+																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Wait>
+																	</Sequence>
+																</IfCondition>
+																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<RelationContextDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<JoinedUnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</JoinedUnstanceAction>
+																				</RelationContextDecorator>
+																				<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Wait>
+																					</Synchronize>
+																				</SuppressFailure>
+																				<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</UnstanceAction>
+																				</UrgencyDecorator>
+																			</Sequence>
+																		</While>
+																	</Then>
+																	<Else>
+																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Wait>
+																	</Else>
+																</IfElseCondition>
+															</Sequence>
+														</Exec>
+													</HandContentElement>
+												</EnableRoleOnHubElement>
+											</AddLinkElement>
+										</IfCondition>
+									</ContinuousSwitch>
+									<DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</AddLink>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Sequence>
+													</AtomicDecorator>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Sequence>
+											</LinkGate>
+										</IfGate>
+									</DeadUnconsciousGate>
+									<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<DecoratorBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</DecoratorBuff>
+										</IfGate>
+									</While>
+									<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</EntityContext>
+										</IfGate>
+									</While>
+									<ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Success>
+									</ExternalLock>
+								</Parallel>
+							</EntityContext>
+						</EntityContextPreset>
+					</EntityContext>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,1108 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleAwareness" is_function="1">
+		<Variables>
+			<Variable name="bodyCarrier" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="break" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="companionType" type="enum:crime_banishCompanionType" values="" isPersistent="0" form="single" />
+			<Variable name="heldBody" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="hitVolumeData" type="crime:hitVolume" values="" isPersistent="0" form="single" />
+			<Variable name="hotEntities" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="hotEntity" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="ignoreVolumeTimer" type="_string" values="&apos;10s&apos;" isPersistent="0" form="single" />
+			<Variable name="isBandit" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="item_isInInventory" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="mlodCorpse" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="mlodCorpseType" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="neverTrue" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="perceptor_soul" type="cast:wuid_soul" values="" isPersistent="0" form="single" />
+			<Variable name="playerHorse" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="playerMount" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="reactionIntermediateData" type="switch:reactionIntermediateData" values="" isPersistent="0" form="single" />
+			<Variable name="reactorData" type="crime:reactor" values="" isPersistent="0" form="single" />
+			<Variable name="reactorStimulusKind" type="enum:crime_stimulusKind" values="" isPersistent="0" form="single" />
+			<Variable name="relationship" type="crime:relationship" values="" isPersistent="0" form="single" />
+			<Variable name="rider" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="skipIgnore" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusCombat" type="switch:stimulus:combat" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusHit" type="switch:stimulus:hit" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus_unknownShooter" type="switch:stimulus:unknownShooter" values="" isPersistent="0" form="single" />
+			<Variable name="type" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="awareness" type="switch:awareness" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<GetType WUID="$awareness.perceptible" OutString="$type" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+					<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+						<Else canSkip="1">
+							<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+								<Else canSkip="1">
+									<Sequence>
+										<Expression expressions="$perceptor_soul.value = $this.id" />
+										<IfElseCondition failOnCondition="false" condition="$awareness.perceptible == $__player" saveVersion="2">
+											<Then canSkip="1">
+												<EntityContextCheck context="crime_ignorePlayerPerception" target="" saveVersion="2">
+													<Else canSkip="1">
+														<SendAIConceptSignal_NPCAwarenessNotification perceptor="$perceptor_soul" perceptible="$awareness.perceptible" />
+													</Else>
+												</EntityContextCheck>
+											</Then>
+											<Else canSkip="1">
+												<SendAIConceptSignal_NPCAwarenessNotification perceptor="$perceptor_soul" perceptible="$awareness.perceptible" />
+											</Else>
+										</IfElseCondition>
+									</Sequence>
+								</Else>
+							</EntityContextCheck>
+						</Else>
+					</EntityContextCheck>
+					<Switch>
+						<IfCondition failOnCondition="false" condition="$type == &apos;NPC&apos;">
+							<Sequence>
+								<SuppressFailure>
+									<Sequence>
+										<GraphSearch Origin="$awareness.perceptible" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;bodyCarrier,bodyHolder&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Union|Or" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;bodyCarrier&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+											<LinkTagFilter tag="&apos;bodyHolder&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+										</GraphSearch>
+										<Expression expressions="$awareness.perceptible = $__player" />
+									</Sequence>
+								</SuppressFailure>
+								<CheckRelationshipInterval_SoulToSoul TargetSoul="$awareness.perceptible" Soul="$this.id" Flag="enemy" saveVersion="2">
+									<Then canSkip="1">
+										<Function_switch_handleAwareness_enemy enemy="$awareness.perceptible" nodeLabel="56613765" />
+									</Then>
+									<Else canSkip="1">
+										<Success />
+									</Else>
+								</CheckRelationshipInterval_SoulToSoul>
+								<HasPerceivableState PerceivableState="&apos;combat&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+									<Then canSkip="1">
+										<Function_switch_handleAwareness_combat perceptible="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="40471348" />
+									</Then>
+								</HasPerceivableState>
+								<IfCondition failOnCondition="false" condition="$awareness.perceptible == $__player">
+									<EntityContextCheck context="crime_ignorePlayerPerception" target="" saveVersion="2">
+										<Else canSkip="1">
+											<Sequence>
+												<Function_crime_updatePlayerAwareness nodeLabel="47735642" />
+												<Function_switch_handleAwareness_informations nodeLabel="53856301" />
+												<HasPerceivableState PerceivableState="&apos;pickpocketing&apos;" PerceivedWUID="$__player" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Function_switch_handleAwareness_pickpocket reactionIntermediateData="$reactionIntermediateData" nodeLabel="37349397" />
+													</Then>
+												</HasPerceivableState>
+												<HasPerceivableState PerceivableState="&apos;loot&apos;" PerceivedWUID="$__player" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Function_switch_handleAwareness_loot reactionIntermediateData="$reactionIntermediateData" nodeLabel="18987349" />
+													</Then>
+												</HasPerceivableState>
+												<HasPerceivableState PerceivableState="&apos;lockpick&apos;" PerceivedWUID="$__player" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Function_switch_handleAwareness_lockpick reactionIntermediateData="$reactionIntermediateData" nodeLabel="74516808" />
+													</Then>
+												</HasPerceivableState>
+												<HasPerceivableState PerceivableState="&apos;VisibleStolenEquipment&apos;" PerceivedWUID="$__player" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Function_switch_handleAwareness_stolenEquipment nodeLabel="88002800" />
+													</Then>
+												</HasPerceivableState>
+												<HasPerceivableState PerceivableState="&apos;aim&apos;" PerceivedWUID="$__player" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Sequence>
+															<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;observerModeAim_lock&apos;" />
+															<Expression expressions="$skipIgnore = true" />
+														</Sequence>
+													</Then>
+													<Else canSkip="1">
+														<SetExternalLock LockManagerType="Intellect" Locked="true" LockName="&apos;observerModeAim_lock&apos;" />
+													</Else>
+												</HasPerceivableState>
+												<HasPerceivableState PerceivableState="&apos;threat&apos;" PerceivedWUID="$__player" PerceptorWUID="$this.id" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<HasPerceivableState PerceivableState="&apos;sharpening&apos;" PerceivedWUID="$__player" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+															<Else canSkip="1">
+																<Function_switch_handleAwareness_threat perceptible="$__player" reactionIntermediateData="$reactionIntermediateData" nodeLabel="17723992" />
+															</Else>
+														</HasPerceivableState>
+													</Then>
+												</HasPerceivableState>
+												<HasPerceivableState PerceivableState="&apos;trespass&apos;" PerceivedWUID="$__player" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Function_switch_handleAwareness_trespass reactionIntermediateData="$reactionIntermediateData" nodeLabel="37111646" />
+													</Then>
+												</HasPerceivableState>
+												<HasPerceivableState PerceivableState="&apos;sleep&apos;" PerceivedWUID="$__player" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Function_switch_handleAwareness_sleep nodeLabel="99394656" />
+													</Then>
+												</HasPerceivableState>
+												<HasPerceivableState PerceivableState="&apos;heldBody&apos;" PerceivedWUID="$__player" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Function_switch_handleAwareness_bodyHolder holder="$__player" reactionIntermediateData="$reactionIntermediateData" nodeLabel="73051065" />
+													</Then>
+												</HasPerceivableState>
+												<HasPerceivableState PerceivableState="&apos;carriedBody&apos;" PerceivedWUID="$__player" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Function_switch_handleAwareness_bodyCarrier carrier="$__player" reactionIntermediateData="$reactionIntermediateData" nodeLabel="84654756" />
+													</Then>
+												</HasPerceivableState>
+												<Function_switch_handleAwareness_friskable nodeLabel="90987154" />
+												<Function_switch_handleAwareness_player reactionIntermediateData="$reactionIntermediateData" nodeLabel="80087326" />
+												<EntityContextCheck context="crime_alwaysCheckPlayer" target="" saveVersion="2">
+													<Then canSkip="1">
+														<Function_switch_handleAwareness_alwaysCheckContext nodeLabel="50941043" />
+													</Then>
+												</EntityContextCheck>
+												<Function_switch_handleAwareness_playerMount reactionIntermediateData="$reactionIntermediateData" nodeLabel="50976148" />
+												<Sequence>
+													<IsBandit Npc="$this.id" IsBandit="$isBandit" />
+													<IfCondition failOnCondition="false" condition="$isBandit">
+														<Function_switch_handleAwareness_nearTrespass nodeLabel="79257495" />
+													</IfCondition>
+												</Sequence>
+											</Sequence>
+										</Else>
+									</EntityContextCheck>
+								</IfCondition>
+								<Function_switch_handleAwareness_checkHotEntities perceptible="$awareness.perceptible" nodeLabel="22228140" />
+								<HasPerceivableState PerceivableState="&apos;dead&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+									<Then canSkip="1">
+										<Function_switch_handleAwareness_corpse corpse="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="73894252" />
+									</Then>
+									<Else canSkip="1">
+										<HasPerceivableState PerceivableState="&apos;unconscious&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+											<Then canSkip="1">
+												<Function_switch_handleAwareness_unconsciousBody body="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="37085480" />
+											</Then>
+										</HasPerceivableState>
+									</Else>
+								</HasPerceivableState>
+								<HasPerceivableState PerceivableState="&apos;crime_mourn&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+									<Then canSkip="1">
+										<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.priority &lt; $data:script_param[&apos;crime_barkReactionPriority_mourn&apos;].value">
+											<Sequence>
+												<ReinitVariable variable="$reactionIntermediateData" />
+												<Expression expressions="$reactionIntermediateData.barkData.priority = $data:script_param[&apos;crime_barkReactionPriority_mourn&apos;].value &#10;$reactionIntermediateData.barkData.barkKind = $enum:crime_barkReactionKind.mourn &#10;$reactionIntermediateData.barkData.lookAt = $awareness.perceptible &#10;$reactionIntermediateData.barkData.metarole = &apos;NPC_VIDI_TRUCHLICIHO&apos;" />
+											</Sequence>
+										</IfCondition>
+									</Then>
+								</HasPerceivableState>
+								<HasPerceivableState PerceivableState="&apos;crime_arrest&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+									<Then canSkip="1">
+										<Function_switch_handleAwareness_arrest target="$awareness.perceptible" nodeLabel="54148987" />
+									</Then>
+								</HasPerceivableState>
+								<Function_crime_ignorePerceivedEntity disableIgnore="$skipIgnore" perceivedEntity="$awareness.perceptible" nodeLabel="99587977" />
+							</Sequence>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$type == &apos;UNK&apos;">
+							<Sequence>
+								<Switch>
+									<HasPerceivableState PerceivableState="&apos;theft&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_theft volume="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="98727960" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;crime_corpseMissing&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_corpseMissing volume="$awareness.perceptible" nodeLabel="79736535" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;crime_missingNpc&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_missingNpc volume="$awareness.perceptible" nodeLabel="47616477" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;switch_arrowTouchdown&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_arrowTouchdown volume="$awareness.perceptible" nodeLabel="52597090" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;crime_hit&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_hitVolume volume="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="93808431" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;crime_animal_hit&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_animal_hitVolume volume="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="74316840" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;crime_suspiciousDoor&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_suspiciousDoor volume="$awareness.perceptible" nodeLabel="73438794" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;crime_pilloryBreak&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Sequence>
+												<Expression expressions="$ignoreVolumeTimer = &apos;-1&apos;" />
+												<Function_switch_handleAwareness_pilloryBreak volume="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="13131013" />
+											</Sequence>
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;crime_kettleEating&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_kettleEating volume="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="86045457" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;crime_kettlePoisoning&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_kettlePoisoning volume="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="51550270" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;crime_animal_missing&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Sequence>
+												<Expression expressions="$ignoreVolumeTimer = &apos;-1&apos;" />
+												<Function_switch_handleAwareness_animal_missingVolume volume="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="75049013" />
+											</Sequence>
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;crime_playerMounted&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_playerMountedVolume volume="$awareness.perceptible" nodeLabel="27118157" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;crime_graveRobbing&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_graveRobbing volume="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="96810343" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;BoidHit&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_switch_handleAwareness_boidHit volume="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="50719988" />
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState PerceivableState="&apos;dead&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Sequence>
+												<GraphSearch Origin="$awareness.perceptible" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+													<LinkTagFilter tag="&apos;perceptionCorpse&apos;" prune="true" negprune="unknown" Parent="" Child="$mlodCorpse" Data="" />
+												</GraphSearch>
+												<GetType WUID="$mlodCorpse" OutString="$mlodCorpseType" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+												<Switch>
+													<IfCondition failOnCondition="false" condition="$mlodCorpseType == &apos;NPC&apos;">
+														<Function_switch_handleAwareness_corpse corpse="$mlodCorpse" reactionIntermediateData="$reactionIntermediateData" nodeLabel="29777823" />
+													</IfCondition>
+													<IfCondition failOnCondition="false" condition="$mlodCorpseType == &apos;NHNPC&apos;">
+														<Function_switch_handleAwareness_animal_corpse corpse="$mlodCorpse" nodeLabel="60334625" />
+													</IfCondition>
+													<DefaultBranch>
+														<Success />
+													</DefaultBranch>
+												</Switch>
+												<Expression expressions="$ignoreVolumeTimer = &apos;1h&apos;" />
+											</Sequence>
+										</Then>
+									</HasPerceivableState>
+									<DefaultBranch>
+										<Success />
+									</DefaultBranch>
+								</Switch>
+								<Switch>
+									<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+										<Then canSkip="1">
+											<Success />
+										</Then>
+									</EntityContextCheck>
+									<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+										<Then canSkip="1">
+											<Success />
+										</Then>
+									</EntityContextCheck>
+									<DefaultBranch>
+										<CheckWuidValid wuid="$awareness.perceptible" FailSubtMissing="false" saveVersion="2">
+											<Then canSkip="1">
+												<IgnorePerception PerceptorObject="$this.id" PerceptibleObject="$awareness.perceptible" IgnoreFor="$ignoreVolumeTimer" TimerType="GameTime" Uninterruptible="false" Persistent="true" />
+											</Then>
+										</CheckWuidValid>
+									</DefaultBranch>
+								</Switch>
+							</Sequence>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$type == &apos;NHNPC&apos;">
+							<Sequence>
+								<HasPerceivableState PerceivableState="&apos;dead&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+									<Then canSkip="1">
+										<Function_switch_handleAwareness_animal_corpse corpse="$awareness.perceptible" nodeLabel="47253296" />
+									</Then>
+									<Else canSkip="1">
+										<HasPerceivableState PerceivableState="&apos;unconscious&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+											<Then canSkip="1">
+												<Success />
+											</Then>
+											<Else canSkip="1">
+												<Sequence>
+													<Function_switch_handleAwareness_checkHotEntities perceptible="$awareness.perceptible" nodeLabel="26339687" />
+													<Function_crime_getPlayerCompanionType entity="$awareness.perceptible" companionType="$companionType" nodeLabel="80331639" />
+													<HasPerceivableState PerceivableState="&apos;combat&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+														<Then canSkip="1">
+															<Function_switch_handleAwareness_combat perceptible="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="81926568" />
+														</Then>
+													</HasPerceivableState>
+													<IfElseCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Unknown" saveVersion="2">
+														<Then canSkip="1">
+															<CheckRelationshipInterval_SoulToSoul TargetSoul="$awareness.perceptible" Soul="$this.id" Flag="enemy" saveVersion="2">
+																<Then canSkip="1">
+																	<EntityContextCheck context="switch_isHorse" target="$awareness.perceptible" saveVersion="2">
+																		<Else canSkip="1">
+																			<Function_switch_handleAwareness_enemy enemy="$awareness.perceptible" nodeLabel="19687502" />
+																		</Else>
+																	</EntityContextCheck>
+																</Then>
+																<Else canSkip="1">
+																	<Success />
+																</Else>
+															</CheckRelationshipInterval_SoulToSoul>
+														</Then>
+														<Else canSkip="1">
+															<Function_switch_handleAwareness_playerCompanion companion="$awareness.perceptible" companionType="$companionType" shouldForcePublicReaction="false" reactionIntermediateData="$reactionIntermediateData" nodeLabel="12439009" />
+														</Else>
+													</IfElseCondition>
+													<HasPerceivableState PerceivableState="&apos;crime_animal_startled&apos;" PerceivedWUID="$awareness.perceptible" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+														<Then canSkip="1">
+															<Function_switch_handleAwareness_animal_startled perceptible="$awareness.perceptible" reactionIntermediateData="$reactionIntermediateData" nodeLabel="13649609" />
+														</Then>
+													</HasPerceivableState>
+												</Sequence>
+											</Else>
+										</HasPerceivableState>
+									</Else>
+								</HasPerceivableState>
+								<Function_crime_ignorePerceivedEntity disableIgnore="$skipIgnore" perceivedEntity="$awareness.perceptible" nodeLabel="69026901" />
+							</Sequence>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$type == &apos;ITM&apos;">
+							<Switch>
+								<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+									<Then canSkip="1">
+										<Success />
+									</Then>
+								</EntityContextCheck>
+								<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+									<Then canSkip="1">
+										<Success />
+									</Then>
+								</EntityContextCheck>
+								<DefaultBranch>
+									<Sequence>
+										<Function_switch_handleAwareness_item perceptible="$awareness.perceptible" nodeLabel="57401135" />
+										<GetItemProperty itemId="$awareness.perceptible" property="InInventory" result="$item_isInInventory" />
+										<IfCondition failOnCondition="false" condition="~$item_isInInventory">
+											<CheckWuidValid wuid="$awareness.perceptible" FailSubtMissing="false" saveVersion="2">
+												<Then canSkip="1">
+													<IgnorePerception PerceptorObject="$this.id" PerceptibleObject="$awareness.perceptible" IgnoreFor="&apos;5s&apos;" TimerType="GameTime" Uninterruptible="false" Persistent="true" />
+												</Then>
+											</CheckWuidValid>
+										</IfCondition>
+									</Sequence>
+								</DefaultBranch>
+							</Switch>
+						</IfCondition>
+					</Switch>
+					<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.metarole ~= &apos;&apos;">
+						<Switch>
+							<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+								<Then canSkip="1">
+									<Success />
+								</Then>
+							</EntityContextCheck>
+							<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+								<Then canSkip="1">
+									<Success />
+								</Then>
+							</EntityContextCheck>
+							<DefaultBranch>
+								<Function_switch_handleAwareness_barkReaction reactionIntermediateData="$reactionIntermediateData" nodeLabel="36087341" />
+							</DefaultBranch>
+						</Switch>
+					</IfCondition>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="bodyCarrier" comment="" />
+				<Variable name="break" comment="" />
+				<Variable name="companionType" comment="" />
+				<Variable name="heldBody" comment="" />
+				<Variable name="hitVolumeData" comment="" />
+				<Variable name="hotEntities" comment="" />
+				<Variable name="hotEntity" comment="" />
+				<Variable name="ignoreVolumeTimer" comment="" />
+				<Variable name="isBandit" comment="" />
+				<Variable name="item_isInInventory" comment="" />
+				<Variable name="mlodCorpse" comment="" />
+				<Variable name="mlodCorpseType" comment="" />
+				<Variable name="neverTrue" comment="" />
+				<Variable name="perceptor_soul" comment="" />
+				<Variable name="playerHorse" comment="" />
+				<Variable name="playerMount" comment="" />
+				<Variable name="reactionIntermediateData" comment="" />
+				<Variable name="reactorData" comment="" />
+				<Variable name="reactorStimulusKind" comment="" />
+				<Variable name="relationship" comment="" />
+				<Variable name="rider" comment="" />
+				<Variable name="skipIgnore" comment="" />
+				<Variable name="stimulusCombat" comment="" />
+				<Variable name="stimulusHit" comment="" />
+				<Variable name="stimulus_unknownShooter" comment="" />
+				<Variable name="type" comment="" />
+				<Variable name="awareness" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="10" editorPosY="-120" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetType>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Else>
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Else>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Else>
+															<SendAIConceptSignal_NPCAwarenessNotification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</SendAIConceptSignal_NPCAwarenessNotification>
+														</Else>
+													</EntityContextCheck>
+												</Then>
+												<Else>
+													<SendAIConceptSignal_NPCAwarenessNotification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</SendAIConceptSignal_NPCAwarenessNotification>
+												</Else>
+											</IfElseCondition>
+										</Sequence>
+									</Else>
+								</EntityContextCheck>
+							</Else>
+						</EntityContextCheck>
+						<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+									</SuppressFailure>
+									<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Function_switch_handleAwareness_enemy hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_switch_handleAwareness_enemy>
+										</Then>
+										<Else>
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</Else>
+									</CheckRelationshipInterval_SoulToSoul>
+									<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Function_switch_handleAwareness_combat hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_switch_handleAwareness_combat>
+										</Then>
+									</HasPerceivableState>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Else>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_crime_updatePlayerAwareness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_updatePlayerAwareness>
+													<Function_switch_handleAwareness_informations hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_switch_handleAwareness_informations>
+													<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_switch_handleAwareness_pickpocket hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_pickpocket>
+														</Then>
+													</HasPerceivableState>
+													<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_switch_handleAwareness_loot hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_loot>
+														</Then>
+													</HasPerceivableState>
+													<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_switch_handleAwareness_lockpick hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_lockpick>
+														</Then>
+													</HasPerceivableState>
+													<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_switch_handleAwareness_stolenEquipment hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_stolenEquipment>
+														</Then>
+													</HasPerceivableState>
+													<HasPerceivableState hasInputBreakpoint="0" comment="Only open/close locks, we handle aim in root switch" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</SetExternalLock>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Sequence>
+														</Then>
+														<Else>
+															<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</SetExternalLock>
+														</Else>
+													</HasPerceivableState>
+													<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Else>
+																	<Function_switch_handleAwareness_threat hasInputBreakpoint="0" comment="#KCD2-66836" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_switch_handleAwareness_threat>
+																</Else>
+															</HasPerceivableState>
+														</Then>
+													</HasPerceivableState>
+													<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_switch_handleAwareness_trespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_trespass>
+														</Then>
+													</HasPerceivableState>
+													<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_switch_handleAwareness_sleep hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_sleep>
+														</Then>
+													</HasPerceivableState>
+													<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_switch_handleAwareness_bodyHolder hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_bodyHolder>
+														</Then>
+													</HasPerceivableState>
+													<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_switch_handleAwareness_bodyCarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_bodyCarrier>
+														</Then>
+													</HasPerceivableState>
+													<Function_switch_handleAwareness_friskable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_switch_handleAwareness_friskable>
+													<Function_switch_handleAwareness_player hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_switch_handleAwareness_player>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_switch_handleAwareness_alwaysCheckContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_alwaysCheckContext>
+														</Then>
+													</EntityContextCheck>
+													<Function_switch_handleAwareness_playerMount hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_switch_handleAwareness_playerMount>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IsBandit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</IsBandit>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_switch_handleAwareness_nearTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_nearTrespass>
+														</IfCondition>
+													</Sequence>
+												</Sequence>
+											</Else>
+										</EntityContextCheck>
+									</IfCondition>
+									<Function_switch_handleAwareness_checkHotEntities hasInputBreakpoint="0" comment="keep under player awareness if possible, otherwise shooter hotentity will cause problems as it changes interrupts, but awa_information will no longer be able to attribute crime" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_switch_handleAwareness_checkHotEntities>
+									<HasPerceivableState hasInputBreakpoint="0" comment="Corpse" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Function_switch_handleAwareness_corpse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_switch_handleAwareness_corpse>
+										</Then>
+										<Else>
+											<HasPerceivableState hasInputBreakpoint="0" comment="Unconscious body" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Function_switch_handleAwareness_unconsciousBody hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_switch_handleAwareness_unconsciousBody>
+												</Then>
+											</HasPerceivableState>
+										</Else>
+									</HasPerceivableState>
+									<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</ReinitVariable>
+													<Expression hasInputBreakpoint="0" comment="TODO: put it into function?" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Sequence>
+											</IfCondition>
+										</Then>
+									</HasPerceivableState>
+									<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Function_switch_handleAwareness_arrest hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_switch_handleAwareness_arrest>
+										</Then>
+									</HasPerceivableState>
+									<Function_crime_ignorePerceivedEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_ignorePerceivedEntity>
+								</Sequence>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<HasPerceivableState hasInputBreakpoint="0" comment="&apos;theft&apos; volume" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_theft hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_theft>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="&apos;corpseMissing&apos; volume" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_corpseMissing hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_corpseMissing>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="&apos;missingNpc&apos; volume" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_missingNpc hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_missingNpc>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="&apos;arrowTouchdown&apos; volume - spawns when arrow lands near NPC" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_arrowTouchdown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_arrowTouchdown>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="&apos;hit&apos; volume" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_hitVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_hitVolume>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="&apos;animal_hit&apos; volume" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_animal_hitVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_animal_hitVolume>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="&apos;suspiciousDoor&apos; volume - spawned when player opens door" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_suspiciousDoor hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_suspiciousDoor>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="&apos;pilloryBreak&apos;&apos; volume" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<Function_switch_handleAwareness_pilloryBreak hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_switch_handleAwareness_pilloryBreak>
+												</Sequence>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_kettleEating hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_kettleEating>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_kettlePoisoning hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_kettlePoisoning>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<Function_switch_handleAwareness_animal_missingVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_switch_handleAwareness_animal_missingVolume>
+												</Sequence>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_playerMountedVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_playerMountedVolume>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="&apos;graveRobbing&apos; volume" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_graveRobbing hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_graveRobbing>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_switch_handleAwareness_boidHit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleAwareness_boidHit>
+											</Then>
+										</HasPerceivableState>
+										<HasPerceivableState hasInputBreakpoint="0" comment="&apos;dead&apos; volume - spawned by corpses in MLOD" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</LinkTagFilter>
+													</GraphSearch>
+													<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</GetType>
+													<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_switch_handleAwareness_corpse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_corpse>
+														</IfCondition>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_switch_handleAwareness_animal_corpse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleAwareness_animal_corpse>
+														</IfCondition>
+														<DefaultBranch>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Success>
+														</DefaultBranch>
+													</Switch>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Sequence>
+											</Then>
+										</HasPerceivableState>
+										<DefaultBranch>
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</DefaultBranch>
+									</Switch>
+									<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Then>
+										</EntityContextCheck>
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Then>
+										</EntityContextCheck>
+										<DefaultBranch>
+											<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<IgnorePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</IgnorePerception>
+												</Then>
+											</CheckWuidValid>
+										</DefaultBranch>
+									</Switch>
+								</Sequence>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Function_switch_handleAwareness_animal_corpse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_switch_handleAwareness_animal_corpse>
+										</Then>
+										<Else>
+											<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Success>
+												</Then>
+												<Else>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_switch_handleAwareness_checkHotEntities hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_switch_handleAwareness_checkHotEntities>
+														<Function_crime_getPlayerCompanionType hasInputBreakpoint="0" comment="Check if player is the master of this companion" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_getPlayerCompanionType>
+														<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Function_switch_handleAwareness_combat hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_switch_handleAwareness_combat>
+															</Then>
+														</HasPerceivableState>
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<EntityContextCheck hasInputBreakpoint="0" comment="KCD2-460467, do not mind enemy horses" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Else>
+																				<Function_switch_handleAwareness_enemy hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_switch_handleAwareness_enemy>
+																			</Else>
+																		</EntityContextCheck>
+																	</Then>
+																	<Else>
+																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Success>
+																	</Else>
+																</CheckRelationshipInterval_SoulToSoul>
+															</Then>
+															<Else>
+																<Function_switch_handleAwareness_playerCompanion hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_switch_handleAwareness_playerCompanion>
+															</Else>
+														</IfElseCondition>
+														<HasPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Function_switch_handleAwareness_animal_startled hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_switch_handleAwareness_animal_startled>
+															</Then>
+														</HasPerceivableState>
+													</Sequence>
+												</Else>
+											</HasPerceivableState>
+										</Else>
+									</HasPerceivableState>
+									<Function_crime_ignorePerceivedEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_ignorePerceivedEntity>
+								</Sequence>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</Then>
+									</EntityContextCheck>
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</Then>
+									</EntityContextCheck>
+									<DefaultBranch>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_switch_handleAwareness_item hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_switch_handleAwareness_item>
+											<GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetItemProperty>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<IgnorePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</IgnorePerception>
+													</Then>
+												</CheckWuidValid>
+											</IfCondition>
+										</Sequence>
+									</DefaultBranch>
+								</Switch>
+							</IfCondition>
+						</Switch>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Success>
+									</Then>
+								</EntityContextCheck>
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Success>
+									</Then>
+								</EntityContextCheck>
+								<DefaultBranch>
+									<Function_switch_handleAwareness_barkReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_switch_handleAwareness_barkReaction>
+								</DefaultBranch>
+							</Switch>
+						</IfCondition>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

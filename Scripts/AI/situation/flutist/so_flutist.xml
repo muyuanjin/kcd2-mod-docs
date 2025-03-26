@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="onUpdate" is_function="0">
+		<Variables>
+			<Variable name="audibleIngameMusic" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="changeStateRequest" type="situation:flutist:changeStateRequest" values="" isPersistent="0" form="single" />
+			<Variable name="cooldown" type="situation:flutist:cooldown" values="" isPersistent="0" form="single" />
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="distance" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="flutistController" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="isTimeSkipping" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playingApproved" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="remainingCooldown" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="shouldRequest" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="waitString" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="wantsToPlayRequest" type="situation:flutist:wantsToPlayRequest" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<SuppressFailure>
+					<Selector>
+						<Sequence>
+							<GraphSearch Origin="$__land" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<LinkTagFilter tag="&apos;flutistController&apos;" prune="true" negprune="unknown" Parent="" Child="$flutistController" Data="" />
+							</GraphSearch>
+							<AddLink From="$this.id" To="$flutistController" Tag="&apos;situation_flutistController&apos;" Data="" LinkOpHandleMode="OverWrite" />
+							<Expression expressions="$wantsToPlayRequest.sender = $this.id" />
+						</Sequence>
+						<ErrorNode Message="&apos;[$this.name;] global flutistController not linked from land&apos;" />
+					</Selector>
+				</SuppressFailure>
+			</OnInit>
+			<Behavior canSkip="1">
+				<IfElseCondition failOnCondition="false" condition="$flutistController ~= $__null" saveVersion="2">
+					<Then canSkip="1">
+						<Parallel successMode="Any" failureMode="Any">
+							<Loop count="-1">
+								<LinkGate from="$flutistController" to="$this.id" tag="&apos;situation_activeFlutist&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="Halt">
+									<Loop count="-1">
+										<Sequence>
+											<MeasureDistance position1="$this.id" position2="$__player" mode="ThreeDimensions" result="$distance" />
+											<IfElseCondition failOnCondition="false" condition="$distance &lt; $data:script_param[&apos;situation_flutist_activationDistance&apos;].value" saveVersion="2">
+												<Then canSkip="1">
+													<Sequence>
+														<Function_situation_flutistController_checkCooldown controller="$flutistController" isCool="$shouldRequest" remainingCooldown="$remainingCooldown" nodeLabel="37399009" />
+														<IfElseCondition failOnCondition="false" condition="$shouldRequest" saveVersion="2">
+															<Then canSkip="1">
+																<Sequence>
+																	<InstantSendMessageToNPC target="$flutistController" variable="$wantsToPlayRequest" />
+																	<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																</Sequence>
+															</Then>
+															<Else canSkip="1">
+																<Sequence>
+																	<Concatenation OutString="$waitString" Pattern="&apos;$remainingCooldown;ms&apos;" />
+																	<Wait duration="$waitString" timeType="GameTime" doFail="false" variation="" />
+																</Sequence>
+															</Else>
+														</IfElseCondition>
+													</Sequence>
+												</Then>
+												<Else canSkip="1">
+													<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="&apos;1s&apos;" />
+												</Else>
+											</IfElseCondition>
+										</Sequence>
+									</Loop>
+								</LinkGate>
+							</Loop>
+							<Loop count="-1">
+								<Sequence>
+									<Expression expressions="$playingApproved = false" />
+									<LinkGate from="$flutistController" to="$this.id" tag="&apos;situation_activeFlutist&apos;" amount="AtLeastOne" presence="Present" RunLogic="Halt">
+										<Sequence>
+											<Expression expressions="$playingApproved = true" />
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+									</LinkGate>
+								</Sequence>
+							</Loop>
+							<Loop count="-1">
+								<Sequence>
+									<Expression expressions="$audibleIngameMusic = false" />
+									<AudibleIngameMusicBarrier Invert="false" RunLogic="Halt">
+										<Sequence>
+											<Expression expressions="$audibleIngameMusic = true" />
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+									</AudibleIngameMusicBarrier>
+								</Sequence>
+							</Loop>
+							<Loop count="-1">
+								<Sequence>
+									<Expression expressions="$isTimeSkipping = true" />
+									<IfGate atomic="false" condition="$playingApproved &amp; ~$audibleIngameMusic" RunLogic="Halt">
+										<Loop count="-1">
+											<Sequence>
+												<IsTimeSkipping saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$isTimeSkipping = true" />
+													</Then>
+													<Else canSkip="1">
+														<Expression expressions="$isTimeSkipping = false" />
+													</Else>
+												</IsTimeSkipping>
+												<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Sequence>
+										</Loop>
+									</IfGate>
+								</Sequence>
+							</Loop>
+							<Loop count="-1">
+								<Sequence>
+									<SmartObjSetBehaviorState behaviors="&apos;useTagpoint&apos;" state="Disabled" />
+									<IfGate atomic="false" condition="$playingApproved &amp; ~$audibleIngameMusic &amp; ~$isTimeSkipping" RunLogic="Halt">
+										<Sequence>
+											<SmartObjSetBehaviorState behaviors="&apos;useTagpoint&apos;" state="Enabled" />
+											<GameContextCheck context="situation_enableFlutistControllerDebug" saveVersion="2">
+												<Then canSkip="1">
+													<ExecuteLua code="Game.SendInfoText(&apos;DEBUG_____flutist, SO:&apos; .. data.this.name .. &apos; received enable state&apos;,false) &#10; &#10;player:SetPos(entity:GetPos())" />
+												</Then>
+											</GameContextCheck>
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+									</IfGate>
+								</Sequence>
+							</Loop>
+						</Parallel>
+					</Then>
+					<Else canSkip="1">
+						<Sequence>
+							<SmartObjSetBehaviorState behaviors="&apos;useTagpoint&apos;" state="Enabled" />
+							<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+						</Sequence>
+					</Else>
+				</IfElseCondition>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="audibleIngameMusic" comment="" />
+				<Variable name="changeStateRequest" comment="" />
+				<Variable name="cooldown" comment="" />
+				<Variable name="currentTime" comment="" />
+				<Variable name="distance" comment="" />
+				<Variable name="flutistController" comment="" />
+				<Variable name="isTimeSkipping" comment="" />
+				<Variable name="playingApproved" comment="" />
+				<Variable name="remainingCooldown" comment="" />
+				<Variable name="shouldRequest" comment="" />
+				<Variable name="waitString" comment="" />
+				<Variable name="wantsToPlayRequest" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="60" editorPosY="120" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkTagFilter>
+								</GraphSearch>
+								<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</AddLink>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Sequence>
+							<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</ErrorNode>
+						</Selector>
+					</SuppressFailure>
+				</OnInit>
+				<Behavior>
+					<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Then>
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</MeasureDistance>
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_situation_flutistController_checkCooldown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_situation_flutistController_checkCooldown>
+															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</InstantSendMessageToNPC>
+																		<Wait hasInputBreakpoint="0" comment="Wait for linkGate to close this branch" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Wait>
+																	</Sequence>
+																</Then>
+																<Else>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Concatenation>
+																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Wait>
+																	</Sequence>
+																</Else>
+															</IfElseCondition>
+														</Sequence>
+													</Then>
+													<Else>
+														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Wait>
+													</Else>
+												</IfElseCondition>
+											</Sequence>
+										</Loop>
+									</LinkGate>
+								</Loop>
+								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+										</LinkGate>
+									</Sequence>
+								</Loop>
+								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<AudibleIngameMusicBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+										</AudibleIngameMusicBarrier>
+									</Sequence>
+								</Loop>
+								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<IfGate hasInputBreakpoint="0" comment="IfGate to prevent global check spamming" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IsTimeSkipping hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+														<Else>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Else>
+													</IsTimeSkipping>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Sequence>
+											</Loop>
+										</IfGate>
+									</Sequence>
+								</Loop>
+								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<SmartObjSetBehaviorState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</SmartObjSetBehaviorState>
+										<IfGate hasInputBreakpoint="0" comment="Just for clarification included other conditions as well, but ~IsTimeSkipping whould be enough" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<SmartObjSetBehaviorState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</SmartObjSetBehaviorState>
+												<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ExecuteLua>
+													</Then>
+												</GameContextCheck>
+												<Wait hasInputBreakpoint="0" comment="Wait for linkGate to close this branch and disable behavior" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+										</IfGate>
+									</Sequence>
+								</Loop>
+							</Parallel>
+						</Then>
+						<Else>
+							<Sequence hasInputBreakpoint="0" comment="Probably a flutist on personal level, just enable behavior" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SmartObjSetBehaviorState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</SmartObjSetBehaviorState>
+								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Wait>
+							</Sequence>
+						</Else>
+					</IfElseCondition>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="crime_createTrespassInformation" is_function="1">
+    <Variables>
+      <Variable name="homeOwner" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="isMyHome" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="maxCounter" type="_int" values="" isPersistent="0" form="single" />
+      <Variable name="position" type="vec3" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="complementaryToOtherCrime" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="home" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+      <Variable name="information" type="information" values="" isPersistent="0" form="single" requirementType="Out" />
+      <Variable name="isKzikTrespass" type="_bool" values="false" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="trespassArea" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+      <Variable name="wuidType" type="enum:crime_trespassInformationWuid" values="" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <GetSpatialInfo In="$__player" Out="$position" What="Position" />
+          <IfElseCondition failOnCondition="false" condition="~$isKzikTrespass" saveVersion="2">
+            <Then canSkip="1">
+              <Sequence>
+                <Switch>
+                  <IfCondition failOnCondition="false" condition="$wuidType == $enum:crime_trespassInformationWuid.homeArea">
+                    <SuppressFailure>
+                      <Function_crime_getHomeFromArea area="$trespassArea" home="$home" nodeLabel="76521183" />
+                    </SuppressFailure>
+                  </IfCondition>
+                  <IfCondition failOnCondition="false" condition="$wuidType == $enum:crime_trespassInformationWuid.home">
+                    <Success />
+                  </IfCondition>
+                  <DefaultBranch>
+                    <Success />
+                  </DefaultBranch>
+                </Switch>
+                <Switch>
+                  <IfCondition failOnCondition="false" condition="$home ~= $__null">
+                    <Sequence>
+                      <CreateInformationWrapper Label="&apos;trespass&apos;" PerceivedWuid="$home" PositionType="positionVec3" PositionVec3="$position" PositionWuid="" Information="$information" />
+                      <GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                        <LinkTagFilter tag="&apos;home&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                        <WUIDFilter WUID="$home" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                        <EvaLLyzer Expresion="$isMyHome = true" Quantifiers="Exists" saveVersion="2" />
+                      </GraphSearch>
+                      <GetOwner Object="$home" Owner="$homeOwner" />
+                      <Expression expressions="$maxCounter = $data:script_param[&apos;crime_trespassEscalationThreshold&apos;].value + 1" />
+                      <AddHomeTrespassEscalation Home="$home" Counter="$maxCounter" IsPaused="false" />
+                      <LockDynamicInformationValues Information="$information">
+                        <SetDynamicInformationValue Information="$information" Tag="&apos;victim&apos;" Variable="$homeOwner" Type="" Value="" />
+                      </LockDynamicInformationValues>
+                    </Sequence>
+                  </IfCondition>
+                  <IfCondition failOnCondition="false" condition="$wuidType == $enum:crime_trespassInformationWuid.homeArea &amp; &#10;$trespassArea ~= $__null">
+                    <Sequence>
+                      <CreateInformationWrapper Label="&apos;trespass&apos;" PerceivedWuid="$trespassArea" PositionType="positionVec3" PositionVec3="$position" PositionWuid="" Information="$information" />
+                      <LockDynamicInformationValues Information="$information">
+                        <SetDynamicInformationValue Information="$information" Tag="&apos;victim&apos;" Variable="$this.id" Type="" Value="" />
+                      </LockDynamicInformationValues>
+                    </Sequence>
+                  </IfCondition>
+                  <DefaultBranch>
+                    <Sequence>
+                      <CreateInformationWrapper Label="&apos;trespass&apos;" PerceivedWuid="$__player" PositionType="positionVec3" PositionVec3="$position" PositionWuid="" Information="$information" />
+                      <LockDynamicInformationValues Information="$information">
+                        <SetDynamicInformationValue Information="$information" Tag="&apos;victim&apos;" Variable="$this.id" Type="" Value="" />
+                      </LockDynamicInformationValues>
+                    </Sequence>
+                  </DefaultBranch>
+                </Switch>
+                <LockDynamicInformationValues Information="$information">
+                  <SetDynamicInformationValue Information="$information" Tag="&apos;complementaryToOtherCrime&apos;" Variable="$complementaryToOtherCrime" Type="" Value="" />
+                </LockDynamicInformationValues>
+              </Sequence>
+            </Then>
+            <Else canSkip="1">
+              <IfCondition failOnCondition="false" condition="$trespassArea ~= $__null">
+                <Sequence>
+                  <CreateInformationWrapper Label="&apos;trespass&apos;" PerceivedWuid="$trespassArea" PositionType="positionVec3" PositionVec3="$position" PositionWuid="" Information="$information" />
+                  <LockDynamicInformationValues Information="$information">
+                    <Sequence>
+                      <SetDynamicInformationValue Information="$information" Tag="&apos;victim&apos;" Variable="$this.id" Type="" Value="" />
+                      <SetDynamicInformationValue Information="$information" Tag="&apos;complementaryToOtherCrime&apos;" Variable="$complementaryToOtherCrime" Type="" Value="" />
+                      <SetDynamicInformationValue Information="$information" Tag="&apos;isKzikTrespass&apos;" Variable="$isKzikTrespass" Type="" Value="" />
+                    </Sequence>
+                  </LockDynamicInformationValues>
+                </Sequence>
+              </IfCondition>
+            </Else>
+          </IfElseCondition>
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="homeOwner" comment="" />
+        <Variable name="isMyHome" comment="" />
+        <Variable name="maxCounter" comment="" />
+        <Variable name="position" comment="" />
+        <Variable name="complementaryToOtherCrime" comment="" />
+        <Variable name="home" comment="" />
+        <Variable name="information" comment="" />
+        <Variable name="isKzikTrespass" comment="" />
+        <Variable name="trespassArea" comment="" />
+        <Variable name="wuidType" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </GetSpatialInfo>
+            <IfElseCondition hasInputBreakpoint="0" comment="IDK duuuuude" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Then>
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Function_crime_getHomeFromArea hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Function_crime_getHomeFromArea>
+                      </SuppressFailure>
+                    </IfCondition>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Success>
+                    </IfCondition>
+                    <DefaultBranch>
+                      <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Success>
+                    </DefaultBranch>
+                  </Switch>
+                  <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </CreateInformationWrapper>
+                        <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </LinkTagFilter>
+                          <WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </WUIDFilter>
+                          <EvaLLyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                          </EvaLLyzer>
+                        </GraphSearch>
+                        <GetOwner hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </GetOwner>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                        <AddHomeTrespassEscalation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </AddHomeTrespassEscalation>
+                        <LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </SetDynamicInformationValue>
+                        </LockDynamicInformationValues>
+                      </Sequence>
+                    </IfCondition>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </CreateInformationWrapper>
+                        <LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </SetDynamicInformationValue>
+                        </LockDynamicInformationValues>
+                      </Sequence>
+                    </IfCondition>
+                    <DefaultBranch>
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </CreateInformationWrapper>
+                        <LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </SetDynamicInformationValue>
+                        </LockDynamicInformationValues>
+                      </Sequence>
+                    </DefaultBranch>
+                  </Switch>
+                  <LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </SetDynamicInformationValue>
+                  </LockDynamicInformationValues>
+                </Sequence>
+              </Then>
+              <Else>
+                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </CreateInformationWrapper>
+                    <LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </SetDynamicInformationValue>
+                        <SetDynamicInformationValue hasInputBreakpoint="0" comment="Irrelevant, but keep it here" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </SetDynamicInformationValue>
+                        <SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </SetDynamicInformationValue>
+                      </Sequence>
+                    </LockDynamicInformationValues>
+                  </Sequence>
+                </IfCondition>
+              </Else>
+            </IfElseCondition>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

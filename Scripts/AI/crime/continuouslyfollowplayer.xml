@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_continuouslyFollowPlayer" is_function="1">
+		<Variables>
+			<Variable name="boostedCloseDistance" type="_float" values="0" isPersistent="0" form="single" />
+			<Variable name="boostedStopDistance" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="closeDistanceBoost" type="_float" values="0" isPersistent="0" form="single" />
+			<Variable name="dot" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="facingPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerClose" type="_bool" values="true" isPersistent="0" form="single" />
+			<Variable name="stopDistanceBoost" type="_float" values="0" isPersistent="0" form="single" />
+			<Variable name="updateMove" type="_bool" values="false" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="moveParams" type="additionalMoveParams" values="" isPersistent="0" form="single" requirementType="ConstReference" optional="1" />
+			<Variable name="movementSpeed" type="enum:movementSpeed" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="pathFindingParams" type="pathFindingParams" values="" isPersistent="0" form="single" requirementType="ConstReference" optional="1" />
+			<Variable name="playerCloseDistance" type="_float" values="2" isPersistent="0" form="single" requirementType="ConstReference" optional="1" />
+			<Variable name="stopWithinDistance" type="_float" values="1" isPersistent="0" form="single" requirementType="ConstReference" optional="1" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<MoveParamsDecorator speed="$movementSpeed" pathFindingParams="$pathFindingParams" doorClosingPolicy="LeaveOpened">
+					<Parallel successMode="Any" failureMode="Any">
+						<Loop count="-1">
+							<Sequence>
+								<LinkGate from="$__player" to="" tag="&apos;mount&apos;" amount="AtLeastOne" presence="Present" RunLogic="Halt">
+									<Sequence>
+										<Expression expressions="$stopDistanceBoost = 1.5 &#10;$closeDistanceBoost = 1.5 &#10;$updateMove = true" />
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</LinkGate>
+								<Expression expressions="$stopDistanceBoost = 0 &#10;$closeDistanceBoost = 0 &#10;$updateMove = true" />
+							</Sequence>
+						</Loop>
+						<ContinuousSwitch>
+							<IfCondition failOnCondition="false" condition="$playerClose">
+								<Parallel successMode="Any" failureMode="Any">
+									<Sequence>
+										<Expression expressions="$boostedCloseDistance = $playerCloseDistance + $closeDistanceBoost" />
+										<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="$boostedCloseDistance" High="$boostedCloseDistance" Negation="true" OpenInMiddle="false" RunLogic="KeepRunning">
+											<Expression expressions="$playerClose = false" />
+										</DistanceGate>
+									</Sequence>
+									<CrimeFollower Target="$__player" Mode="NoMoveOnlyTurn" Role="Main" RelativeSpeedLimit="Dash" DisableGhosting="false" />
+								</Parallel>
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="true">
+								<ContinuousSwitch>
+									<IfCondition failOnCondition="false" condition="$updateMove">
+										<Expression expressions="$updateMove = false" />
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="true">
+										<Semaphore SemaphoreCount="1" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;SAL_action_running&apos;">
+											<Sequence>
+												<Expression expressions="$boostedStopDistance = $stopWithinDistance + $stopDistanceBoost" />
+												<WaitAction />
+												<Move stopWithinDistance="$boostedStopDistance" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$__player" destinationSpecification2="" destinationSpecification3="" speed="$movementSpeed" additionalParams="$moveParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+												<Expression expressions="$playerClose = true" />
+											</Sequence>
+										</Semaphore>
+									</IfCondition>
+								</ContinuousSwitch>
+							</IfCondition>
+						</ContinuousSwitch>
+					</Parallel>
+				</MoveParamsDecorator>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<ContinuousSwitch>
+				<IfCondition failOnCondition="false" condition="~$facingPlayer">
+					<Semaphore SemaphoreCount="1" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;SAL_action_running&apos;">
+						<SuppressFailure>
+							<Sequence>
+								<WaitAction />
+								<Turn target="$__player" align="false" />
+								<Expression expressions="$facingPlayer = true" />
+							</Sequence>
+						</SuppressFailure>
+					</Semaphore>
+				</IfCondition>
+				<IfCondition failOnCondition="false" condition="$facingPlayer">
+					<Sequence>
+						<Loop count="20">
+							<Sequence>
+								<Wait duration="&apos;200ms&apos;" timeType="GameTime" doFail="false" variation="&apos;200ms&apos;" />
+								<NumericalOperation In1VariableName="this.id" In2VariableName="__player" In3VariableName="" OutVariableName="$dot" Operation="dot(w1_look_dir, w1_to_w2_dir)" />
+								<IfCondition failOnCondition="false" condition="$dot &lt; 0.7">
+									<Expression expressions="$facingPlayer = false" />
+								</IfCondition>
+							</Sequence>
+						</Loop>
+						<Expression expressions="$facingPlayer = false" />
+					</Sequence>
+				</IfCondition>
+			</ContinuousSwitch>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="boostedCloseDistance" comment="" />
+				<Variable name="boostedStopDistance" comment="" />
+				<Variable name="closeDistanceBoost" comment="" />
+				<Variable name="dot" comment="" />
+				<Variable name="facingPlayer" comment="" />
+				<Variable name="playerClose" comment="" />
+				<Variable name="stopDistanceBoost" comment="" />
+				<Variable name="updateMove" comment="" />
+				<Variable name="moveParams" comment="" />
+				<Variable name="movementSpeed" comment="" />
+				<Variable name="pathFindingParams" comment="" />
+				<Variable name="playerCloseDistance" comment="" />
+				<Variable name="stopWithinDistance" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</LinkGate>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+								</Sequence>
+							</Loop>
+							<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</DistanceGate>
+										</Sequence>
+										<CrimeFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</CrimeFollower>
+									</Parallel>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Semaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</WaitAction>
+													<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Move>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Sequence>
+											</Semaphore>
+										</IfCondition>
+									</ContinuousSwitch>
+								</IfCondition>
+							</ContinuousSwitch>
+						</Parallel>
+					</MoveParamsDecorator>
+				</Behavior>
+			</Root>
+			<Forest>
+				<ContinuousSwitch editorPosX="2660" editorPosY="-200" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Semaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</WaitAction>
+									<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Turn>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+								</Sequence>
+							</SuppressFailure>
+						</Semaphore>
+					</IfCondition>
+					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+									<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</NumericalOperation>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</IfCondition>
+								</Sequence>
+							</Loop>
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</Sequence>
+					</IfCondition>
+				</ContinuousSwitch>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

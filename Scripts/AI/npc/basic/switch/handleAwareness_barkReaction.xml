@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleAwareness_barkReaction" is_function="1">
+		<Variables>
+			<Variable name="cooldownType" type="enum:openWorld_cooldownEventType" values="$enum:openWorld_cooldownEventType.playerCrimeReaction" isPersistent="0" form="single" />
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="dialogContext" type="_float" values="" isPersistent="0" form="associative" />
+			<Variable name="onCooldown" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerIsConspicuous" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="scheduledPriority" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="skipBark" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="usePersonalCooldown" type="_bool" values="true" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="reactionIntermediateData" type="switch:reactionIntermediateData" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<GetScheduledPriority Priority="$scheduledPriority" />
+					<IfCondition failOnCondition="false" condition="$scheduledPriority &lt;= 19">
+						<Sequence>
+							<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.barkKind &lt;= $enum:crime_barkReactionKind.semipublicTrespass">
+								<EntityContextCheck context="speech_playerWasRecentlyInNormalDialog" target="$__player" saveVersion="2">
+									<Then canSkip="1">
+										<Expression expressions="$skipBark = true" />
+									</Then>
+								</EntityContextCheck>
+							</IfCondition>
+							<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+							<IfCondition failOnCondition="false" condition="~$skipBark">
+								<Sequence>
+									<Switch>
+										<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.barkKind == $enum:crime_barkReactionKind.greetPlayer">
+											<Expression expressions="$cooldownType = $enum:openWorld_cooldownEventType.playerGreeting" />
+										</IfCondition>
+										<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.barkKind == $enum:crime_barkReactionKind.companionHorse">
+											<Expression expressions="$cooldownType = $enum:openWorld_cooldownEventType.commentCompanionHorse" />
+										</IfCondition>
+										<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.barkKind == $enum:crime_barkReactionKind.companionDog">
+											<Expression expressions="$cooldownType = $enum:openWorld_cooldownEventType.commentCompanionDog" />
+										</IfCondition>
+										<DefaultBranch>
+											<Success />
+										</DefaultBranch>
+									</Switch>
+									<Function_crime_checkOpenWorldCooldown cooldownType="$cooldownType" crimeReactionKind="$reactionIntermediateData.barkData.barkKind" crimeReactionPriority="$reactionIntermediateData.barkData.priority" npc="$this.id" onCooldown="$onCooldown" nodeLabel="11889750" />
+									<IfCondition failOnCondition="false" condition="~$onCooldown">
+										<Sequence>
+											<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.serializedDialogContext ~= &apos;&apos;">
+												<Function_switch_deserializeDialogueContext serializedString="$reactionIntermediateData.barkData.serializedDialogContext" dialogContext="$dialogContext" nodeLabel="47542369" />
+											</IfCondition>
+											<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.genderData.isGenderSpecific">
+												<IfElseCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.genderData.isMan" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$dialogContext[&apos;isMan&apos;] = 1" />
+													</Then>
+													<Else canSkip="1">
+														<Expression expressions="$dialogContext[&apos;isMan&apos;] = 0" />
+													</Else>
+												</IfElseCondition>
+											</IfCondition>
+											<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.barkType == $enum:crime_barkReactionType.chat">
+												<EntityContextCheck context="crime_bff" target="" saveVersion="2">
+													<Else canSkip="1">
+														<EntityContextCheck context="crime_isAuthorityOnDuty" target="" saveVersion="2">
+															<Else canSkip="1">
+																<EntityContextCheck context="crime_alwaysGreetPlayerWithChat" target="" saveVersion="2">
+																	<Else canSkip="1">
+																		<Sequence>
+																			<Function_crime_checkPlayerConspicuousness isPlayerConspicuous="$playerIsConspicuous" nodeLabel="83553052" />
+																			<IfCondition failOnCondition="false" condition="!$playerIsConspicuous">
+																				<Expression expressions="$reactionIntermediateData.barkData.barkType = $enum:crime_barkReactionType.ingameMonolog" />
+																			</IfCondition>
+																		</Sequence>
+																	</Else>
+																</EntityContextCheck>
+															</Else>
+														</EntityContextCheck>
+													</Else>
+												</EntityContextCheck>
+											</IfCondition>
+											<Switch>
+												<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.barkType == $enum:crime_barkReactionType.ingameMonolog">
+													<Sequence>
+														<Function_crime_addOpenWorldCooldown cooldownType="$cooldownType" crimeReactionPriority="$reactionIntermediateData.barkData.priority" globalCooldown="true" personalCooldown="true" nodeLabel="19298103" />
+														<Function_crime_crimeSwitchBark animationApproach="$reactionIntermediateData.barkData.animationApproach" canBarkFromSleep="false" canBeDelayed="false" dialogContext="$dialogContext" dramaticBark="$reactionIntermediateData.barkData.isDramatic" lookAt="$reactionIntermediateData.barkData.lookAt" metarole="$reactionIntermediateData.barkData.metarole" priority="$enum:crime_barkPriority.low" nodeLabel="49984470" />
+													</Sequence>
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.barkType == $enum:crime_barkReactionType.chat">
+													<Sequence>
+														<EntityContextCheck context="crime_bff" target="" saveVersion="2">
+															<Else canSkip="1">
+																<EntityContextCheck context="crime_isAuthorityOnDuty" target="" saveVersion="2">
+																	<Else canSkip="1">
+																		<Expression expressions="$usePersonalCooldown = false" />
+																	</Else>
+																</EntityContextCheck>
+															</Else>
+														</EntityContextCheck>
+														<Function_crime_addOpenWorldCooldown cooldownType="$cooldownType" crimeReactionPriority="$reactionIntermediateData.barkData.priority" globalCooldown="true" personalCooldown="$usePersonalCooldown" nodeLabel="25277439" />
+														<Function_speech_chat alias="" canBeDelayed="false" context="$dialogContext" important="false" lookAtId="$reactionIntermediateData.barkData.lookAt" metarole="$reactionIntermediateData.barkData.metarole" target="$this.id" wait="false" nodeLabel="67341968" />
+													</Sequence>
+												</IfCondition>
+											</Switch>
+											<IfCondition failOnCondition="false" condition="$reactionIntermediateData.animData.fragment ~= &apos;&apos;">
+												<PlayAdditiveAnimation Fragment="$reactionIntermediateData.animData.fragment" Tags="$reactionIntermediateData.animData.tags" />
+											</IfCondition>
+										</Sequence>
+									</IfCondition>
+								</Sequence>
+							</IfCondition>
+						</Sequence>
+					</IfCondition>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="cooldownType" comment="" />
+				<Variable name="currentTime" comment="" />
+				<Variable name="dialogContext" comment="" />
+				<Variable name="onCooldown" comment="" />
+				<Variable name="playerIsConspicuous" comment="" />
+				<Variable name="scheduledPriority" comment="" />
+				<Variable name="skipBark" comment="" />
+				<Variable name="usePersonalCooldown" comment="" />
+				<Variable name="reactionIntermediateData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="20" editorPosY="240" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GetScheduledPriority hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetScheduledPriority>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Then>
+									</EntityContextCheck>
+								</IfCondition>
+								<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</GetTime>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Switch hasInputBreakpoint="0" comment="" breakpointFlags="4">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="4">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="4">
+													<OutputBreakpoints />
+												</Expression>
+											</IfCondition>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="4">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="4">
+													<OutputBreakpoints />
+												</Expression>
+											</IfCondition>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="4">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="4">
+													<OutputBreakpoints />
+												</Expression>
+											</IfCondition>
+											<DefaultBranch>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="4">
+													<OutputBreakpoints />
+												</Success>
+											</DefaultBranch>
+										</Switch>
+										<Function_crime_checkOpenWorldCooldown hasInputBreakpoint="0" comment="" breakpointFlags="4">
+											<OutputBreakpoints />
+										</Function_crime_checkOpenWorldCooldown>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="4">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="4">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="4">
+													<OutputBreakpoints />
+													<Function_switch_deserializeDialogueContext hasInputBreakpoint="0" comment="" breakpointFlags="4">
+														<OutputBreakpoints />
+													</Function_switch_deserializeDialogueContext>
+												</IfCondition>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="4">
+													<OutputBreakpoints />
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="4" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="4">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+														<Else>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="4">
+																<OutputBreakpoints />
+															</Expression>
+														</Else>
+													</IfElseCondition>
+												</IfCondition>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContextCheck hasInputBreakpoint="0" comment="bffs always use chat" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Else>
+															<EntityContextCheck hasInputBreakpoint="0" comment="Guards on duty always use chat" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Else>
+																	<EntityContextCheck hasInputBreakpoint="0" comment="quest chat greeting overrides use this context so that the NPC always greets via chat" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Else>
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Function_crime_checkPlayerConspicuousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_checkPlayerConspicuousness>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="standard NPC greet player via chat only if he is conspicuous" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</IfCondition>
+																			</Sequence>
+																		</Else>
+																	</EntityContextCheck>
+																</Else>
+															</EntityContextCheck>
+														</Else>
+													</EntityContextCheck>
+												</IfCondition>
+												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="4">
+													<OutputBreakpoints />
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="4">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="4">
+															<OutputBreakpoints />
+															<Function_crime_addOpenWorldCooldown hasInputBreakpoint="0" comment="" breakpointFlags="4">
+																<OutputBreakpoints />
+															</Function_crime_addOpenWorldCooldown>
+															<Function_crime_crimeSwitchBark hasInputBreakpoint="0" comment="" breakpointFlags="4">
+																<OutputBreakpoints />
+															</Function_crime_crimeSwitchBark>
+														</Sequence>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="4">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<EntityContextCheck hasInputBreakpoint="0" comment="BFF have their own chats and they use them as greetings, once a day - personal Cooldown used" breakpointFlags="4" saveVersion="2">
+																<OutputBreakpoints />
+																<Else>
+																	<EntityContextCheck hasInputBreakpoint="0" comment="Guards have their own chat when theyre on duty and they should be also heard only once per day per NPC - therefore personal cooldown was used " breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Else>
+																			<Expression hasInputBreakpoint="0" comment="The rest use chat only for snidy remarks which shouldnt set the personal cooldown" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Else>
+																	</EntityContextCheck>
+																</Else>
+															</EntityContextCheck>
+															<Function_crime_addOpenWorldCooldown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_addOpenWorldCooldown>
+															<Function_speech_chat hasInputBreakpoint="0" comment="" breakpointFlags="4">
+																<OutputBreakpoints />
+															</Function_speech_chat>
+														</Sequence>
+													</IfCondition>
+												</Switch>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="4">
+													<OutputBreakpoints />
+													<PlayAdditiveAnimation hasInputBreakpoint="0" comment="" breakpointFlags="4">
+														<OutputBreakpoints />
+													</PlayAdditiveAnimation>
+												</IfCondition>
+											</Sequence>
+										</IfCondition>
+									</Sequence>
+								</IfCondition>
+							</Sequence>
+						</IfCondition>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

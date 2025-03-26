@@ -1,0 +1,464 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleAwareness_suspiciousDoor" is_function="1">
+		<Variables>
+			<Variable name="door" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="doorIsRelevant" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="doorPoint" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="doorPoint2" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="freshlyOpened" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="home" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="homeEscalationCounter" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="homeEscalationIsPaused" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="isBandit" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="myHome" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="now" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="playerRelated" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="pos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="shouldReact" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="shouldWatch" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusTrespass" type="switch:stimulus:trespass" values="" isPersistent="0" form="single" />
+			<Variable name="suspiciousInteractionTimestamp" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="trespassArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="trespassAreaSevereness" type="enum:trespassLevel" values="" isPersistent="0" form="single" />
+			<Variable name="trespassReaction" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="trespassReactionSuppressed" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="volume" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Switch>
+					<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Success />
+						</Then>
+					</EntityContextCheck>
+					<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Success />
+						</Then>
+					</EntityContextCheck>
+					<EntityContextCheck context="crime_ignorePlayerPerception" target="" saveVersion="2">
+						<Then canSkip="1">
+							<IgnorePerception PerceptorObject="$this.id" PerceptibleObject="$volume" IgnoreFor="&apos;-1&apos;" TimerType="GameTime" Uninterruptible="false" Persistent="true" />
+						</Then>
+					</EntityContextCheck>
+					<EntityContextCheck context="crime_bff" target="" saveVersion="2">
+						<Then canSkip="1">
+							<IgnorePerception PerceptorObject="$this.id" PerceptibleObject="$volume" IgnoreFor="&apos;-1&apos;" TimerType="GameTime" Uninterruptible="false" Persistent="true" />
+						</Then>
+					</EntityContextCheck>
+					<DefaultBranch>
+						<CheckWuidValid wuid="$volume" FailSubtMissing="false" saveVersion="2">
+							<Then canSkip="1">
+								<Sequence>
+									<GraphSearch Origin="$volume" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;crime_suspiciousDoor&apos;" prune="true" negprune="unknown" Parent="" Child="$door" Data="" />
+									</GraphSearch>
+									<GetTime TimeType="GameTime" OutVar="$now" Delta="" />
+									<ExecuteLua code="data.suspiciousInteractionTimestamp = XGenAIModule.GetEntityByWUID(data.door).suspiciousInteractionTimestamp" />
+									<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;home&apos;" prune="true" negprune="unknown" Parent="" Child="$myHome" Data="" />
+									</GraphSearch>
+									<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+										<Then canSkip="1">
+											<Sequence>
+												<Function_crime_equipmentBelongsToHome equipment="$door" home="$myHome" equipmentBelongsToHome="$doorIsRelevant" nodeLabel="29955934" />
+												<IfCondition failOnCondition="false" condition="~$doorIsRelevant">
+													<HasSeenPlayer NPC="" FullyAwareOnly="false" saveVersion="2">
+														<Then canSkip="1">
+															<ExecuteLua code="data.doorIsRelevant = XGenAIModule.GetEntityByWUID(data.door).Properties.Lock.bLocked" />
+														</Then>
+														<Else canSkip="1">
+															<Success />
+														</Else>
+													</HasSeenPlayer>
+												</IfCondition>
+											</Sequence>
+										</Then>
+										<Else canSkip="1">
+											<Function_crime_equipmentBelongsToHome equipment="$door" home="$myHome" equipmentBelongsToHome="$doorIsRelevant" nodeLabel="83176006" />
+										</Else>
+									</EntityContextCheck>
+									<GetDoorPoints Door="$door" Observer="$this.id" Point1="$doorPoint" Point2="$doorPoint2" />
+									<IfCondition failOnCondition="false" condition="$doorIsRelevant">
+										<Sequence>
+											<DetermineTrespassReaction Observer="$this.id" Target="$__player" Position="$doorPoint" ForceSemipublicReaction="false" ShouldUseVec3Position="true" TrespassAreaSevereness="$trespassAreaSevereness" TrespassArea="$trespassArea" Reaction="$doorIsRelevant" ReactionSuppressed="$trespassReactionSuppressed" />
+											<IfCondition failOnCondition="false" condition="~$doorIsRelevant | $trespassAreaSevereness &lt; $enum:trespassLevel.personal">
+												<DetermineTrespassReaction Observer="$this.id" Target="$__player" Position="$doorPoint2" ForceSemipublicReaction="false" ShouldUseVec3Position="true" TrespassAreaSevereness="$trespassAreaSevereness" TrespassArea="$trespassArea" Reaction="$doorIsRelevant" ReactionSuppressed="$trespassReactionSuppressed" />
+											</IfCondition>
+											<Expression expressions="$doorIsRelevant = $doorIsRelevant &amp; $trespassAreaSevereness &gt;= $enum:trespassLevel.personal" />
+										</Sequence>
+									</IfCondition>
+									<IfElseCondition failOnCondition="false" condition="$doorIsRelevant" saveVersion="2">
+										<Then canSkip="1">
+											<Sequence>
+												<HasSeenPlayer NPC="" FullyAwareOnly="false" saveVersion="2">
+													<Then canSkip="1">
+														<Sequence>
+															<DetermineTrespassReaction Observer="$this.id" Target="$__player" Position="" ForceSemipublicReaction="false" ShouldUseVec3Position="false" TrespassAreaSevereness="$trespassAreaSevereness" TrespassArea="$trespassArea" Reaction="$trespassReaction" ReactionSuppressed="$trespassReactionSuppressed" />
+															<IfElseCondition failOnCondition="false" condition="$trespassReaction" saveVersion="2">
+																<Then canSkip="1">
+																	<Sequence>
+																		<IsBandit Npc="$this.id" IsBandit="$isBandit" />
+																		<IfCondition failOnCondition="false" condition="$isBandit">
+																			<Expression expressions="$stimulusTrespass.isCampTrespass = true" />
+																		</IfCondition>
+																		<Expression expressions="$stimulusTrespass.area = $trespassArea" />
+																		<EntityContext context="switch_doNotOpenRecognizingLock" target="">
+																			<Function_switch_handleStimulusTrespass stimulus="$stimulusTrespass" nodeLabel="73745905" />
+																		</EntityContext>
+																	</Sequence>
+																</Then>
+																<Else canSkip="1">
+																	<Sequence>
+																		<GetSpatialInfo In="$__player" Out="$pos" What="Position" />
+																		<CheckReactionLimit DesiredReactionType="$enum:crime_reactionType.mildWatchTrespass" Information="" Position="$pos" StimulusKind="$enum:crime_stimulusKind.trespass" ShouldReact="$shouldReact" ShouldWatch="$shouldWatch" />
+																		<IfCondition failOnCondition="false" condition="$shouldReact">
+																			<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+																				<Then canSkip="1">
+																					<Function_stealth_recognitionState_II_reaction stimulusKind="$enum:crime_stimulusKind.suspiciousDoor" target="$__player" nodeLabel="44932663" />
+																				</Then>
+																				<Else canSkip="1">
+																					<Function_callInterrupt_mindPlayer ignorePriority="false" initiator="$enum:switch_interruptInitiator.scheduler" previousReaction="$enum:crime_reactionKind.checkProperty" soundType="$enum:sound.invalid" stimulusKind="$enum:crime_stimulusKind.suspiciousDoor" nodeLabel="63088942" />
+																				</Else>
+																			</EntityContextCheck>
+																		</IfCondition>
+																	</Sequence>
+																</Else>
+															</IfElseCondition>
+														</Sequence>
+													</Then>
+													<Else canSkip="1">
+														<Sequence>
+															<Function_crime_getEquipmentsHome equipment="$door" home="$home" nodeLabel="54189480" />
+															<GetHomeTrespassEscalation Home="$home" Counter="$homeEscalationCounter" IsPaused="$homeEscalationIsPaused" />
+															<Expression expressions="$doorIsRelevant = $homeEscalationCounter == 0" />
+															<IfElseCondition failOnCondition="false" condition="$doorIsRelevant" saveVersion="2">
+																<Then canSkip="1">
+																	<Sequence>
+																		<AffectFeelings Npc="" Token="&apos;suspiciousDoor&apos;" AffectNervousness="true" AffectReputation="false" />
+																		<Expression expressions="$freshlyOpened = $now/1000 - $suspiciousInteractionTimestamp &lt; 5" />
+																		<Function_callInterrupt_checkProperty home="$home" ignorePriority="false" initiator="$enum:switch_interruptInitiator.switch" missingNpc="" previousReaction="$enum:crime_reactionKind.unknown" stimulusKind="$enum:crime_stimulusKind.suspiciousDoor" suspiciousDoor="$door" suspiciousDoorFreshlyOpened="$freshlyOpened" nodeLabel="57663135" />
+																		<IfCondition failOnCondition="false" condition="~$freshlyOpened">
+																			<SuppressFailure>
+																				<Sequence>
+																					<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																						<LinkTagFilter tag="&apos;home&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																						<WUIDFilter WUID="$home" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																					</GraphSearch>
+																					<Function_crime_checkLongTermMemoryTrespass home="$home" knowAboutPlayer="$playerRelated" nodeLabel="36104544" />
+																					<Function_crime_addFollowUp_checkHomeStashes home="$home" information="" playerRelated="$playerRelated" resetStolenItemsFound="false" stolenItemsFound="false" added="" nodeLabel="93611811" />
+																				</Sequence>
+																			</SuppressFailure>
+																		</IfCondition>
+																	</Sequence>
+																</Then>
+															</IfElseCondition>
+														</Sequence>
+													</Else>
+												</HasSeenPlayer>
+												<ExecuteLua code="local door = XGenAIModule.GetEntityByWUID(data.door) &#10;door:DespawnSuspiciousVolume()" />
+											</Sequence>
+										</Then>
+										<Else canSkip="1">
+											<IgnorePerception PerceptorObject="$this.id" PerceptibleObject="$volume" IgnoreFor="&apos;-1&apos;" TimerType="GameTime" Uninterruptible="false" Persistent="true" />
+										</Else>
+									</IfElseCondition>
+								</Sequence>
+							</Then>
+						</CheckWuidValid>
+					</DefaultBranch>
+				</Switch>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="door" comment="" />
+				<Variable name="doorIsRelevant" comment="" />
+				<Variable name="doorPoint" comment="" />
+				<Variable name="doorPoint2" comment="" />
+				<Variable name="freshlyOpened" comment="" />
+				<Variable name="home" comment="" />
+				<Variable name="homeEscalationCounter" comment="" />
+				<Variable name="homeEscalationIsPaused" comment="" />
+				<Variable name="isBandit" comment="" />
+				<Variable name="myHome" comment="" />
+				<Variable name="now" comment="" />
+				<Variable name="playerRelated" comment="" />
+				<Variable name="pos" comment="" />
+				<Variable name="shouldReact" comment="" />
+				<Variable name="shouldWatch" comment="" />
+				<Variable name="stimulusTrespass" comment="" />
+				<Variable name="suspiciousInteractionTimestamp" comment="" />
+				<Variable name="trespassArea" comment="" />
+				<Variable name="trespassAreaSevereness" comment="" />
+				<Variable name="trespassReaction" comment="" />
+				<Variable name="trespassReactionSuppressed" comment="" />
+				<Variable name="volume" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Then>
+						</EntityContextCheck>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Then>
+						</EntityContextCheck>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<IgnorePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</IgnorePerception>
+							</Then>
+						</EntityContextCheck>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<IgnorePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</IgnorePerception>
+							</Then>
+						</EntityContextCheck>
+						<DefaultBranch>
+							<CheckWuidValid hasInputBreakpoint="0" comment="someone else might have perceived it before this perceptionMessage was processed and despawned the volume" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Then>
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+										<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetTime>
+										<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ExecuteLua>
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_crime_equipmentBelongsToHome hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_equipmentBelongsToHome>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</ExecuteLua>
+															</Then>
+															<Else>
+																<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Success>
+															</Else>
+														</HasSeenPlayer>
+													</IfCondition>
+												</Sequence>
+											</Then>
+											<Else>
+												<Function_crime_equipmentBelongsToHome hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_crime_equipmentBelongsToHome>
+											</Else>
+										</EntityContextCheck>
+										<GetDoorPoints hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetDoorPoints>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</DetermineTrespassReaction>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</DetermineTrespassReaction>
+												</IfCondition>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Sequence>
+										</IfCondition>
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</DetermineTrespassReaction>
+																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IsBandit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</IsBandit>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</IfCondition>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Function_switch_handleStimulusTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_switch_handleStimulusTrespass>
+																			</EntityContext>
+																		</Sequence>
+																	</Then>
+																	<Else>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</GetSpatialInfo>
+																			<CheckReactionLimit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</CheckReactionLimit>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Then>
+																						<Function_stealth_recognitionState_II_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_stealth_recognitionState_II_reaction>
+																					</Then>
+																					<Else>
+																						<Function_callInterrupt_mindPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_callInterrupt_mindPlayer>
+																					</Else>
+																				</EntityContextCheck>
+																			</IfCondition>
+																		</Sequence>
+																	</Else>
+																</IfElseCondition>
+															</Sequence>
+														</Then>
+														<Else>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_crime_getEquipmentsHome hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_getEquipmentsHome>
+																<GetHomeTrespassEscalation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetHomeTrespassEscalation>
+																<Expression hasInputBreakpoint="0" comment="door is relevant only if there was no trespass reaction recently" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<AffectFeelings hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</AffectFeelings>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<Function_callInterrupt_checkProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_callInterrupt_checkProperty>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<GraphSearch hasInputBreakpoint="0" comment="guards wont check ppls stashes" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</LinkTagFilter>
+																							<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</WUIDFilter>
+																						</GraphSearch>
+																						<Function_crime_checkLongTermMemoryTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_checkLongTermMemoryTrespass>
+																						<Function_crime_addFollowUp_checkHomeStashes hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_addFollowUp_checkHomeStashes>
+																					</Sequence>
+																				</SuppressFailure>
+																			</IfCondition>
+																		</Sequence>
+																	</Then>
+																</IfElseCondition>
+															</Sequence>
+														</Else>
+													</HasSeenPlayer>
+													<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</ExecuteLua>
+												</Sequence>
+											</Then>
+											<Else>
+												<IgnorePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</IgnorePerception>
+											</Else>
+										</IfElseCondition>
+									</Sequence>
+								</Then>
+							</CheckWuidValid>
+						</DefaultBranch>
+					</Switch>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="situation_greeting_isValidReceiver" is_function="1">
+		<Variables>
+			<Variable name="areMates" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="currentSchedulerPriority" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="dotMeToReceiver" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="dotReceiverToMe" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="entityType" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="greetAllowed" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="greeters" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="greetingLock" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="shouldGreet" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="isValid" type="_bool" values="" isPersistent="0" form="single" requirementType="Out" />
+			<Variable name="receiver" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Expression expressions="$isValid = false" />
+					<GetType WUID="$receiver" OutString="$entityType" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+					<IfCondition failOnCondition="false" condition="$entityType == &apos;NPC&apos; &amp; &#10;$receiver ~= $__player">
+						<CheckWuidValid wuid="$receiver" FailSubtMissing="false" saveVersion="2">
+							<Then canSkip="1">
+								<Sequence>
+									<Expression expressions="$greetAllowed = true &#10;$shouldGreet = true" />
+									<SuppressFailure>
+										<Sequence>
+											<Sequence>
+												<EntityContextCheck context="situation_suppressNPCGreetings" target="" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$greetAllowed = false" />
+													</Then>
+												</EntityContextCheck>
+												<EntityContextCheck context="situation_allowGreetings" target="$this.id" saveVersion="2">
+													<Else canSkip="1">
+														<Expression expressions="$greetAllowed = false" />
+													</Else>
+												</EntityContextCheck>
+												<EntityContextCheck context="situation_allowGreetings" target="$receiver" saveVersion="2">
+													<Else canSkip="1">
+														<Expression expressions="$greetAllowed = false" />
+													</Else>
+												</EntityContextCheck>
+												<Sequence>
+													<GetScheduledPriority Priority="$currentSchedulerPriority" />
+													<IfCondition failOnCondition="false" condition="$currentSchedulerPriority &gt;= 10">
+														<Expression expressions="$greetAllowed = false" />
+													</IfCondition>
+												</Sequence>
+												<CheckRelationshipInterval_SoulToSoul TargetSoul="$receiver" Soul="$this.id" Flag="friend" saveVersion="2">
+													<Else canSkip="1">
+														<Expression expressions="$greetAllowed = false" />
+													</Else>
+												</CheckRelationshipInterval_SoulToSoul>
+												<IsDeadCheck SoulWUID="$receiver" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$greetAllowed = false" />
+													</Then>
+												</IsDeadCheck>
+												<IsUnconsciousCheck SoulWUID="$receiver" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$greetAllowed = false" />
+													</Then>
+												</IsUnconsciousCheck>
+												<EntityContextCheck context="crime_sleeping" target="" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$greetAllowed = false" />
+													</Then>
+												</EntityContextCheck>
+												<EntityContextCheck context="crime_sleeping" target="$receiver" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$greetAllowed = false" />
+													</Then>
+												</EntityContextCheck>
+											</Sequence>
+											<IfCondition failOnCondition="false" condition="$greetAllowed">
+												<Sequence>
+													<GetAreMates Npc1="$this.id" Npc2="$receiver" AreMates="$areMates" />
+													<Sequence>
+														<NumericalOperation In1VariableName="receiver" In2VariableName="this.id" In3VariableName="" OutVariableName="$dotReceiverToMe" Operation="dot(w1_look_dir, w1_to_w2_dir)" />
+														<NumericalOperation In1VariableName="this.id" In2VariableName="receiver" In3VariableName="" OutVariableName="$dotMeToReceiver" Operation="dot(w1_look_dir, w1_to_w2_dir)" />
+														<IfElseCondition failOnCondition="false" condition="$areMates" saveVersion="2">
+															<Then canSkip="1">
+																<Expression expressions="$shouldGreet = $dotReceiverToMe &gt;= 0.0" />
+															</Then>
+															<Else canSkip="1">
+																<Expression expressions="$shouldGreet = ($dotReceiverToMe &gt;= 0.65 &amp; &#10;$dotMeToReceiver &gt;= 0.65)" />
+															</Else>
+														</IfElseCondition>
+													</Sequence>
+													<IsGreetingOnCooldown Left="$this.id" Right="$receiver" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$shouldGreet = false" />
+														</Then>
+														<Else canSkip="1">
+															<Success />
+														</Else>
+													</IsGreetingOnCooldown>
+													<IfElseCondition failOnCondition="false" condition="$areMates" saveVersion="2">
+														<Then canSkip="1">
+															<Success />
+														</Then>
+														<Else canSkip="1">
+															<Sequence>
+																<StanceCheck soul="$this.id" stance="standing" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
+																	<Then canSkip="1">
+																		<Success />
+																	</Then>
+																	<Else canSkip="1">
+																		<Expression expressions="$shouldGreet = false" />
+																	</Else>
+																</StanceCheck>
+																<StanceCheck soul="$receiver" stance="standing" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
+																	<Then canSkip="1">
+																		<Success />
+																	</Then>
+																	<Else canSkip="1">
+																		<Expression expressions="$shouldGreet = false" />
+																	</Else>
+																</StanceCheck>
+															</Sequence>
+														</Else>
+													</IfElseCondition>
+													<Expression expressions="$isValid = $shouldGreet" />
+												</Sequence>
+											</IfCondition>
+										</Sequence>
+									</SuppressFailure>
+								</Sequence>
+							</Then>
+						</CheckWuidValid>
+					</IfCondition>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Sequence>
+				<Expression expressions="$greeters[0] = $this.id &#10;$greeters[1] = $receiver" />
+				<VarOperation varName="$greeters" targetVarName="" operation="Sort" argument="&apos;desc&apos;" />
+				<Concatenation OutString="$greetingLock" Pattern="&apos;greeting_$greeters[0];_$greeters[1];&apos;" />
+				<InstantSemaphore SemaphoreCount="1" LockManagerType="Global" SemaphoreName="&apos;$greetingLock&apos;" />
+			</Sequence>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="areMates" comment="" />
+				<Variable name="currentSchedulerPriority" comment="" />
+				<Variable name="dotMeToReceiver" comment="" />
+				<Variable name="dotReceiverToMe" comment="" />
+				<Variable name="entityType" comment="" />
+				<Variable name="greetAllowed" comment="" />
+				<Variable name="greeters" comment="" />
+				<Variable name="greetingLock" comment="" />
+				<Variable name="shouldGreet" comment="" />
+				<Variable name="isValid" comment="" />
+				<Variable name="receiver" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="20" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetType>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Then>
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="Default true, checks turn it false" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="Check for greeting" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContextCheck hasInputBreakpoint="0" comment="I suppress" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+													</EntityContextCheck>
+													<EntityContextCheck hasInputBreakpoint="0" comment="I allow greetings" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Else>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Else>
+													</EntityContextCheck>
+													<EntityContextCheck hasInputBreakpoint="0" comment="Partner allows greetings" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Else>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Else>
+													</EntityContextCheck>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<GetScheduledPriority hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetScheduledPriority>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</IfCondition>
+													</Sequence>
+													<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="Only allow greetings between friends" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Else>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Else>
+													</CheckRelationshipInterval_SoulToSoul>
+													<IsDeadCheck hasInputBreakpoint="0" comment="Kinda obvious" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+													</IsDeadCheck>
+													<IsUnconsciousCheck hasInputBreakpoint="0" comment="Kinda obvious" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+													</IsUnconsciousCheck>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+													</EntityContextCheck>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+													</EntityContextCheck>
+												</Sequence>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<GetAreMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetAreMates>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</NumericalOperation>
+															<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</NumericalOperation>
+															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Then>
+																<Else>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Else>
+															</IfElseCondition>
+														</Sequence>
+														<IsGreetingOnCooldown hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+															<Else>
+																<Success hasInputBreakpoint="0" comment="Is already true" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Success>
+															</Else>
+														</IsGreetingOnCooldown>
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Success hasInputBreakpoint="0" comment="No checks" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Success>
+															</Then>
+															<Else>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<StanceCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Success>
+																		</Then>
+																		<Else>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Else>
+																	</StanceCheck>
+																	<StanceCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Success>
+																		</Then>
+																		<Else>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Else>
+																	</StanceCheck>
+																</Sequence>
+															</Else>
+														</IfElseCondition>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Sequence>
+												</IfCondition>
+											</Sequence>
+										</SuppressFailure>
+									</Sequence>
+								</Then>
+							</CheckWuidValid>
+						</IfCondition>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Sequence editorPosX="710" editorPosY="-480" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+					<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</VarOperation>
+					<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Concatenation>
+					<InstantSemaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</InstantSemaphore>
+				</Sequence>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="speech_tour_movementInFormation" is_function="1">
+		<Variables>
+			<Variable name="currentFormation" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="formationLock" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="formationWUID" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="turnOnPlayer" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="turningLock" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="alias" type="_string" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="destination" type="_wuid" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="dialogFinishedAndTagpointReachedLock" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="disableORCA" type="_bool" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="finalTagpoint" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+			<Variable name="followFormationParams" type="followFormationParams" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="followableSoul" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+			<Variable name="followableSoulPreferredPosition" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="formationName" type="_string" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="movementSpeed" type="enum:movementSpeed" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="nextPhaseTrigger" type="enum:tour_nextPhaseTrigger" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="onPlayerLeft_wait" type="enum:tour_onPlayerLeft_wait" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="onPlayerLeft_waitMode" type="enum:tour_onPlayerLeft_waitMode" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="onTagpointReached_turnOnPlayer" type="_bool" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="pathOffset" type="_float" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="playerLeft_maxReactionDistance" type="_float" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="progressTour" type="enum:tour_tourProgress" values="false" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="successDistance" type="_float" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="successDistanceMove" type="_bool" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="turningCooldown" type="_string" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="turningCooldownVariation" type="_string" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<Sequence>
+							<AddLink From="$this.id" To="$followFormationParams.formation.leader" Tag="&apos;tour_readyToTour&apos;" Data="" LinkOpHandleMode="Success" />
+							<IfElseCondition failOnCondition="false" condition="$followFormationParams.formation.leader == $this.id" saveVersion="2">
+								<Then canSkip="1">
+									<SubtreeDecorator saveVersion="2">
+										<Init canSkip="1">
+											<Sequence>
+												<MakeFormation FormationName="$followFormationParams.formation.type" HandleVariable="$formationWUID" />
+												<Expression expressions="$currentFormation = $formationName" />
+												<Concatenation OutString="$formationLock" Pattern="&apos;followNPC_leader_$this.id&apos;" />
+											</Sequence>
+										</Init>
+										<Subtree canSkip="1">
+											<Sequence>
+												<SetExternalLock LockManagerType="Global" Locked="false" LockName="&apos;$formationLock&apos;" />
+												<Parallel successMode="Any" failureMode="Any">
+													<Function_speech_tour_movement alias="$alias" destination="$destination" dialogFinishedAndTagpointReachedLock="$dialogFinishedAndTagpointReachedLock" disableORCA="$disableORCA" finalTagpoint="$finalTagpoint" movementSpeed="$movementSpeed" nextPhaseTrigger="$nextPhaseTrigger" onPlayerLeft_wait="$onPlayerLeft_wait" onTagpointReached_turnOnPlayer="$onTagpointReached_turnOnPlayer" pathOffset="$pathOffset" playerLeft_maxReactionDistance="$playerLeft_maxReactionDistance" progressTour="$progressTour" successDistance="$successDistance" successDistanceMove="$successDistanceMove" turningCooldown="$turningCooldown" turningCooldownVariation="$turningCooldownVariation" nodeLabel="86158294" />
+													<While doFail="false" propagateChildFail="false" condition="true">
+														<IfGate atomic="false" condition="$currentFormation ~= $formationName" RunLogic="KeepRunning">
+															<Sequence>
+																<ChangeFormation NewName="$formationName" Formation="$formationWUID" />
+																<Expression expressions="$currentFormation = $formationName" />
+															</Sequence>
+														</IfGate>
+													</While>
+												</Parallel>
+											</Sequence>
+										</Subtree>
+										<Cleanup canSkip="1">
+											<Sequence>
+												<EndFormation FormationHandle="$formationWUID" />
+												<SetExternalLock LockManagerType="Global" Locked="true" LockName="&apos;$formationLock&apos;" />
+											</Sequence>
+										</Cleanup>
+									</SubtreeDecorator>
+								</Then>
+								<Else canSkip="1">
+									<Sequence>
+										<IfCondition failOnCondition="false" condition="$followableSoul == $this.id &amp; &#10;$followableSoulPreferredPosition ~= &apos;none&apos;">
+											<Expression expressions="$followFormationParams.formation.preferedPosition = $followableSoulPreferredPosition" />
+										</IfCondition>
+										<Concatenation OutString="$turningLock" Pattern="&apos;tourTurningLock_leader_$followFormationParams.formation.leader&apos;" />
+										<Parallel successMode="Any" failureMode="Any">
+											<ContinuousSwitch>
+												<IfCondition failOnCondition="false" condition="$turnOnPlayer == false">
+													<MoveParamsDecorator speed="$movementSpeed" pathFindingParams="" doorClosingPolicy="LeaveOpened">
+														<Function_moveInFormation_slave followFormationParams="$followFormationParams" nodeLabel="86180621" />
+													</MoveParamsDecorator>
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$turnOnPlayer == true">
+													<Sequence>
+														<Semaphore SemaphoreCount="1" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;$turningLock&apos;">
+															<Wait duration="&apos;600ms&apos;" timeType="GameTime" doFail="false" variation="&apos;300ms&apos;" />
+														</Semaphore>
+														<Function_speech_tour_turnOnPlayer turningCooldown="$turningCooldown" turningCooldownVariation="$turningCooldownVariation" nodeLabel="72080209" />
+													</Sequence>
+												</IfCondition>
+											</ContinuousSwitch>
+											<While doFail="false" propagateChildFail="false" condition="true">
+												<IfGate atomic="false" condition="$onPlayerLeft_waitMode == $enum:tour_onPlayerLeft_waitMode.everybodyTurnsOnPlayer" RunLogic="Halt">
+													<Sequence>
+														<EntityContextBarrier context="tour_waitingForPlayer" target="$followFormationParams.formation.leader" Negation="false" RunLogic="Halt">
+															<Sequence>
+																<Expression expressions="$turnOnPlayer = true" />
+																<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+															</Sequence>
+														</EntityContextBarrier>
+														<Expression expressions="$turnOnPlayer = false" />
+													</Sequence>
+												</IfGate>
+											</While>
+										</Parallel>
+									</Sequence>
+								</Else>
+							</IfElseCondition>
+						</Sequence>
+					</Child>
+					<OnSuccess canSkip="1">
+						<RemoveLink From="$this.id" To="$followFormationParams.formation.leader" Tag="&apos;tour_readyToTour&apos;" LinkOpHandleMode="Success" />
+					</OnSuccess>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="currentFormation" comment="" />
+				<Variable name="formationLock" comment="" />
+				<Variable name="formationWUID" comment="" />
+				<Variable name="turnOnPlayer" comment="" />
+				<Variable name="turningLock" comment="" />
+				<Variable name="alias" comment="" />
+				<Variable name="destination" comment="" />
+				<Variable name="dialogFinishedAndTagpointReachedLock" comment="" />
+				<Variable name="disableORCA" comment="" />
+				<Variable name="finalTagpoint" comment="" />
+				<Variable name="followFormationParams" comment="" />
+				<Variable name="followableSoul" comment="" />
+				<Variable name="followableSoulPreferredPosition" comment="" />
+				<Variable name="formationName" comment="" />
+				<Variable name="movementSpeed" comment="" />
+				<Variable name="nextPhaseTrigger" comment="" />
+				<Variable name="onPlayerLeft_wait" comment="" />
+				<Variable name="onPlayerLeft_waitMode" comment="" />
+				<Variable name="onTagpointReached_turnOnPlayer" comment="" />
+				<Variable name="pathOffset" comment="" />
+				<Variable name="playerLeft_maxReactionDistance" comment="" />
+				<Variable name="progressTour" comment="" />
+				<Variable name="successDistance" comment="" />
+				<Variable name="successDistanceMove" comment="" />
+				<Variable name="turningCooldown" comment="" />
+				<Variable name="turningCooldownVariation" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</AddLink>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Init>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<MakeFormation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</MakeFormation>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Concatenation>
+												</Sequence>
+											</Init>
+											<Subtree>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</SetExternalLock>
+													<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_speech_tour_movement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_speech_tour_movement>
+														<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<ChangeFormation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</ChangeFormation>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Sequence>
+															</IfGate>
+														</While>
+													</Parallel>
+												</Sequence>
+											</Subtree>
+											<Cleanup>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EndFormation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</EndFormation>
+													<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</SetExternalLock>
+												</Sequence>
+											</Cleanup>
+										</SubtreeDecorator>
+									</Then>
+									<Else>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</IfCondition>
+											<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Concatenation>
+											<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_moveInFormation_slave hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_moveInFormation_slave>
+														</MoveParamsDecorator>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Semaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+															</Semaphore>
+															<Function_speech_tour_turnOnPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_speech_tour_turnOnPlayer>
+														</Sequence>
+													</IfCondition>
+												</ContinuousSwitch>
+												<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																	<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Wait>
+																</Sequence>
+															</EntityContextBarrier>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Sequence>
+													</IfGate>
+												</While>
+											</Parallel>
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+						</Child>
+						<OnSuccess>
+							<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</RemoveLink>
+						</OnSuccess>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

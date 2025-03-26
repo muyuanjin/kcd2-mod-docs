@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_banishCompanion" is_function="0">
+		<Variables>
+			<Variable name="canEnd" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="canSeePlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="canSendObjective" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="companionClose" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="companionInTrespass" type="_bool" values="true" isPersistent="0" form="single" />
+			<Variable name="companionMoveToPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="companionType" type="enum:crime_banishCompanionType" values="" isPersistent="0" form="single" />
+			<Variable name="horseBanishRequest" type="horseModule:banishRequest" values="" isPersistent="0" form="single" />
+			<Variable name="moveParams" type="additionalMoveParams" values="" isPersistent="0" form="single" />
+			<Variable name="objectiveMessage" type="dog:objectiveChangeRequest" values="" isPersistent="0" form="single" />
+			<Variable name="reactionSuppressed" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="shouldEscalate" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="shouldForceSemipublicReaction" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="trespassArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="trespassAreaSevereness" type="enum:trespassLevel" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="banishCompanionData" type="switch:interruptData:banishCompanion" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Expression expressions="$moveParams.destChangedThreshold = &apos;10ms&apos;" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<AnyDecorator preset="crime_keepState" enabled="true">
+							<EntityContextElement context="crime_interrupt" enabled="true">
+								<EntityContext context="crime_interruptBanishCompanion" target="">
+									<EntityContext context="soliloquy_disable" target="">
+										<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+											<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:banishCompanion&apos;">
+												<IsDeadCheck SoulWUID="$banishCompanionData.companion" FailSubtMissing="false" saveVersion="2">
+													<Else canSkip="1">
+														<IsUnconsciousCheck SoulWUID="$banishCompanionData.companion" FailSubtMissing="false" saveVersion="2">
+															<Else canSkip="1">
+																<DeadUnconsciousGate Who="$banishCompanionData.companion" State="Any" Negation="true" RunLogic="Halt">
+																	<Sequence>
+																		<Function_crime_limits_confirmReactionLink reactionKind="$enum:crime_reactionKind.banishCompanion" nodeLabel="83876565" />
+																		<RemoveBuffs SoulWUID="" BuffGUID="&apos;ffc20522-134d-4811-8bc5-e933b74b7081&apos;" BuffTagId="-1" />
+																		<Function_crime_getPlayerCompanionType entity="$banishCompanionData.companion" companionType="$companionType" nodeLabel="49601289" />
+																		<IsLoadedGate saveVersion="2">
+																			<Else canSkip="1">
+																				<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Dog">
+																					<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$banishCompanionData.companion" metarole="&apos;NPC_VIDI_HRACOVA_PSA_(DISTRACTION)&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="56238968" />
+																				</IfCondition>
+																			</Else>
+																		</IsLoadedGate>
+																		<IfGate atomic="false" condition="$companionInTrespass | ~$canEnd" RunLogic="Halt">
+																			<Parallel successMode="Any" failureMode="Any">
+																				<Loop count="-1">
+																					<Sequence>
+																						<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Dog">
+																							<GetDogObservableActivity Companion="$__playerDog" ObservableActivity="" Target="" IsBarking="$shouldForceSemipublicReaction" />
+																						</IfCondition>
+																						<DetermineTrespassReaction Observer="$this.id" Target="$banishCompanionData.companion" Position="" ForceSemipublicReaction="$shouldForceSemipublicReaction" ShouldUseVec3Position="false" TrespassAreaSevereness="$trespassAreaSevereness" TrespassArea="$trespassArea" Reaction="$companionInTrespass" ReactionSuppressed="$reactionSuppressed" />
+																						<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+																					</Sequence>
+																				</Loop>
+																				<Function_continuousPlayerPerceptionCheck NPC="$this.id" loopTime="&apos;250ms&apos;" doesSeePlayer="$canSeePlayer" nodeLabel="77452274" />
+																				<ContinuousSwitch>
+																					<IfCondition failOnCondition="false" condition="($companionClose &amp; $canSendObjective)">
+																						<ForceLook LookTarget="$banishCompanionData.companion" DisableVariations="false">
+																							<Sequence>
+																								<GetSpatialInfo In="$__player" Out="$companionMoveToPos" What="Position" />
+																								<Turn target="$banishCompanionData.companion" align="false" />
+																								<Switch>
+																									<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Dog">
+																										<Sequence>
+																											<Expression expressions="$objectiveMessage.objective = $enum:dogObjective.followHeel &#10;$objectiveMessage.position = $companionMoveToPos &#10;$objectiveMessage.priority = $enum:dogCompanionPriority.gettingOrder &#10;$objectiveMessage.time = &apos;3s&apos;" />
+																											<InstantSendMessageToNPC target="$banishCompanionData.companion" variable="$objectiveMessage" />
+																										</Sequence>
+																									</IfCondition>
+																									<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Horse">
+																										<Sequence>
+																											<Expression expressions="$horseBanishRequest.sender = $this.id" />
+																											<InstantSendMessageToNPC target="$banishCompanionData.companion" variable="$horseBanishRequest" />
+																										</Sequence>
+																									</IfCondition>
+																								</Switch>
+																								<Sequence>
+																									<Parallel successMode="All" failureMode="Any">
+																										<Switch>
+																											<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Dog">
+																												<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$banishCompanionData.companion" metarole="&apos;NPC_VYHANENI_HRACOVA_PSA_(DISTRACTION)&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="84656923" />
+																											</IfCondition>
+																											<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Horse">
+																												<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$banishCompanionData.companion" metarole="&apos;NPC_VYHANI_KONE&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="50141192" />
+																											</IfCondition>
+																										</Switch>
+																										<Switch>
+																											<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Dog">
+																												<AnimationAction fragment="&apos;BehaviorChasingDog&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																											</IfCondition>
+																											<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Horse">
+																												<AnimationAction fragment="&apos;BehaviorChasingHorse&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																											</IfCondition>
+																										</Switch>
+																									</Parallel>
+																									<WaitAction />
+																								</Sequence>
+																								<Expression expressions="$companionClose = false &#10;$canSendObjective = false &#10;$canEnd = true" />
+																							</Sequence>
+																						</ForceLook>
+																					</IfCondition>
+																					<IfCondition failOnCondition="false" condition="$canSeePlayer &amp;  &#10;$companionType == $enum:crime_banishCompanionType.Dog &amp; &#10;~$shouldEscalate">
+																						<Parallel successMode="Any" failureMode="Any">
+																							<UrgencyDecorator Urgency="Fast">
+																								<CrimeFollower Target="$__player" Mode="NoMoveOnlyTurn" Role="Main" RelativeSpeedLimit="Dash" DisableGhosting="false" />
+																							</UrgencyDecorator>
+																							<Loop count="-1">
+																								<Sequence>
+																									<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_VYZVA_K_ZAVOLANI_PSA_(DISTRACTION)&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="81038769" />
+																									<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="&apos;2s&apos;" />
+																								</Sequence>
+																							</Loop>
+																							<Sequence>
+																								<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" />
+																								<Expression expressions="$shouldEscalate = true" />
+																							</Sequence>
+																						</Parallel>
+																					</IfCondition>
+																					<IfCondition failOnCondition="false" condition="true">
+																						<Loop count="-1">
+																							<Parallel successMode="Any" failureMode="Any">
+																								<UrgencyDecorator Urgency="Fast">
+																									<CrimeFollower Target="$banishCompanionData.companion" Mode="Default" Role="Main" RelativeSpeedLimit="Dash" DisableGhosting="false" />
+																								</UrgencyDecorator>
+																								<Loop count="-1">
+																									<DistanceGate Origin="$this.id" ReferencePt="$banishCompanionData.companion" Low="4.000000" High="4.000000" Negation="false" OpenInMiddle="false" RunLogic="Halt">
+																										<Sequence>
+																											<Expression expressions="$companionClose = true" />
+																											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																										</Sequence>
+																									</DistanceGate>
+																								</Loop>
+																								<Loop count="-1">
+																									<IfGate atomic="false" condition="~$canSendObjective" RunLogic="KeepRunning">
+																										<Sequence>
+																											<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+																											<Expression expressions="$canSendObjective = true" />
+																											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																										</Sequence>
+																									</IfGate>
+																								</Loop>
+																							</Parallel>
+																						</Loop>
+																					</IfCondition>
+																				</ContinuousSwitch>
+																			</Parallel>
+																		</IfGate>
+																		<Switch>
+																			<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Dog">
+																				<Switch>
+																					<IfCondition failOnCondition="false" condition="~$companionInTrespass &amp; $canSeePlayer">
+																						<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$banishCompanionData.companion" metarole="&apos;NPC_REAKCE_NA_ZAVOLANI_PSA_(DISTRACTION)&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="50602466" />
+																					</IfCondition>
+																					<IfCondition failOnCondition="false" condition="~$companionInTrespass &amp; ~$canSeePlayer">
+																						<Function_crime_crimeBark animationApproach="$enum:animationApproach.tryDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$banishCompanionData.companion" metarole="&apos;NPC_REAKCE_NA_ODCHOD_PSA_(DISTRACTION)&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="53776734" />
+																					</IfCondition>
+																					<DefaultBranch>
+																						<Success />
+																					</DefaultBranch>
+																				</Switch>
+																			</IfCondition>
+																			<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Horse">
+																				<Function_crime_crimeBark animationApproach="$enum:animationApproach.tryDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$banishCompanionData.companion" metarole="&apos;NPC_REAGUJE_PO_VYHNANI_KONE&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="36371314" />
+																			</IfCondition>
+																		</Switch>
+																		<Function_callFollowUpBehavior previousReaction="$enum:crime_reactionKind.banishCompanion" nodeLabel="23461264" />
+																	</Sequence>
+																</DeadUnconsciousGate>
+															</Else>
+														</IsUnconsciousCheck>
+													</Else>
+												</IsDeadCheck>
+											</LogToLabel>
+										</AddPerceivableState>
+									</EntityContext>
+								</EntityContext>
+							</EntityContextElement>
+						</AnyDecorator>
+					</Child>
+					<OnFail canSkip="1">
+						<Function_crime_limits_removeReactionLink information="$banishCompanionData.information" reactionKind="$enum:crime_reactionKind.banishCompanion" nodeLabel="31972886" />
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="banishCompanion" EventSet="">
+			<Variables>
+				<Variable name="canEnd" comment="" />
+				<Variable name="canSeePlayer" comment="" />
+				<Variable name="canSendObjective" comment="" />
+				<Variable name="companionClose" comment="" />
+				<Variable name="companionInTrespass" comment="" />
+				<Variable name="companionMoveToPos" comment="" />
+				<Variable name="companionType" comment="" />
+				<Variable name="horseBanishRequest" comment="" />
+				<Variable name="moveParams" comment="" />
+				<Variable name="objectiveMessage" comment="" />
+				<Variable name="reactionSuppressed" comment="" />
+				<Variable name="shouldEscalate" comment="" />
+				<Variable name="shouldForceSemipublicReaction" comment="" />
+				<Variable name="trespassArea" comment="" />
+				<Variable name="trespassAreaSevereness" comment="" />
+				<Variable name="banishCompanionData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-10" editorPosY="-10" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+				</OnInit>
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Else>
+															<IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Else>
+																	<DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Function_crime_limits_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_limits_confirmReactionLink>
+																			<RemoveBuffs hasInputBreakpoint="0" comment="rm drunkeness" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</RemoveBuffs>
+																			<Function_crime_getPlayerCompanionType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_getPlayerCompanionType>
+																			<IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Else>
+																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_crimeBark>
+																					</IfCondition>
+																				</Else>
+																			</IsLoadedGate>
+																			<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Loop hasInputBreakpoint="0" comment="Is companion in trespass" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<GetDogObservableActivity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</GetDogObservableActivity>
+																							</IfCondition>
+																							<DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</DetermineTrespassReaction>
+																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Wait>
+																						</Sequence>
+																					</Loop>
+																					<Function_continuousPlayerPerceptionCheck hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_continuousPlayerPerceptionCheck>
+																					<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<IfCondition hasInputBreakpoint="0" comment="Actually banish companion" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</GetSpatialInfo>
+																									<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Turn>
+																									<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Expression>
+																												<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</InstantSendMessageToNPC>
+																											</Sequence>
+																										</IfCondition>
+																										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Expression>
+																												<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</InstantSendMessageToNPC>
+																											</Sequence>
+																										</IfCondition>
+																									</Switch>
+																									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</Function_crime_crimeBark>
+																												</IfCondition>
+																												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</Function_crime_crimeBark>
+																												</IfCondition>
+																											</Switch>
+																											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</AnimationAction>
+																												</IfCondition>
+																												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</AnimationAction>
+																												</IfCondition>
+																											</Switch>
+																										</Parallel>
+																										<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</WaitAction>
+																									</Sequence>
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																								</Sequence>
+																							</ForceLook>
+																						</IfCondition>
+																						<IfCondition hasInputBreakpoint="0" comment="Bully player" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<CrimeFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</CrimeFollower>
+																								</UrgencyDecorator>
+																								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Function_crime_crimeBark>
+																										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Wait>
+																									</Sequence>
+																								</Loop>
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Wait>
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																								</Sequence>
+																							</Parallel>
+																						</IfCondition>
+																						<IfCondition hasInputBreakpoint="0" comment="No player, just send objective" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Loop hasInputBreakpoint="0" comment="Follow doggo" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<CrimeFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</CrimeFollower>
+																									</UrgencyDecorator>
+																									<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Expression>
+																												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Wait>
+																											</Sequence>
+																										</DistanceGate>
+																									</Loop>
+																									<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Wait>
+																												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Expression>
+																												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Wait>
+																											</Sequence>
+																										</IfGate>
+																									</Loop>
+																								</Parallel>
+																							</Loop>
+																						</IfCondition>
+																					</ContinuousSwitch>
+																				</Parallel>
+																			</IfGate>
+																			<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Switch hasInputBreakpoint="0" comment="End barks" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<IfCondition hasInputBreakpoint="0" comment="End bark" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_crimeBark>
+																						</IfCondition>
+																						<IfCondition hasInputBreakpoint="0" comment="End bark" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_crimeBark>
+																						</IfCondition>
+																						<DefaultBranch>
+																							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Success>
+																						</DefaultBranch>
+																					</Switch>
+																				</IfCondition>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_crime_crimeBark>
+																				</IfCondition>
+																			</Switch>
+																			<Function_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_callFollowUpBehavior>
+																		</Sequence>
+																	</DeadUnconsciousGate>
+																</Else>
+															</IsUnconsciousCheck>
+														</Else>
+													</IsDeadCheck>
+												</LogToLabel>
+											</AddPerceivableState>
+										</EntityContext>
+									</EntityContext>
+								</EntityContextElement>
+							</AnyDecorator>
+						</Child>
+						<OnFail>
+							<Function_crime_limits_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_limits_removeReactionLink>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

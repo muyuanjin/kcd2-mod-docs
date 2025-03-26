@@ -1,0 +1,136 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Database xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="brambora">
+	<Skald>
+		<Gameplay Name="po_arene_u_vavrince">
+			<Ports>
+				<Port Name="fiala_posila_jindru_za_vavrincem" Direction="In" Type="trigger">
+					<DesignName StringName="po_arene__fiala_posila_ji_yjGC" Text="Fiala posílá Jindru za Vavřincem" />
+				</Port>
+				<Port Name="abortuji_objective_pokud_jsou_aktivni" Direction="In" Type="trigger">
+					<DesignName StringName="po_arene__abortuji_object_Hnxn" Text="Abortují objective pokud jsou aktivní" />
+				</Port>
+				<Port Name="jindra_dostava_tip_na_boje_v_podseminsku" Direction="Out" Type="trigger">
+					<DesignName StringName="po_arene__jindra_dostava__jN7o" Text="Jindra dostává tip na boje v Podsemínsku" />
+				</Port>
+				<Port Name="jindra_se_dozvida_o_velmistrovi_trosecka" Direction="Out" Type="trigger">
+					<DesignName StringName="po_arene__jindra_se_dozvi_5KsN" Text="Jindra se dozvídá o velmistrovi Trosecka" />
+				</Port>
+				<Port Name="vavrinec_umira" Direction="Out" Type="trigger">
+					<DesignName StringName="po_arene__vavrinec_umira_3Xu0" Text="Vavřinec umírá" />
+				</Port>
+				<Port Name="quest_konci_smrti_vavrince" Direction="Out" Type="trigger">
+					<DesignName StringName="po_arene__quest_konci_smr_M5nL" Text="Quest končí smrtí Vavřince" />
+				</Port>
+				<Port Name="jindra_vyhral_turnaj_v_podsemine" Direction="In" Type="bool">
+					<DesignName StringName="po_arene__jindra_vyhral_t_fswd" Text="Jindra vyhrál turnaj v Podsemíně" />
+				</Port>
+				<Port Name="jindrich_ma_od_hospodskeho_tip_na_velmistra" Direction="Out" Type="bool">
+					<DesignName StringName="po_arene__jindrich_ma_od__snyv" Text="Jindřich má od hospodského tip na velmistra" />
+				</Port>
+			</Ports>
+			<Definitions>
+				<Definition File="po_arene_u_vavrince/hostinsky_vavrinec__po_vyhre.xml" />
+			</Definitions>
+			<Nodes>
+				<converttodecigroshen Name="converttodecigroshen" PositionY="590" PositionX="1080" Namespace="utils.money">
+					<Edge From="doubleEntryFee_groshenToDecigroshen.float" To="groshen" />
+				</converttodecigroshen>
+				<EventFunction Name="createplayerreward_money" PositionY="280" PositionX="1380" MethodName="wh::entitymodule::CreatePlayerReward" DeclaringType="wh::entitymodule">
+					<Constant Name="ItemClass" Value="5ef63059-322e-4e1b-abe8-926e100c770e" />
+					<Edge From="createplayerreward_potions.OnExec" To="Exec" />
+					<Edge From="converttodecigroshen.decigroshenuint" To="Amount" />
+				</EventFunction>
+				<EventFunction Name="createplayerreward_potions" PositionY="280" PositionX="940" MethodName="wh::entitymodule::CreatePlayerReward" DeclaringType="wh::entitymodule">
+					<Constant Name="ItemClass" Value="928463d9-e21a-4f7c-b5d3-8378ed375cd1" />
+					<Constant Name="Amount" Value="2" />
+					<Edge From="hostinsky_vavrinec__po_vyhre.jindra_dostava_penize_za_vyhru" To="Exec" />
+				</EventFunction>
+				<Function Name="doubleEntryFee_groshenToDecigroshen" PositionY="620" PositionX="730" MethodName="wh::conceptmodule::math::MultiplyFloat" DeclaringType="wh::conceptmodule::math">
+					<Constant Name="B" Value="2" />
+					<Edge From="konstanty.vstupne" To="A" />
+				</Function>
+				<State Name="getRewardFromInnkeeper_objective" PositionY="-140" PositionX="-770" RequiredForOutput="trosecko" TypeT="GetRewardFromInnkeeper">
+					<Edge From="fiala_posila_jindru_za_vavrincem" To="SetBeforeReceivingReward" />
+					<Edge From="ifStarted.True" To="SetAborted" />
+					<Edge From="triggersequence7_1.A" To="SetGotMoneyAndInfoAboutPodsemin" />
+					<Edge From="triggersequence7.A" To="SetGotMoneyAndInfoAboutChampion" />
+				</State>
+				<vyzvedni_si_odmenu_u_hospodskeho Name="getRewardFromInnkeeper_objectiveVisual" PositionY="-330" PositionX="-180" RequiredForOutput="trosecko">
+					<Edge From="getRewardFromInnkeeper_objective.State" To="Progress" />
+				</vyzvedni_si_odmenu_u_hospodskeho>
+				<hostinsky_vavrinec__po_vyhre Name="hostinsky_vavrinec__po_vyhre" PositionY="60" PositionX="440">
+					<Edge From="getRewardFromInnkeeper_objective.BeforeReceivingReward" To="jindra_vyhral_turnaj_v_zelejove">
+						<Vertex>vertex9</Vertex>
+					</Edge>
+					<Edge From="jindra_vyhral_turnaj_v_podsemine" To="jindra_vyhral_turnaj_v_podsemine">
+						<Vertex>vertex2</Vertex>
+						<Vertex>vertex1</Vertex>
+					</Edge>
+				</hostinsky_vavrinec__po_vyhre>
+				<If Name="ifStarted" PositionY="170" PositionX="-1090">
+					<Edge From="getRewardFromInnkeeper_objective.BeforeReceivingReward" To="Condition">
+						<Vertex>vertex9</Vertex>
+						<Vertex>vertex11</Vertex>
+						<Vertex>vertex10</Vertex>
+					</Edge>
+					<Edge From="abortuji_objective_pokud_jsou_aktivni" To="Exec" />
+				</If>
+				<important_npc_death_objective Name="important_npc_death_objective" PositionY="-410" PositionX="620" RequiredForOutput="trosecko" Namespace="fist_fights_common_library">
+					<Asset Name="soul" Alias="vavrinec" />
+					<Edge From="or6.bool" To="isactive" />
+				</important_npc_death_objective>
+				<konstanty Name="konstanty" PositionY="550" PositionX="240" Namespace="fight_club_zelejov" />
+				<Function Name="or6" PositionY="-300" PositionX="330" MethodName="math::boolean::Or" DeclaringType="math::boolean">
+					<Edge From="getRewardFromInnkeeper_objective.None" To="A" />
+					<Edge From="getRewardFromInnkeeper_objective.BeforeReceivingReward" To="B">
+						<Vertex>vertex9</Vertex>
+					</Edge>
+				</Function>
+				<Output Name="Output">
+					<Edge From="getRewardFromInnkeeper_objective.GotMoneyAndInfoAboutChampion" To="jindrich_ma_od_hospodskeho_tip_na_velmistra">
+						<Vertex>vertex12</Vertex>
+					</Edge>
+					<Edge From="important_npc_death_objective.abort_active_objectives" To="vavrinec_umira" />
+					<Edge From="important_npc_death_objective.fail_quest" To="quest_konci_smrti_vavrince" />
+					<Edge From="triggersequence7_1.B" To="jindra_dostava_tip_na_boje_v_podseminsku">
+						<Vertex>vertex8</Vertex>
+					</Edge>
+					<Edge From="triggersequence7.B" To="jindra_se_dozvida_o_velmistrovi_trosecka">
+						<Vertex>vertex3</Vertex>
+					</Edge>
+				</Output>
+				<TriggerSequence Name="triggersequence7" PositionY="520" PositionX="-1050">
+					<Edge From="hostinsky_vavrinec__po_vyhre.jindra_se_dozvida_o_velmistrovi_trosecka" To="Exec">
+						<Vertex>vertex6</Vertex>
+						<Vertex>vertex7</Vertex>
+					</Edge>
+				</TriggerSequence>
+				<TriggerSequence Name="triggersequence7_1" PositionY="680" PositionX="-1050">
+					<Edge From="hostinsky_vavrinec__po_vyhre.vavrinec_dava_tip_na_boje_v_podseminsku" To="Exec">
+						<Vertex>vertex4</Vertex>
+						<Vertex>vertex5</Vertex>
+					</Edge>
+				</TriggerSequence>
+				<umrel_vavrinec Name="vavrinecIsDead_objectiveVisual" PositionY="-370" PositionX="1070" RequiredForOutput="trosecko">
+					<Edge From="important_npc_death_objective.state" To="Progress" />
+					<Edge From="important_npc_death_objective.npcisdead" To="VavrinecIsDead" />
+				</umrel_vavrinec>
+			</Nodes>
+			<EdgeVertices>
+				<EdgeVertex Name="vertex1" PositionY="350" PositionX="310" />
+				<EdgeVertex Name="vertex10" PositionY="450" PositionX="-1050" />
+				<EdgeVertex Name="vertex11" PositionY="460" PositionX="-50" />
+				<EdgeVertex Name="vertex12" PositionY="0" PositionX="580" />
+				<EdgeVertex Name="vertex2" PositionY="350" PositionX="-1090" />
+				<EdgeVertex Name="vertex3" PositionY="-80" PositionX="590" />
+				<EdgeVertex Name="vertex4" PositionY="420" PositionX="720" />
+				<EdgeVertex Name="vertex5" PositionY="420" PositionX="-760" />
+				<EdgeVertex Name="vertex6" PositionY="390" PositionX="670" />
+				<EdgeVertex Name="vertex7" PositionY="390" PositionX="-730" />
+				<EdgeVertex Name="vertex8" PositionY="-110" PositionX="590" />
+				<EdgeVertex Name="vertex9" PositionY="110" PositionX="-20" />
+			</EdgeVertices>
+			<Text StringName="po_arene_u_vavrince_H3oh" Text="Po aréně u Vavřince" />
+		</Gameplay>
+	</Skald>
+</Database>

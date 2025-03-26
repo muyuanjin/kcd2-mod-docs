@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="move_move_linkedRoute" is_function="0">
+    <Variables>
+      <Variable name="closestDistance" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="currentStep" type="_wuid" values="" isPersistent="1" form="single" />
+      <Variable name="pathFindingParams" type="pathFindingParams" values="" isPersistent="0" form="single" />
+      <Variable name="planningDistance" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="planningStep" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="stepType" type="_string" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="routeLinkTag" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="routeStart" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="speed" type="enum:movementSpeed" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="successDistance" type="_float" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="useGeneratedNavigationSO" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <OnInit canSkip="1">
+        <Expression expressions="$pathFindingParams.useGeneratedNSO = $useGeneratedNavigationSO" />
+      </OnInit>
+      <Behavior canSkip="1">
+        <Sequence>
+          <CheckWuidValid wuid="$currentStep" FailSubtMissing="false" saveVersion="2">
+            <Else canSkip="1">
+              <Expression expressions="$currentStep = $__null" />
+            </Else>
+          </CheckWuidValid>
+          <IfCondition failOnCondition="false" condition="$currentStep == $__null">
+            <Sequence>
+              <Expression expressions="$currentStep = $routeStart &#10;$planningStep = $routeStart" />
+              <MeasureDistance position1="$this.id" position2="$routeStart" mode="ThreeDimensions" result="$closestDistance" />
+              <LoopUntil until="Fail" attemptCount="0">
+                <Sequence>
+                  <GraphSearch Origin="$planningStep" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="$routeLinkTag" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                    <AnyLinkFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="$planningStep" />
+                  </GraphSearch>
+                  <MeasureDistance position1="$this.id" position2="$planningStep" mode="ThreeDimensions" result="$planningDistance" />
+                  <IfCondition failOnCondition="false" condition="$planningDistance &lt;= $closestDistance">
+                    <Expression expressions="$currentStep = $planningStep &#10;$closestDistance = $planningDistance" />
+                  </IfCondition>
+                </Sequence>
+              </LoopUntil>
+              <GetType WUID="$currentStep" OutString="$stepType" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+              <IfCondition failOnCondition="false" condition="$stepType ~= &apos;PP&apos;">
+                <SuppressFailure>
+                  <Sequence>
+                    <GraphSearch Origin="$currentStep" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="$routeLinkTag" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                      <AnyLinkFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="$planningStep" />
+                    </GraphSearch>
+                    <MeasureDistance position1="$this.id" position2="$planningStep" mode="ThreeDimensions" result="$planningDistance" />
+                    <MeasureDistance position1="$planningStep" position2="$currentStep" mode="ThreeDimensions" result="$closestDistance" />
+                    <IfCondition failOnCondition="false" condition="$planningDistance &lt; $closestDistance">
+                      <Expression expressions="$currentStep = $planningStep" />
+                    </IfCondition>
+                  </Sequence>
+                </SuppressFailure>
+              </IfCondition>
+            </Sequence>
+          </IfCondition>
+          <While doFail="false" propagateChildFail="true" condition="$currentStep ~= $__null">
+            <Sequence>
+              <Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="$successDistance" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$currentStep" destinationSpecification2="" destinationSpecification3="" speed="$speed" additionalParams="" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+              <GraphSearch Origin="$currentStep" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="$routeLinkTag" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                <AnyLinkFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="$currentStep" />
+              </GraphSearch>
+            </Sequence>
+          </While>
+          <Callback_empty EventName="&apos;OnFinished&apos;" />
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData Signature="move_linkedRoute" EventSet="endNotification">
+      <Variables>
+        <Variable name="closestDistance" comment="" />
+        <Variable name="currentStep" comment="" />
+        <Variable name="pathFindingParams" comment="" />
+        <Variable name="planningDistance" comment="" />
+        <Variable name="planningStep" comment="" />
+        <Variable name="stepType" comment="" />
+        <Variable name="routeLinkTag" comment="" />
+        <Variable name="routeStart" comment="" />
+        <Variable name="speed" comment="" />
+        <Variable name="successDistance" comment="" />
+        <Variable name="useGeneratedNavigationSO" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <OnInit>
+          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+          </Expression>
+        </OnInit>
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Else>
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </Else>
+            </CheckWuidValid>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+                <MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </MeasureDistance>
+                <LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <AnyLinkFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </AnyLinkFilter>
+                    </GraphSearch>
+                    <MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </MeasureDistance>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </IfCondition>
+                  </Sequence>
+                </LoopUntil>
+                <GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </GetType>
+                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <AnyLinkFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </AnyLinkFilter>
+                      </GraphSearch>
+                      <MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </MeasureDistance>
+                      <MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </MeasureDistance>
+                      <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                      </IfCondition>
+                    </Sequence>
+                  </SuppressFailure>
+                </IfCondition>
+              </Sequence>
+            </IfCondition>
+            <While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Move>
+                <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <AnyLinkFilter hasInputBreakpoint="0" comment="Check this null na konci" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </AnyLinkFilter>
+                </GraphSearch>
+              </Sequence>
+            </While>
+            <Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Callback_empty>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

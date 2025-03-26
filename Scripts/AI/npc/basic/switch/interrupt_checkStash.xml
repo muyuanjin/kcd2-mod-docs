@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_checkStash" is_function="0">
+		<Variables>
+			<Variable name="assaultData" type="crime:assaultData" values="" isPersistent="0" form="single" />
+			<Variable name="home" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="knowAboutPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="reportDestination" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="reportDestinationType" type="enum:crime_reportDestinationType" values="" isPersistent="0" form="single" />
+			<Variable name="robbedValue" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="stash_owner" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusKind" type="enum:crime_stimulusKind" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="checkStashData" type="switch:interruptData:checkStash" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<EntityContext context="crime_preventDespawn" target="">
+					<AnyDecorator preset="crime_keepState" enabled="true">
+						<EntityContextElement context="crime_interrupt" enabled="true">
+							<EntityContext context="crime_interruptCheckStash" target="">
+								<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+									<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:checkStash&apos;">
+										<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$checkStashData.stimulusKind&apos;">
+											<MoveParamsDecorator speed="Walk" pathFindingParams="" doorClosingPolicy="LeaveOpened">
+												<Sequence>
+													<Move stopWithinDistance="1.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$checkStashData.stash" destinationSpecification2="" destinationSpecification3="" speed="AlertedWalk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+													<Function_checkChest chest="$checkStashData.stash" nodeLabel="64212162" />
+													<GetStashRobbedValue StashWUID="$checkStashData.stash" Value="$robbedValue" />
+													<IfElseCondition failOnCondition="false" condition="$robbedValue &gt; 0" saveVersion="2">
+														<Then canSkip="1">
+															<Sequence>
+																<ChooseReportDestination Information="$information" IsImportant="false" Destination="$reportDestination" DestinationType="$reportDestinationType" />
+																<IfElseCondition failOnCondition="false" condition="$reportDestinationType == $enum:crime_reportDestinationType.authority | &#10;$reportDestinationType == $enum:crime_reportDestinationType.security" saveVersion="2">
+																	<Then canSkip="1">
+																		<Sequence>
+																			<Function_crime_getEquipmentsHome equipment="$checkStashData.stash" home="$home" nodeLabel="31449912" />
+																			<Function_crime_checkLongTermMemoryTrespass home="$home" knowAboutPlayer="$knowAboutPlayer" nodeLabel="74020169" />
+																			<IfElseCondition failOnCondition="false" condition="$knowAboutPlayer" saveVersion="2">
+																				<Then canSkip="1">
+																					<Sequence>
+																						<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_CILENA_PROHLIDKA_TRUHEL_ZJISTI_KRADEZ&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="47716107" />
+																						<GetOwner Object="$checkStashData.stash" Owner="$stash_owner" />
+																						<Function_crime_createTheftInformation count="0" immediate="false" isNonAttributedCrime="false" kettleType="$enum:kettleType.kettle" method="$enum:crime_theftMethod.loot" owner="$stash_owner" pivot="$checkStashData.stash" seenEquippedItems="" information="$information" nodeLabel="79615285" />
+																						<Expression expressions="$stimulusKind = $enum:crime_stimulusKind.theft" />
+																					</Sequence>
+																				</Then>
+																				<Else canSkip="1">
+																					<Sequence>
+																						<CreateInformationWrapper Label="&apos;nonAttributedCrime&apos;" PerceivedWuid="$checkStashData.stash" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$information" />
+																						<LockDynamicInformationValues Information="$information">
+																							<Sequence>
+																								<SetDynamicInformationValue Information="$information" Tag="&apos;stimulusKind&apos;" Variable="" Type="&apos;enum:crime_stimulusKind&apos;" Value="$enum:crime_stimulusKind.theft" />
+																								<GetOwner Object="$checkStashData.stash" Owner="$stash_owner" />
+																								<SetDynamicInformationValue Information="$information" Tag="&apos;victim&apos;" Variable="$stash_owner" Type="" Value="" />
+																							</Sequence>
+																						</LockDynamicInformationValues>
+																						<Expression expressions="$stimulusKind = $enum:crime_stimulusKind.nonAttributedCrime" />
+																					</Sequence>
+																				</Else>
+																			</IfElseCondition>
+																			<Function_callInterrupt_report assaultData="$assaultData" corpseState="$enum:corpseState.undiscovered" criminalFreshness="$enum:crime_criminalFreshness.unknown" disableDetectedIcon="true" disableEmitting="false" freshlyAttributedCrime="false" ignorePriority="true" information="$information" initiator="$enum:switch_interruptInitiator.scheduler" movementSpeed="$enum:movementSpeed.run" previousReaction="$enum:crime_reactionKind.checkStash" reportDestination="$reportDestination" reportDestinationType="$reportDestinationType" source="$enum:crime_source.direct" stimulusKind="$stimulusKind" nodeLabel="63802193" />
+																		</Sequence>
+																	</Then>
+																	<Else canSkip="1">
+																		<Success />
+																	</Else>
+																</IfElseCondition>
+																<RemoveLink From="$this.id" To="$checkStashData.stash" Tag="&apos;crime_followUpBehavior_checkStash&apos;" LinkOpHandleMode="Error" />
+															</Sequence>
+														</Then>
+														<Else canSkip="1">
+															<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_CILENA_PROHLIDKA_TRUHEL_ZJISTI_KE_KRADEZI_NEDOSLO&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="67351641" />
+														</Else>
+													</IfElseCondition>
+													<Function_callFollowUpBehavior previousReaction="$enum:crime_reactionKind.checkStash" nodeLabel="28372915" />
+												</Sequence>
+											</MoveParamsDecorator>
+										</LogToLabel>
+									</LogToLabel>
+								</AddPerceivableState>
+							</EntityContext>
+						</EntityContextElement>
+					</AnyDecorator>
+				</EntityContext>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="assaultData" comment="" />
+				<Variable name="home" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="knowAboutPlayer" comment="" />
+				<Variable name="reportDestination" comment="" />
+				<Variable name="reportDestinationType" comment="" />
+				<Variable name="robbedValue" comment="" />
+				<Variable name="stash_owner" comment="" />
+				<Variable name="stimulusKind" comment="" />
+				<Variable name="checkStashData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-300" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<MoveParamsDecorator hasInputBreakpoint="0" comment="only doorClosingPolicy is relevant" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Move>
+														<Function_checkChest hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_checkChest>
+														<GetStashRobbedValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetStashRobbedValue>
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<ChooseReportDestination hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</ChooseReportDestination>
+																	<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Function_crime_getEquipmentsHome hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_getEquipmentsHome>
+																				<Function_crime_checkLongTermMemoryTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_checkLongTermMemoryTrespass>
+																				<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Then>
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_crimeBark>
+																							<GetOwner hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</GetOwner>
+																							<Function_crime_createTheftInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_createTheftInformation>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</Sequence>
+																					</Then>
+																					<Else>
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</CreateInformationWrapper>
+																							<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</SetDynamicInformationValue>
+																									<GetOwner hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</GetOwner>
+																									<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</SetDynamicInformationValue>
+																								</Sequence>
+																							</LockDynamicInformationValues>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</Sequence>
+																					</Else>
+																				</IfElseCondition>
+																				<Function_callInterrupt_report hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_callInterrupt_report>
+																			</Sequence>
+																		</Then>
+																		<Else>
+																			<Success hasInputBreakpoint="0" comment="TODO: atleast bark" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Success>
+																		</Else>
+																	</IfElseCondition>
+																	<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</RemoveLink>
+																</Sequence>
+															</Then>
+															<Else>
+																<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_crimeBark>
+															</Else>
+														</IfElseCondition>
+														<Function_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_callFollowUpBehavior>
+													</Sequence>
+												</MoveParamsDecorator>
+											</LogToLabel>
+										</LogToLabel>
+									</AddPerceivableState>
+								</EntityContext>
+							</EntityContextElement>
+						</AnyDecorator>
+					</EntityContext>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

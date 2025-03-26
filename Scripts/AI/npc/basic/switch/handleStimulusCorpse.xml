@@ -1,0 +1,636 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleStimulusCorpse" is_function="1">
+		<Variables>
+			<Variable name="corpseData" type="crime:corpseData" values="" isPersistent="0" form="single" />
+			<Variable name="corpseSeenBefore" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="ignorePriority" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="initiator" type="enum:switch_interruptInitiator" values="$enum:switch_interruptInitiator.switch" isPersistent="0" form="single" />
+			<Variable name="isReportNecessary" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="reportDestination" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="reportDestinationType" type="enum:crime_reportDestinationType" values="" isPersistent="0" form="single" />
+			<Variable name="shouldReact" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="shouldWatch" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="source" type="enum:crime_source" values="$enum:crime_source.direct" isPersistent="0" form="single" />
+			<Variable name="stimulusKind" type="enum:crime_stimulusKind" values="$enum:crime_stimulusKind.corpse" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="stimulus" type="switch:stimulus:corpse" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Function_crime_getCorpseSeenBefore corpse="$stimulus.corpse" seenBefore="$corpseSeenBefore" nodeLabel="34613278" />
+					<EntityContextCheck context="crime_stimulusInitiatedByScheduler" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Expression expressions="$ignorePriority = true &#10;$initiator = $enum:switch_interruptInitiator.scheduler" />
+						</Then>
+						<Else canSkip="1">
+							<EntityContextCheck context="crime_interruptCheckLyingBody" target="" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$ignorePriority = true" />
+								</Then>
+							</EntityContextCheck>
+						</Else>
+					</EntityContextCheck>
+					<Switch>
+						<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+							<Then canSkip="1">
+								<Success />
+							</Then>
+						</EntityContextCheck>
+						<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+							<Then canSkip="1">
+								<Success />
+							</Then>
+						</EntityContextCheck>
+						<DefaultBranch>
+							<AtomicDecorator>
+								<Function_crime_createCorpseInformation corpse="$stimulus.corpse" customPos="false" observer="$this.id" pos="" information="$information" nodeLabel="27056552" />
+							</AtomicDecorator>
+						</DefaultBranch>
+					</Switch>
+					<SuppressFailure>
+						<GraphSearch Origin="$stimulus.corpse" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+							<LinkTagFilter tag="&apos;switch_corpse&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$corpseData" />
+						</GraphSearch>
+					</SuppressFailure>
+					<IfCondition failOnCondition="false" condition="$stimulus.corpseStateOverrideActive">
+						<Expression expressions="$corpseData.state = $stimulus.corpseStateOverride" />
+					</IfCondition>
+					<IfElseCondition failOnCondition="false" condition="$corpseData.state &gt;= $enum:corpseState.watched | &#10;$stimulus.isIndifferent" saveVersion="2">
+						<Then canSkip="1">
+							<EntityContextCheck context="crime_isAuthority" target="$this.id" saveVersion="2">
+								<Then canSkip="1">
+									<Selector>
+										<GraphSearch Origin="$stimulus.corpse" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;crime_corpseReactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+											<LinkDataFilter tag="&apos;crime_corpseReactor&apos;" condition="$__link_crime_corpseReactor.reactionKind == $enum:crime_reactionKind.watchCorpse" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+										</GraphSearch>
+										<Switch>
+											<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+												<Then canSkip="1">
+													<Function_stealth_recognitionState_I_reaction target="$stimulus.corpse" nodeLabel="10768156" />
+												</Then>
+											</EntityContextCheck>
+											<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+												<Then canSkip="1">
+													<Function_stealth_recognitionState_II_reaction stimulusKind="$stimulusKind" target="$stimulus.corpse" nodeLabel="16691725" />
+												</Then>
+											</EntityContextCheck>
+											<DefaultBranch>
+												<Sequence>
+													<Function_crime_addCorpseLink corpse="$stimulus.corpse" corpseState="$enum:corpseState.watched" mateReacting="false" resolve="false" storeTime="false" nodeLabel="40682038" />
+													<EntityContextCheck context="crime_deadBody" target="$stimulus.corpse" saveVersion="2">
+														<Else canSkip="1">
+															<Function_callInterrupt_watchCorpse corpse="$stimulus.corpse" ignorePriority="$ignorePriority" initiator="$initiator" noticableCorpseMissingVolume="$__null" previousReaction="$enum:crime_reactionKind.unknown" seenBefore="$corpseSeenBefore" stimulusKind="$stimulusKind" nodeLabel="35615626" />
+														</Else>
+													</EntityContextCheck>
+												</Sequence>
+											</DefaultBranch>
+										</Switch>
+									</Selector>
+								</Then>
+								<Else canSkip="1">
+									<IfCondition failOnCondition="false" condition="$stimulus.isFollowUp">
+										<RemoveLink From="$this.id" To="$stimulus.corpse" Tag="&apos;crime_followUpBehavior_watchCorpse&apos;" LinkOpHandleMode="Success" />
+									</IfCondition>
+								</Else>
+							</EntityContextCheck>
+						</Then>
+						<Else canSkip="1">
+							<IfCondition failOnCondition="false" condition="~$corpseSeenBefore | $ignorePriority">
+								<Sequence>
+									<CheckReactionLimit DesiredReactionType="$enum:crime_reactionType.reactToCorpse" Information="$information" Position="" StimulusKind="$stimulusKind" ShouldReact="$shouldReact" ShouldWatch="$shouldWatch" />
+									<IfElseCondition failOnCondition="false" condition="$shouldReact" saveVersion="2">
+										<Then canSkip="1">
+											<Switch>
+												<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+													<Then canSkip="1">
+														<IfCondition failOnCondition="false" condition="$corpseData.state &lt; $enum:corpseState.investigated">
+															<Function_stealth_recognitionState_I_reaction target="$stimulus.corpse" nodeLabel="61015991" />
+														</IfCondition>
+													</Then>
+												</EntityContextCheck>
+												<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+													<Then canSkip="1">
+														<IfCondition failOnCondition="false" condition="$corpseData.state &lt; $enum:corpseState.investigated">
+															<Function_stealth_recognitionState_II_reaction stimulusKind="$stimulusKind" target="$stimulus.corpse" nodeLabel="13126332" />
+														</IfCondition>
+													</Then>
+												</EntityContextCheck>
+												<DefaultBranch>
+													<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+														<Then canSkip="1">
+															<Sequence>
+																<Function_crime_addCorpseLink corpse="$stimulus.corpse" corpseState="$enum:corpseState.investigated" mateReacting="false" resolve="true" storeTime="false" nodeLabel="19113253" />
+																<AddLink From="$this.id" To="$stimulus.corpse" Tag="&apos;crime_followUpBehavior_watchCorpse&apos;" Data="active(true)" LinkOpHandleMode="Success" />
+																<Function_callInterrupt_lookAround alarmReactionType="$enum:crime_alarmReactionType.none" amIBuddy="false" corpseState="$corpseData.state" directHit="false" forceSubscribedSoundReaction="false" ignorePriority="$ignorePriority" information_look="$information" initiator="$initiator" missingNpc="$__null" position="$information.position" previousReaction="$enum:crime_reactionKind.unknown" reactingToSoundBecauseAlone="false" reportedBy="$__null" searchDirection="" searchPointsFromDirection="false" shooter="$__player" soundType="$enum:sound.movement" source="$source" stimulusAnimalAbuse="" stimulusKind="$stimulusKind" nodeLabel="36597128" />
+															</Sequence>
+														</Then>
+														<Else canSkip="1">
+															<Sequence>
+																<ChooseReportDestination Information="$information" IsImportant="true" Destination="$reportDestination" DestinationType="$reportDestinationType" />
+																<Switch>
+																	<IfCondition failOnCondition="false" condition="$reportDestinationType == $enum:crime_reportDestinationType.authority">
+																		<Sequence>
+																			<Function_crime_addCorpseLink corpse="$stimulus.corpse" corpseState="$enum:corpseState.discovered" mateReacting="false" resolve="false" storeTime="false" nodeLabel="64966935" />
+																			<IsReportNecessary Information="$information" ReportDestination="$reportDestination" ReportNecessary="$isReportNecessary" />
+																			<IfElseCondition failOnCondition="false" condition="$corpseData.state &lt; $enum:corpseState.investigated &amp; $isReportNecessary" saveVersion="2">
+																				<Then canSkip="1">
+																					<Function_callInterrupt_report assaultData="" corpseState="$corpseData.state" criminalFreshness="$enum:crime_criminalFreshness.unknown" disableDetectedIcon="false" disableEmitting="false" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="$information" initiator="$initiator" movementSpeed="$enum:movementSpeed.sprint" previousReaction="$enum:crime_reactionKind.unknown" reportDestination="$reportDestination" reportDestinationType="$reportDestinationType" source="$source" stimulusKind="$stimulusKind" nodeLabel="15444610" />
+																				</Then>
+																				<Else canSkip="1">
+																					<IfCondition failOnCondition="false" condition="$shouldWatch">
+																						<Function_callInterrupt_watch assaultData="" corpseState="$corpseData.state" criminalFreshness="$enum:crime_criminalFreshness.unknown" defenceMode="false" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="$information" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" source="$source" stimulusKind="$stimulusKind" target="$stimulus.corpse" nodeLabel="87584616" />
+																					</IfCondition>
+																				</Else>
+																			</IfElseCondition>
+																		</Sequence>
+																	</IfCondition>
+																	<IfCondition failOnCondition="false" condition="$reportDestinationType == $enum:crime_reportDestinationType.mate | &#10;$reportDestinationType == $enum:crime_reportDestinationType.security">
+																		<IfElseCondition failOnCondition="false" condition="$corpseData.state == $enum:corpseState.undiscovered" saveVersion="2">
+																			<Then canSkip="1">
+																				<EntityContextCheck context="crime_isCourageous" target="" saveVersion="2">
+																					<Then canSkip="1">
+																						<Sequence>
+																							<Function_crime_addCorpseLink corpse="$stimulus.corpse" corpseState="$enum:corpseState.investigated" mateReacting="false" resolve="false" storeTime="false" nodeLabel="36982855" />
+																							<AddLink From="$this.id" To="$stimulus.corpse" Tag="&apos;crime_followUpBehavior_watchCorpse&apos;" Data="active(true)" LinkOpHandleMode="Success" />
+																							<Function_callInterrupt_lookAround alarmReactionType="$enum:crime_alarmReactionType.none" amIBuddy="false" corpseState="$corpseData.state" directHit="false" forceSubscribedSoundReaction="false" ignorePriority="$ignorePriority" information_look="$information" initiator="$initiator" missingNpc="$__null" position="$information.position" previousReaction="$enum:crime_reactionKind.unknown" reactingToSoundBecauseAlone="false" reportedBy="$__null" searchDirection="" searchPointsFromDirection="false" shooter="$__player" soundType="$enum:sound.movement" source="$source" stimulusAnimalAbuse="" stimulusKind="$stimulusKind" nodeLabel="45525953" />
+																						</Sequence>
+																					</Then>
+																					<Else canSkip="1">
+																						<Sequence>
+																							<Function_crime_addCorpseLink corpse="$stimulus.corpse" corpseState="$enum:corpseState.discovered" mateReacting="false" resolve="false" storeTime="false" nodeLabel="21505712" />
+																							<Function_callInterrupt_report assaultData="" corpseState="$corpseData.state" criminalFreshness="$enum:crime_criminalFreshness.unknown" disableDetectedIcon="false" disableEmitting="false" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="$information" initiator="$initiator" movementSpeed="$enum:movementSpeed.sprint" previousReaction="$enum:crime_reactionKind.unknown" reportDestination="$reportDestination" reportDestinationType="$reportDestinationType" source="$source" stimulusKind="$stimulusKind" nodeLabel="79554953" />
+																						</Sequence>
+																					</Else>
+																				</EntityContextCheck>
+																			</Then>
+																			<Else canSkip="1">
+																				<Sequence>
+																					<Function_crime_addCorpseLink corpse="$stimulus.corpse" corpseState="$enum:corpseState.investigated" mateReacting="false" resolve="false" storeTime="false" nodeLabel="40527254" />
+																					<AddLink From="$this.id" To="$stimulus.corpse" Tag="&apos;crime_followUpBehavior_watchCorpse&apos;" Data="active(true)" LinkOpHandleMode="Success" />
+																					<Function_callInterrupt_lookAround alarmReactionType="$enum:crime_alarmReactionType.none" amIBuddy="false" corpseState="$corpseData.state" directHit="false" forceSubscribedSoundReaction="false" ignorePriority="$ignorePriority" information_look="$information" initiator="$initiator" missingNpc="$__null" position="$information.position" previousReaction="$enum:crime_reactionKind.unknown" reactingToSoundBecauseAlone="false" reportedBy="$__null" searchDirection="" searchPointsFromDirection="false" shooter="$__player" soundType="$enum:sound.movement" source="$source" stimulusAnimalAbuse="" stimulusKind="$stimulusKind" nodeLabel="14362392" />
+																				</Sequence>
+																			</Else>
+																		</IfElseCondition>
+																	</IfCondition>
+																	<DefaultBranch>
+																		<EntityContextCheck context="crime_isCourageous" target="" saveVersion="2">
+																			<Then canSkip="1">
+																				<Sequence>
+																					<Function_crime_addCorpseLink corpse="$stimulus.corpse" corpseState="$enum:corpseState.investigated" mateReacting="false" resolve="false" storeTime="false" nodeLabel="64677770" />
+																					<AddLink From="$this.id" To="$stimulus.corpse" Tag="&apos;crime_followUpBehavior_watchCorpse&apos;" Data="active(true)" LinkOpHandleMode="Success" />
+																					<Function_callInterrupt_lookAround alarmReactionType="$enum:crime_alarmReactionType.none" amIBuddy="false" corpseState="$corpseData.state" directHit="false" forceSubscribedSoundReaction="false" ignorePriority="$ignorePriority" information_look="$information" initiator="$initiator" missingNpc="$__null" position="$information.position" previousReaction="$enum:crime_reactionKind.unknown" reactingToSoundBecauseAlone="false" reportedBy="$__null" searchDirection="" searchPointsFromDirection="false" shooter="$__player" soundType="$enum:sound.movement" source="$source" stimulusAnimalAbuse="" stimulusKind="$stimulusKind" nodeLabel="90712610" />
+																				</Sequence>
+																			</Then>
+																			<Else canSkip="1">
+																				<Sequence>
+																					<Function_crime_addCorpseLink corpse="$stimulus.corpse" corpseState="$enum:corpseState.discovered" mateReacting="false" resolve="false" storeTime="false" nodeLabel="66728936" />
+																					<Function_callInterrupt_flee assaultData="" corpseState="$corpseData.state" criminalFreshness="$enum:crime_criminalFreshness.unknown" freshlyAttributedCrime="false" ignorePriority="false" information="$information" initiator="$initiator" isIndifferent="false" leaveLevel="false" mercyDialogueResult="$enum:crime_mercyDialogueResult.unknown" previousReaction="$enum:crime_reactionKind.unknown" priority="135" source="$source" stimulusKind="$stimulusKind" target="$stimulus.corpse" nodeLabel="33211761" />
+																				</Sequence>
+																			</Else>
+																		</EntityContextCheck>
+																	</DefaultBranch>
+																</Switch>
+															</Sequence>
+														</Else>
+													</EntityContextCheck>
+												</DefaultBranch>
+											</Switch>
+										</Then>
+										<Else canSkip="1">
+											<IfElseCondition failOnCondition="false" condition="$stimulus.isFollowUp" saveVersion="2">
+												<Then canSkip="1">
+													<RemoveLink From="$this.id" To="$stimulus.corpse" Tag="&apos;crime_followUpBehavior_watchCorpse&apos;" LinkOpHandleMode="Success" />
+												</Then>
+												<Else canSkip="1">
+													<Switch>
+														<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+															<Then canSkip="1">
+																<Success />
+															</Then>
+														</EntityContextCheck>
+														<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+															<Then canSkip="1">
+																<Success />
+															</Then>
+														</EntityContextCheck>
+														<DefaultBranch>
+															<Sequence>
+																<Function_crime_addCorpseLink corpse="$stimulus.corpse" corpseState="$enum:corpseState.discovered" mateReacting="false" resolve="false" storeTime="false" nodeLabel="37551570" />
+																<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+																	<Then canSkip="1">
+																		<AddLink From="$this.id" To="$stimulus.corpse" Tag="&apos;crime_followUpBehavior_watchCorpse&apos;" Data="active(true)" LinkOpHandleMode="Success" />
+																	</Then>
+																</EntityContextCheck>
+																<IfCondition failOnCondition="false" condition="$shouldWatch">
+																	<Function_callInterrupt_watch assaultData="" corpseState="$corpseData.state" criminalFreshness="$enum:crime_criminalFreshness.unknown" defenceMode="false" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="$information" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" source="$source" stimulusKind="$stimulusKind" target="$stimulus.corpse" nodeLabel="52762892" />
+																</IfCondition>
+															</Sequence>
+														</DefaultBranch>
+													</Switch>
+												</Else>
+											</IfElseCondition>
+										</Else>
+									</IfElseCondition>
+								</Sequence>
+							</IfCondition>
+						</Else>
+					</IfElseCondition>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="corpseData" comment="" />
+				<Variable name="corpseSeenBefore" comment="" />
+				<Variable name="ignorePriority" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="initiator" comment="" />
+				<Variable name="isReportNecessary" comment="" />
+				<Variable name="reportDestination" comment="" />
+				<Variable name="reportDestinationType" comment="" />
+				<Variable name="shouldReact" comment="" />
+				<Variable name="shouldWatch" comment="" />
+				<Variable name="source" comment="" />
+				<Variable name="stimulusKind" comment="" />
+				<Variable name="stimulus" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosY="-100" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Function_crime_getCorpseSeenBefore hasInputBreakpoint="0" comment="if initiated by scheduler assume you want to react still" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_crime_getCorpseSeenBefore>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Then>
+							<Else>
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+								</EntityContextCheck>
+							</Else>
+						</EntityContextCheck>
+						<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Then>
+									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Success>
+								</Then>
+							</EntityContextCheck>
+							<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Then>
+									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Success>
+								</Then>
+							</EntityContextCheck>
+							<DefaultBranch>
+								<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_createCorpseInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_createCorpseInformation>
+								</AtomicDecorator>
+							</DefaultBranch>
+						</Switch>
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</LinkTagFilter>
+							</GraphSearch>
+						</SuppressFailure>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</IfCondition>
+						<IfElseCondition hasInputBreakpoint="0" comment="treat indifferent corpses as resolved" breakpointFlags="1" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+												<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkDataFilter>
+											</GraphSearch>
+											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Function_stealth_recognitionState_I_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_stealth_recognitionState_I_reaction>
+													</Then>
+												</EntityContextCheck>
+												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Function_stealth_recognitionState_II_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_stealth_recognitionState_II_reaction>
+													</Then>
+												</EntityContextCheck>
+												<DefaultBranch>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_addCorpseLink>
+														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Else>
+																<Function_callInterrupt_watchCorpse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_callInterrupt_watchCorpse>
+															</Else>
+														</EntityContextCheck>
+													</Sequence>
+												</DefaultBranch>
+											</Switch>
+										</Selector>
+									</Then>
+									<Else>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RemoveLink>
+										</IfCondition>
+									</Else>
+								</EntityContextCheck>
+							</Then>
+							<Else>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<CheckReactionLimit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</CheckReactionLimit>
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_stealth_recognitionState_I_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_stealth_recognitionState_I_reaction>
+															</IfCondition>
+														</Then>
+													</EntityContextCheck>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_stealth_recognitionState_II_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_stealth_recognitionState_II_reaction>
+															</IfCondition>
+														</Then>
+													</EntityContextCheck>
+													<DefaultBranch>
+														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_crime_addCorpseLink>
+																	<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</AddLink>
+																	<Function_callInterrupt_lookAround hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_callInterrupt_lookAround>
+																</Sequence>
+															</Then>
+															<Else>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<ChooseReportDestination hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</ChooseReportDestination>
+																	<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_addCorpseLink>
+																				<IsReportNecessary hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</IsReportNecessary>
+																				<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Then>
+																						<Function_callInterrupt_report hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_callInterrupt_report>
+																					</Then>
+																					<Else>
+																						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Function_callInterrupt_watch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_callInterrupt_watch>
+																						</IfCondition>
+																					</Else>
+																				</IfElseCondition>
+																			</Sequence>
+																		</IfCondition>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Then>
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_crime_addCorpseLink>
+																								<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</AddLink>
+																								<Function_callInterrupt_lookAround hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_callInterrupt_lookAround>
+																							</Sequence>
+																						</Then>
+																						<Else>
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_crime_addCorpseLink>
+																								<Function_callInterrupt_report hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_callInterrupt_report>
+																							</Sequence>
+																						</Else>
+																					</EntityContextCheck>
+																				</Then>
+																				<Else>
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_addCorpseLink>
+																						<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</AddLink>
+																						<Function_callInterrupt_lookAround hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_callInterrupt_lookAround>
+																					</Sequence>
+																				</Else>
+																			</IfElseCondition>
+																		</IfCondition>
+																		<DefaultBranch>
+																			<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_addCorpseLink>
+																						<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</AddLink>
+																						<Function_callInterrupt_lookAround hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_callInterrupt_lookAround>
+																					</Sequence>
+																				</Then>
+																				<Else>
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_addCorpseLink>
+																						<Function_callInterrupt_flee hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_callInterrupt_flee>
+																					</Sequence>
+																				</Else>
+																			</EntityContextCheck>
+																		</DefaultBranch>
+																	</Switch>
+																</Sequence>
+															</Else>
+														</EntityContextCheck>
+													</DefaultBranch>
+												</Switch>
+											</Then>
+											<Else>
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</RemoveLink>
+													</Then>
+													<Else>
+														<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Success>
+																</Then>
+															</EntityContextCheck>
+															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Success>
+																</Then>
+															</EntityContextCheck>
+															<DefaultBranch>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_crime_addCorpseLink>
+																	<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</AddLink>
+																		</Then>
+																	</EntityContextCheck>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Function_callInterrupt_watch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_callInterrupt_watch>
+																	</IfCondition>
+																</Sequence>
+															</DefaultBranch>
+														</Switch>
+													</Else>
+												</IfElseCondition>
+											</Else>
+										</IfElseCondition>
+									</Sequence>
+								</IfCondition>
+							</Else>
+						</IfElseCondition>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

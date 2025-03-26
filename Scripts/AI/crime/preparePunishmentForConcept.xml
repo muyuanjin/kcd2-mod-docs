@@ -1,0 +1,465 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_preparePunishmentForConcept" is_function="1">
+		<Variables>
+			<Variable name="assets_wuid" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="assets_wuid_val" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="cutsceneHolder" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="cutsceneLinkName" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="fastTravelCH" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="punishmentArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="punishmentLocation" type="enum:crime_punishmentLocation" values="" isPersistent="0" form="single" />
+			<Variable name="qso_openworld" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="teleportPoint" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="timeAdvanceCH" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="punishmentType" type="enum:crime_punishmentType" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Selector>
+					<AtomicDecorator>
+						<Sequence>
+							<Sequence>
+								<Function_crime_getPunishmentArea punishmentArea="$punishmentArea" punishmentLocation="$punishmentLocation" nodeLabel="80014466" />
+								<IfElseCondition failOnCondition="false" condition="$punishmentType == $enum:crime_punishmentType.execution" saveVersion="2">
+									<Then canSkip="1">
+										<GraphSearch Origin="$__land" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;punishment_executionCH&apos;" prune="true" negprune="unknown" Parent="" Child="$cutsceneHolder" Data="" />
+										</GraphSearch>
+									</Then>
+									<Else canSkip="1">
+										<Sequence>
+											<Switch>
+												<IfCondition failOnCondition="false" condition="$punishmentType == $enum:crime_punishmentType.pillory">
+													<GameContextCheck context="crime_punishmentPilloryFirstRunExecuted" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$cutsceneLinkName = &apos;punishment_pilloryCH_var&apos;" />
+														</Then>
+														<Else canSkip="1">
+															<Expression expressions="$cutsceneLinkName = &apos;punishment_pilloryCH_firstRun&apos;" />
+														</Else>
+													</GameContextCheck>
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$punishmentType == $enum:crime_punishmentType.beating">
+													<Expression expressions="$cutsceneLinkName = &apos;punishment_beatingCH&apos;" />
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$punishmentType == $enum:crime_punishmentType.branding">
+													<Expression expressions="$cutsceneLinkName = &apos;punishment_brandingCH&apos;" />
+												</IfCondition>
+												<DefaultBranch>
+													<ErrorNode Message="&apos;[Punishment] unknown punishmentType provided&apos;" />
+												</DefaultBranch>
+											</Switch>
+											<Selector>
+												<GraphSearch Origin="$punishmentArea" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+													<LinkTagFilter tag="$cutsceneLinkName" prune="true" negprune="unknown" Parent="" Child="$cutsceneHolder" Data="" />
+												</GraphSearch>
+												<ErrorNode Message="&apos;[Punishment] \&apos;$cutsceneLinkName;\&apos; link not found on punishmentArea&apos;" />
+											</Selector>
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+							<Function_crime_getOpenworldQSO openworldQSO="$qso_openworld" nodeLabel="30149958" />
+							<Sequence>
+								<ReinitVariable variable="$assets_wuid" />
+								<SuppressFailure>
+									<GraphSearch Origin="$qso_openworld" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<Nodalyzer Quantifiers="ForAll" Parent="" Child="$assets_wuid" saveVersion="2" />
+										<LinkDataFilter tag="&apos;asset&apos;" condition="$__link_asset == &apos;punishment_cutscene&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+									</GraphSearch>
+								</SuppressFailure>
+								<SuppressFailure>
+									<GraphSearch Origin="$qso_openworld" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<Nodalyzer Quantifiers="ForAll" Parent="" Child="$assets_wuid" saveVersion="2" />
+										<LinkDataFilter tag="&apos;asset&apos;" condition="$__link_asset == &apos;punishment_teleportPoint&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+									</GraphSearch>
+								</SuppressFailure>
+								<ForEach startIndex="0" step="1" array="$assets_wuid" iterator="" value="$assets_wuid_val" break="">
+									<RemoveLink From="$qso_openworld" To="$assets_wuid_val" Tag="&apos;asset&apos;" LinkOpHandleMode="Error" />
+								</ForEach>
+							</Sequence>
+							<SuppressFailure>
+								<Sequence>
+									<Selector>
+										<GraphSearch Origin="$qso_openworld" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkDataFilter tag="&apos;asset&apos;" condition="$__link_asset == &apos;punishment_timeAdvance&apos;" prune="true" negprune="unknown" Parent="" Child="$timeAdvanceCH" Data="" />
+										</GraphSearch>
+										<ErrorNode Message="&apos;[Punishment] No punishment_timeAdvance cutscene linked to openworld QSO&apos;" />
+									</Selector>
+									<Sequence>
+										<Function_crime_removeLinksByName linkName="&apos;teleport&apos;" sourceEntity="$timeAdvanceCH" nodeLabel="79086231" />
+									</Sequence>
+								</Sequence>
+							</SuppressFailure>
+							<Sequence>
+								<Selector>
+									<GraphSearch Origin="$punishmentArea" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;punishment_teleportPoint&apos;" prune="true" negprune="unknown" Parent="" Child="$teleportPoint" Data="" />
+									</GraphSearch>
+									<ErrorNode Message="&apos;[Punishment] No teleport tagpoint found for this punishmentArea [$punishmentArea;]&apos;" />
+								</Selector>
+								<AddLink From="$qso_openworld" To="$teleportPoint" Tag="&apos;asset&apos;" Data="&apos;punishment_teleportPoint&apos;" LinkOpHandleMode="Success" />
+							</Sequence>
+							<IfCondition failOnCondition="false" condition="$teleportPoint ~= $__null">
+								<SuppressFailure>
+									<Sequence>
+										<Selector>
+											<GraphSearch Origin="$qso_openworld" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+												<LinkDataFilter tag="&apos;asset&apos;" condition="$__link_asset == &apos;punishment_fastTravel&apos;" prune="true" negprune="unknown" Parent="" Child="$fastTravelCH" Data="" />
+											</GraphSearch>
+											<ErrorNode Message="&apos;[Punishment] No punishment_timeAdvance cutscene linked to openworld QSO&apos;" />
+										</Selector>
+										<Function_crime_removeLinksByName linkName="&apos;fastTravel&apos;" sourceEntity="$fastTravelCH" nodeLabel="58610946" />
+										<AddLink From="$fastTravelCH" To="$teleportPoint" Tag="&apos;fastTravel&apos;" Data="" LinkOpHandleMode="OverWrite" />
+									</Sequence>
+								</SuppressFailure>
+							</IfCondition>
+							<AddLink From="$qso_openworld" To="$cutsceneHolder" Tag="&apos;asset&apos;" Data="&apos;punishment_cutscene&apos;" LinkOpHandleMode="Success" />
+						</Sequence>
+					</AtomicDecorator>
+					<ErrorNode Message="&apos;[$this.name;] Unable to find a punishment spot&apos;" />
+				</Selector>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Sequence>
+				<SuppressFailure>
+					<Sequence>
+						<GraphSearch Origin="$punishment_fader" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+							<LinkTagFilter tag="&apos;fastForward&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+							<Nodalyzer Quantifiers="ForAll" Parent="" Child="$fastForwards" saveVersion="2" />
+						</GraphSearch>
+						<ForEach startIndex="0" step="1" array="$fastForwards" iterator="" value="$fastForwards_val" break="">
+							<RemoveLink From="$punishment_fader" To="$fastForwards_val" Tag="&apos;fastForward&apos;" LinkOpHandleMode="OverWrite" />
+						</ForEach>
+					</Sequence>
+				</SuppressFailure>
+				<VarOperation varName="$fastForwards" targetVarName="" operation="Reinit" argument="" />
+				<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+					<LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+					<Nodalyzer Quantifiers="ForAll" Parent="" Child="$fastForwards" saveVersion="2" />
+				</GraphSearch>
+				<ForEach startIndex="0" step="1" array="$fastForwards" iterator="" value="$fastForwards_val" break="">
+					<AddLink From="$punishment_fader" To="$fastForwards_val" Tag="&apos;fastForward&apos;" Data="" LinkOpHandleMode="OverWrite" />
+				</ForEach>
+			</Sequence>
+			<Sequence>
+				<GraphSearch Origin="$__land" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+					<LinkTagFilter tag="&apos;punishment_fader&apos;" prune="true" negprune="unknown" Parent="" Child="$punishment_fader" Data="" />
+				</GraphSearch>
+				<Sequence>
+					<SuppressFailure>
+						<Sequence>
+							<GraphSearch Origin="$punishment_fader" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<LinkTagFilter tag="&apos;teleport&apos;" prune="true" negprune="unknown" Parent="" Child="$teleport_old" Data="" />
+							</GraphSearch>
+							<RemoveLink From="$punishment_fader" To="$teleport_old" Tag="&apos;teleport&apos;" LinkOpHandleMode="OverWrite" />
+						</Sequence>
+					</SuppressFailure>
+					<GraphSearch Origin="$cutsceneHolder" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;teleport&apos;" prune="true" negprune="unknown" Parent="" Child="$teleport" Data="" />
+					</GraphSearch>
+					<AddLink From="$punishment_fader" To="$teleport" Tag="&apos;teleport&apos;" Data="" LinkOpHandleMode="OverWrite" />
+				</Sequence>
+			</Sequence>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="assets_wuid" comment="" />
+				<Variable name="assets_wuid_val" comment="" />
+				<Variable name="cutsceneHolder" comment="" />
+				<Variable name="cutsceneLinkName" comment="" />
+				<Variable name="fastTravelCH" comment="" />
+				<Variable name="punishmentArea" comment="" />
+				<Variable name="punishmentLocation" comment="" />
+				<Variable name="qso_openworld" comment="" />
+				<Variable name="teleportPoint" comment="" />
+				<Variable name="timeAdvanceCH" comment="" />
+				<Variable name="punishmentType" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="punishment_cutscene stuff" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_getPunishmentArea hasInputBreakpoint="0" comment="Need punishmentArea for linking even when getting executed" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_getPunishmentArea>
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<GraphSearch hasInputBreakpoint="0" comment="Execution is static per map" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+										</Then>
+										<Else>
+											<Sequence hasInputBreakpoint="0" comment="Get the correct CutScene holder entity based on TriggerArea that player is inside of" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+															<Else>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Else>
+														</GameContextCheck>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</IfCondition>
+													<DefaultBranch>
+														<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ErrorNode>
+													</DefaultBranch>
+												</Switch>
+												<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</LinkTagFilter>
+													</GraphSearch>
+													<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</ErrorNode>
+												</Selector>
+											</Sequence>
+										</Else>
+									</IfElseCondition>
+								</Sequence>
+								<Function_crime_getOpenworldQSO hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_getOpenworldQSO>
+								<Sequence hasInputBreakpoint="0" comment="Delete linked &apos;punishment cutscene&apos; assets from this &apos;open world&apos; SmartObject" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</ReinitVariable>
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+											</Nodalyzer>
+											<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkDataFilter>
+										</GraphSearch>
+									</SuppressFailure>
+									<SuppressFailure hasInputBreakpoint="0" comment="Append" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+											</Nodalyzer>
+											<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkDataFilter>
+										</GraphSearch>
+									</SuppressFailure>
+									<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</RemoveLink>
+									</ForEach>
+								</Sequence>
+								<SuppressFailure hasInputBreakpoint="0" comment="Postpunishment text cutscene" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Selector hasInputBreakpoint="0" comment="Time Advance CUTSCENE" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkDataFilter>
+											</GraphSearch>
+											<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</ErrorNode>
+										</Selector>
+										<Sequence hasInputBreakpoint="0" comment="Cleanup old shit (patch)" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_crime_removeLinksByName hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_removeLinksByName>
+										</Sequence>
+									</Sequence>
+								</SuppressFailure>
+								<Sequence hasInputBreakpoint="0" comment="Add new teleport Point" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+										<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ErrorNode>
+									</Selector>
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+								</Sequence>
+								<IfCondition hasInputBreakpoint="0" comment="Link TeleportPoint as fast travel destination" breakpointFlags="0">
+									<OutputBreakpoints />
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</LinkDataFilter>
+												</GraphSearch>
+												<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</ErrorNode>
+											</Selector>
+											<Function_crime_removeLinksByName hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_removeLinksByName>
+											<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</AddLink>
+										</Sequence>
+									</SuppressFailure>
+								</IfCondition>
+								<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</AddLink>
+							</Sequence>
+						</AtomicDecorator>
+						<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</ErrorNode>
+					</Selector>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Sequence editorPosX="3970" editorPosY="390" hasInputBreakpoint="0" comment="Link crime_reactors for fastforward" breakpointFlags="0">
+					<OutputBreakpoints />
+					<SuppressFailure hasInputBreakpoint="0" comment="Delete old" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</LinkTagFilter>
+								<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+								</Nodalyzer>
+							</GraphSearch>
+							<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</RemoveLink>
+							</ForEach>
+						</Sequence>
+					</SuppressFailure>
+					<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</VarOperation>
+					<GraphSearch hasInputBreakpoint="0" comment="Get new" breakpointFlags="0">
+						<OutputBreakpoints />
+						<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</LinkTagFilter>
+						<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+						</Nodalyzer>
+					</GraphSearch>
+					<ForEach hasInputBreakpoint="0" comment="Add new" breakpointFlags="0">
+						<OutputBreakpoints />
+						<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</AddLink>
+					</ForEach>
+				</Sequence>
+				<Sequence editorPosX="4170" editorPosY="-280" hasInputBreakpoint="0" comment="Punishment_fader stuff" breakpointFlags="0">
+					<OutputBreakpoints />
+					<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</LinkTagFilter>
+					</GraphSearch>
+					<Sequence hasInputBreakpoint="0" comment="Link punishment_fader to appropriate teleport tagpoint" breakpointFlags="0">
+						<OutputBreakpoints />
+						<SuppressFailure hasInputBreakpoint="0" comment="Delete old" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkTagFilter>
+								</GraphSearch>
+								<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</RemoveLink>
+							</Sequence>
+						</SuppressFailure>
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+						</GraphSearch>
+						<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</AddLink>
+					</Sequence>
+				</Sequence>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

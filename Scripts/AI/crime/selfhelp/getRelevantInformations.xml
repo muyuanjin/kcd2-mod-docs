@@ -1,0 +1,715 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_selfhelp_getRelevantInformations" is_function="1">
+		<Variables>
+			<Variable name="attackKind" type="enum:crime_attackKind" values="" isPersistent="0" form="single" />
+			<Variable name="createdInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="informationTransformed" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="killedByHorse" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="mates" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="murderInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="relatedToEveryone" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="relevantInformations_index" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="relevantInformations_lastIndex" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="relevantInformations_value" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="relevantInformations_value_isRelatedToResolvingSelfhelper" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="relevantInformations_value_victim" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="resolveInformation" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="uselessInt" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="violentNoDogInformation" type="information" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="allSelfhelpers" type="_wuid" values="" isPersistent="0" form="array" requirementType="Reference" />
+			<Variable name="relevantInformations" type="information" values="" isPersistent="0" form="array" requirementType="Out" />
+			<Variable name="resolvingSelfhelper" type="_wuid" values="$this.id" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="selfhelpParticipantsType" type="enum:crime_selfhelpParticipants" values="" isPersistent="0" form="single" requirementType="Out" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<GetMates Target="$resolvingSelfhelper" Mates="$mates" />
+					<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+						<LinkDataFilter tag="&apos;crime_reactor&apos;" condition="$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.selfhelp | &#10;$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.attack | &#10;$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.watch" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+						<RangeFilter min="0.000000" max="25.000000" point="$__player" excludeRef="true" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+						<SoulIsAliveFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+						<Nodalyzer Quantifiers="ForAll" Parent="" Child="$allSelfhelpers" saveVersion="2" />
+					</GraphSearch>
+					<EntityContext context="crime_receiveIrrelevantInformationSpreads" target="">
+						<Sequence>
+							<Function_spreadInformationWithinFriends NPCs="$allSelfhelpers" nodeLabel="24460370" />
+							<GetKnownInformations OutArray="$relevantInformations" Holder="$resolvingSelfhelper" />
+							<Expression expressions="$relevantInformations_lastIndex = #relevantInformations - 1" />
+							<For startIndex="$relevantInformations_lastIndex" endIndex="-1" step="-1" array="$relevantInformations" iterator="$relevantInformations_index" value="$relevantInformations_value" break="">
+								<IfElseCondition failOnCondition="false" condition="$data:crime[$relevantInformations_value.label].isCrime" saveVersion="2">
+									<Then canSkip="1">
+										<Sequence>
+											<ReinitVariable variable="$relevantInformations_value_isRelatedToResolvingSelfhelper" />
+											<ReinitVariable variable="$resolveInformation" />
+											<DetermineCrimeVictim Information="$relevantInformations_value" Victim="$relevantInformations_value_victim" />
+											<IfCondition failOnCondition="false" condition="$relevantInformations_value_victim ~= $__null">
+												<IfElseCondition failOnCondition="false" condition="$relevantInformations_value_victim == $resolvingSelfhelper" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$relevantInformations_value_isRelatedToResolvingSelfhelper = true" />
+													</Then>
+													<Else canSkip="1">
+														<Sequence>
+															<GetAreMates Npc1="$relevantInformations_value_victim" Npc2="$resolvingSelfhelper" AreMates="$relevantInformations_value_isRelatedToResolvingSelfhelper" />
+															<IfCondition failOnCondition="false" condition="$selfhelpParticipantsType == $enum:crime_selfhelpParticipants.onlyMe">
+																<Expression expressions="$selfhelpParticipantsType = $enum:crime_selfhelpParticipants.meAndMates" />
+															</IfCondition>
+														</Sequence>
+													</Else>
+												</IfElseCondition>
+											</IfCondition>
+											<LockDynamicInformationValues Information="$relevantInformations_value">
+												<Sequence>
+													<Expression expressions="$relatedToEveryone = false" />
+													<SuppressFailure>
+														<GetDynamicInformationValue Information="$relevantInformations_value" Tag="&apos;relatedToEveryone&apos;" Out="$relatedToEveryone" />
+													</SuppressFailure>
+													<Expression expressions="$relevantInformations_value_isRelatedToResolvingSelfhelper = $relevantInformations_value_isRelatedToResolvingSelfhelper | $relatedToEveryone" />
+												</Sequence>
+											</LockDynamicInformationValues>
+											<IfElseCondition failOnCondition="false" condition="$relevantInformations_value_isRelatedToResolvingSelfhelper" saveVersion="2">
+												<Then canSkip="1">
+													<Expression expressions="$resolveInformation = true" />
+												</Then>
+												<Else canSkip="1">
+													<Sequence>
+														<Switch>
+															<IfCondition failOnCondition="false" condition="$relevantInformations_value.label == &apos;murder&apos; | &#10;$relevantInformations_value.label == &apos;murderByDog&apos;">
+																<Expression expressions="$selfhelpParticipantsType = $enum:crime_selfhelpParticipants.unrelated &#10;$resolveInformation = true" />
+															</IfCondition>
+															<IfCondition failOnCondition="false" condition="$relevantInformations_value.label == &apos;assault&apos; | &#10;$relevantInformations_value.label == &apos;aggression&apos; | &#10;$relevantInformations_value.label == &apos;assaultByDog&apos;">
+																<IsDeadCheck SoulWUID="$relevantInformations_value.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+																	<Then canSkip="1">
+																		<Expression expressions="$selfhelpParticipantsType = $enum:crime_selfhelpParticipants.unrelated &#10;$resolveInformation = true" />
+																	</Then>
+																</IsDeadCheck>
+															</IfCondition>
+															<DefaultBranch>
+																<Success />
+															</DefaultBranch>
+														</Switch>
+														<IfCondition failOnCondition="false" condition="~$resolveInformation">
+															<SuppressFailure>
+																<Sequence>
+																	<Selector>
+																		<FindInArray array="$allSelfhelpers" keyOut="$uselessInt" condition="$__value == $relevantInformations_value_victim" />
+																		<GraphSearch Origin="$relevantInformations_value_victim" Borders="" depth="2" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;home,home_inhabitant&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																			<LinkTagFilter tag="&apos;home_inhabitant&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																			<WUIDFilter WUID="$allSelfhelpers" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																		</GraphSearch>
+																	</Selector>
+																	<Expression expressions="$selfhelpParticipantsType = $enum:crime_selfhelpParticipants.unrelated &#10;$resolveInformation = true" />
+																</Sequence>
+															</SuppressFailure>
+														</IfCondition>
+													</Sequence>
+												</Else>
+											</IfElseCondition>
+											<IfElseCondition failOnCondition="false" condition="$resolveInformation" saveVersion="2">
+												<Then canSkip="1">
+													<Switch>
+														<IfCondition failOnCondition="false" condition="$relevantInformations_value.label == &apos;assault&apos; | &#10;$relevantInformations_value.label == &apos;aggression&apos;">
+															<CheckWuidValid wuid="$relevantInformations_value.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+																<Then canSkip="1">
+																	<IsDeadCheck SoulWUID="$relevantInformations_value.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+																		<Then canSkip="1">
+																			<Selector>
+																				<Sequence>
+																					<RetrieveInformation PerceivedWuid="$relevantInformations_value.perceivedWuid" label="&apos;murder&apos;" OutVariable="$murderInformation" />
+																					<Function_crime_transformInformation a_originalInformation="$relevantInformations_value" b_newInformation="$murderInformation" skipAllDynamicInfo="true" skipMetadata="false" nodeLabel="47334838" />
+																					<EraseFromArray array="$relevantInformations" condition="$__value == $relevantInformations_value" />
+																					<Expression expressions="$informationTransformed = true" />
+																				</Sequence>
+																				<Sequence>
+																					<CreateInformationWrapper Label="&apos;murder&apos;" PerceivedWuid="$relevantInformations_value.perceivedWuid" PositionType="positionVec3" PositionVec3="$relevantInformations_value.position" PositionWuid="" Information="$createdInformation" />
+																					<LockDynamicInformationValues Information="$createdInformation">
+																						<Sequence>
+																							<LockDynamicInformationValues Information="$relevantInformations_value">
+																								<GetDynamicInformationValue Information="$relevantInformations_value" Tag="&apos;kind&apos;" Out="$attackKind" />
+																							</LockDynamicInformationValues>
+																							<Expression expressions="$killedByHorse = $attackKind == $enum:crime_attackKind.collision" />
+																							<SetDynamicInformationValue Information="$createdInformation" Tag="&apos;killedByHorse&apos;" Variable="$killedByHorse" Type="" Value="" />
+																						</Sequence>
+																					</LockDynamicInformationValues>
+																					<Function_crime_transformInformation a_originalInformation="$relevantInformations_value" b_newInformation="$createdInformation" skipAllDynamicInfo="false" skipMetadata="false" nodeLabel="57372353" />
+																					<Expression expressions="$relevantInformations[$relevantInformations_index] = $createdInformation &#10; &#10;$informationTransformed = true" />
+																				</Sequence>
+																			</Selector>
+																		</Then>
+																		<Else canSkip="1">
+																			<IfCondition failOnCondition="false" condition="$relevantInformations_value.label == &apos;aggression&apos;">
+																				<SuppressFailure>
+																					<Sequence>
+																						<RetrieveInformation PerceivedWuid="$relevantInformations_value.perceivedWuid" label="&apos;assault&apos;" OutVariable="$murderInformation" />
+																						<Function_crime_transformInformation a_originalInformation="$relevantInformations_value" b_newInformation="$murderInformation" skipAllDynamicInfo="true" skipMetadata="false" nodeLabel="32036789" />
+																						<EraseFromArray array="$relevantInformations" condition="$__value == $relevantInformations_value" />
+																						<Expression expressions="$informationTransformed = true" />
+																					</Sequence>
+																				</SuppressFailure>
+																			</IfCondition>
+																		</Else>
+																	</IsDeadCheck>
+																</Then>
+															</CheckWuidValid>
+														</IfCondition>
+														<IfCondition failOnCondition="false" condition="$relevantInformations_value.label == &apos;assaultByDog&apos; | &#10;$relevantInformations_value.label == &apos;murderByDog&apos;">
+															<CheckWuidValid wuid="$relevantInformations_value.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+																<Then canSkip="1">
+																	<Selector>
+																		<Sequence>
+																			<RetrieveInformation PerceivedWuid="$relevantInformations_value.perceivedWuid" label="&apos;murder&apos;" OutVariable="$violentNoDogInformation" />
+																			<Function_crime_transformInformation a_originalInformation="$relevantInformations_value" b_newInformation="$violentNoDogInformation" skipAllDynamicInfo="true" skipMetadata="false" nodeLabel="71983636" />
+																			<EraseFromArray array="$relevantInformations" condition="$__value == $relevantInformations_value" />
+																			<Expression expressions="$informationTransformed = true" />
+																		</Sequence>
+																		<IfCondition failOnCondition="false" condition="$relevantInformations_value.label == &apos;assaultByDog&apos;">
+																			<IsDeadCheck SoulWUID="$relevantInformations_value.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+																				<Then canSkip="1">
+																					<Selector>
+																						<Sequence>
+																							<RetrieveInformation PerceivedWuid="$relevantInformations_value.perceivedWuid" label="&apos;murderByDog&apos;" OutVariable="$murderInformation" />
+																							<Function_crime_transformInformation a_originalInformation="$relevantInformations_value" b_newInformation="$murderInformation" skipAllDynamicInfo="true" skipMetadata="false" nodeLabel="45229171" />
+																							<EraseFromArray array="$relevantInformations" condition="$__value == $relevantInformations_value" />
+																							<Expression expressions="$informationTransformed = true" />
+																						</Sequence>
+																						<Sequence>
+																							<CreateInformationWrapper Label="&apos;murderByDog&apos;" PerceivedWuid="$relevantInformations_value.perceivedWuid" PositionType="positionVec3" PositionVec3="$relevantInformations_value.position" PositionWuid="" Information="$createdInformation" />
+																							<Function_crime_transformInformation a_originalInformation="$relevantInformations_value" b_newInformation="$createdInformation" skipAllDynamicInfo="false" skipMetadata="false" nodeLabel="82285508" />
+																							<Expression expressions="$relevantInformations[$relevantInformations_index] = $createdInformation &#10; &#10;$informationTransformed = true" />
+																						</Sequence>
+																					</Selector>
+																				</Then>
+																				<Else canSkip="1">
+																					<Success />
+																				</Else>
+																			</IsDeadCheck>
+																		</IfCondition>
+																	</Selector>
+																</Then>
+															</CheckWuidValid>
+														</IfCondition>
+														<IfCondition failOnCondition="false" condition="$relevantInformations_value.label == &apos;corpseViolation&apos;">
+															<CheckWuidValid wuid="$relevantInformations_value.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+																<Then canSkip="1">
+																	<SuppressFailure>
+																		<Sequence>
+																			<RetrieveInformation PerceivedWuid="$relevantInformations_value.perceivedWuid" label="&apos;murder&apos;" OutVariable="$murderInformation" />
+																			<Function_crime_transformInformation a_originalInformation="$relevantInformations_value" b_newInformation="$murderInformation" skipAllDynamicInfo="true" skipMetadata="false" nodeLabel="18689779" />
+																			<EraseFromArray array="$relevantInformations" condition="$__value == $relevantInformations_value" />
+																			<Expression expressions="$informationTransformed = true" />
+																		</Sequence>
+																	</SuppressFailure>
+																</Then>
+															</CheckWuidValid>
+														</IfCondition>
+														<IfCondition failOnCondition="false" condition="$relevantInformations_value.label == &apos;assaultAnimal&apos;">
+															<CheckWuidValid wuid="$relevantInformations_value.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+																<Then canSkip="1">
+																	<IsDeadCheck SoulWUID="$relevantInformations_value.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+																		<Then canSkip="1">
+																			<Selector>
+																				<Sequence>
+																					<RetrieveInformation PerceivedWuid="$relevantInformations_value.perceivedWuid" label="&apos;murderAnimal&apos;" OutVariable="$murderInformation" />
+																					<Function_crime_transformInformation a_originalInformation="$relevantInformations_value" b_newInformation="$murderInformation" skipAllDynamicInfo="true" skipMetadata="false" nodeLabel="78060933" />
+																					<EraseFromArray array="$relevantInformations" condition="$__value == $relevantInformations_value" />
+																					<Expression expressions="$informationTransformed = true" />
+																				</Sequence>
+																				<Sequence>
+																					<CreateInformationWrapper Label="&apos;murderAnimal&apos;" PerceivedWuid="$relevantInformations_value.perceivedWuid" PositionType="positionVec3" PositionVec3="$relevantInformations_value.position" PositionWuid="" Information="$createdInformation" />
+																					<Function_crime_transformInformation a_originalInformation="$relevantInformations_value" b_newInformation="$createdInformation" skipAllDynamicInfo="false" skipMetadata="false" nodeLabel="54767758" />
+																					<Expression expressions="$relevantInformations[$relevantInformations_index] = $createdInformation &#10; &#10;$informationTransformed = true" />
+																				</Sequence>
+																			</Selector>
+																		</Then>
+																		<Else canSkip="1">
+																			<Success />
+																		</Else>
+																	</IsDeadCheck>
+																</Then>
+															</CheckWuidValid>
+														</IfCondition>
+														<DefaultBranch>
+															<Success />
+														</DefaultBranch>
+													</Switch>
+												</Then>
+												<Else canSkip="1">
+													<EraseFromArray array="$relevantInformations" condition="$__value == $relevantInformations_value" />
+												</Else>
+											</IfElseCondition>
+										</Sequence>
+									</Then>
+									<Else canSkip="1">
+										<EraseFromArray array="$relevantInformations" condition="$__value == $relevantInformations_value" />
+									</Else>
+								</IfElseCondition>
+							</For>
+							<IfCondition failOnCondition="false" condition="$informationTransformed">
+								<Function_crime_broadcastCooperationNotification cooperationNotification="$enum:crime_cooperationNotification.informationTransformed" nodeLabel="83281057" />
+							</IfCondition>
+						</Sequence>
+					</EntityContext>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="attackKind" comment="" />
+				<Variable name="createdInformation" comment="" />
+				<Variable name="informationTransformed" comment="" />
+				<Variable name="killedByHorse" comment="" />
+				<Variable name="mates" comment="" />
+				<Variable name="murderInformation" comment="" />
+				<Variable name="relatedToEveryone" comment="" />
+				<Variable name="relevantInformations_index" comment="" />
+				<Variable name="relevantInformations_lastIndex" comment="" />
+				<Variable name="relevantInformations_value" comment="" />
+				<Variable name="relevantInformations_value_isRelatedToResolvingSelfhelper" comment="" />
+				<Variable name="relevantInformations_value_victim" comment="" />
+				<Variable name="resolveInformation" comment="" />
+				<Variable name="uselessInt" comment="" />
+				<Variable name="violentNoDogInformation" comment="" />
+				<Variable name="allSelfhelpers" comment="" />
+				<Variable name="relevantInformations" comment="" />
+				<Variable name="resolvingSelfhelper" comment="" />
+				<Variable name="selfhelpParticipantsType" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-170" editorPosY="-90" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GetMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetMates>
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+							<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkDataFilter>
+							<RangeFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</RangeFilter>
+							<SoulIsAliveFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</SoulIsAliveFilter>
+							<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+							</Nodalyzer>
+						</GraphSearch>
+						<EntityContext hasInputBreakpoint="0" comment="To get all the information from othet selfhelpers" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_spreadInformationWithinFriends hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_spreadInformationWithinFriends>
+								<GetKnownInformations hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</GetKnownInformations>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+								<For hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</ReinitVariable>
+												<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</ReinitVariable>
+												<DetermineCrimeVictim hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</DetermineCrimeVictim>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+														<Else>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GetAreMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetAreMates>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</IfCondition>
+															</Sequence>
+														</Else>
+													</IfElseCondition>
+												</IfCondition>
+												<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</GetDynamicInformationValue>
+														</SuppressFailure>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Sequence>
+												</LockDynamicInformationValues>
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Then>
+													<Else>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfCondition hasInputBreakpoint="0" comment="KCD2-383622, murder is always relevant" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</IfCondition>
+																<IfCondition hasInputBreakpoint="0" comment="KCD2-383622, current info will be escalated to murder and therefore be relevant" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Then>
+																	</IsDeadCheck>
+																</IfCondition>
+																<DefaultBranch>
+																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Success>
+																</DefaultBranch>
+															</Switch>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</FindInArray>
+																			<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</LinkTagFilter>
+																				<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</WUIDFilter>
+																			</GraphSearch>
+																		</Selector>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</Sequence>
+																</SuppressFailure>
+															</IfCondition>
+														</Sequence>
+													</Else>
+												</IfElseCondition>
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</RetrieveInformation>
+																						<Function_crime_transformInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_transformInformation>
+																						<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</EraseFromArray>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Sequence>
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</CreateInformationWrapper>
+																						<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</GetDynamicInformationValue>
+																								</LockDynamicInformationValues>
+																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																								<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</SetDynamicInformationValue>
+																							</Sequence>
+																						</LockDynamicInformationValues>
+																						<Function_crime_transformInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_transformInformation>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Sequence>
+																				</Selector>
+																			</Then>
+																			<Else>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</RetrieveInformation>
+																							<Function_crime_transformInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_transformInformation>
+																							<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</EraseFromArray>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</Sequence>
+																					</SuppressFailure>
+																				</IfCondition>
+																			</Else>
+																		</IsDeadCheck>
+																	</Then>
+																</CheckWuidValid>
+															</IfCondition>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</RetrieveInformation>
+																				<Function_crime_transformInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_transformInformation>
+																				<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</EraseFromArray>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Sequence>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Then>
+																						<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</RetrieveInformation>
+																								<Function_crime_transformInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_crime_transformInformation>
+																								<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</EraseFromArray>
+																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																							</Sequence>
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</CreateInformationWrapper>
+																								<Function_crime_transformInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_crime_transformInformation>
+																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																							</Sequence>
+																						</Selector>
+																					</Then>
+																					<Else>
+																						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Success>
+																					</Else>
+																				</IsDeadCheck>
+																			</IfCondition>
+																		</Selector>
+																	</Then>
+																</CheckWuidValid>
+															</IfCondition>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</RetrieveInformation>
+																				<Function_crime_transformInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_transformInformation>
+																				<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</EraseFromArray>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Sequence>
+																		</SuppressFailure>
+																	</Then>
+																</CheckWuidValid>
+															</IfCondition>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</RetrieveInformation>
+																						<Function_crime_transformInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_transformInformation>
+																						<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</EraseFromArray>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Sequence>
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</CreateInformationWrapper>
+																						<Function_crime_transformInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_transformInformation>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Sequence>
+																				</Selector>
+																			</Then>
+																			<Else>
+																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Success>
+																			</Else>
+																		</IsDeadCheck>
+																	</Then>
+																</CheckWuidValid>
+															</IfCondition>
+															<DefaultBranch>
+																<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Success>
+															</DefaultBranch>
+														</Switch>
+													</Then>
+													<Else>
+														<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</EraseFromArray>
+													</Else>
+												</IfElseCondition>
+											</Sequence>
+										</Then>
+										<Else>
+											<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</EraseFromArray>
+										</Else>
+									</IfElseCondition>
+								</For>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_broadcastCooperationNotification hasInputBreakpoint="0" comment="Notify reactors that SOME informations got transformed, they have to check for themselves" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_broadcastCooperationNotification>
+								</IfCondition>
+							</Sequence>
+						</EntityContext>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

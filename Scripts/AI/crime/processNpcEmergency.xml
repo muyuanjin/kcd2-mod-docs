@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_processNpcEmergency" is_function="1">
+		<Variables>
+			<Variable name="breakLoop" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="distancePlayerToLastNavmesh" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="distancePointToPlayer" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="lastNavmeshPosition" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="lastPositionAvailable" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="npcEmergency" type="npcEmergency" values="" isPersistent="0" form="single" />
+			<Variable name="npcType" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="points" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="points_val" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="teleportRequest" type="switch:teleportRequest" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<While doFail="false" propagateChildFail="false" condition="true">
+					<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$npcEmergency" senderInfo="" inbox="&apos;npcEmergency&apos;" condition="" answerVar="">
+						<Sequence>
+							<Expression expressions="$lastPositionAvailable = false" />
+							<SuppressFailure>
+								<Sequence>
+									<GetType WUID="$this.id" OutString="$npcType" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+									<IfElseCondition failOnCondition="false" condition="$npcType == &apos;NPC&apos;" saveVersion="2">
+										<Then canSkip="1">
+											<GetLastNavmeshPosition Target="$this.id" OutPos="$lastNavmeshPosition" TrackingMode="MNMPos" />
+										</Then>
+										<Else canSkip="1">
+											<GetLastNavmeshPosition Target="$this.id" OutPos="$lastNavmeshPosition" TrackingMode="NPCPos" />
+										</Else>
+									</IfElseCondition>
+									<MeasureDistance position1="$__player" position2="$lastNavmeshPosition" mode="ThreeDimensions" result="$distancePlayerToLastNavmesh" />
+									<IfCondition failOnCondition="false" condition="$distancePlayerToLastNavmesh &gt; $data:script_param[&apos;switch_npcEmergency_minimalDistanceToPlayer&apos;].value  | &#10;$this.id == $__player">
+										<Expression expressions="$lastPositionAvailable = true" />
+									</IfCondition>
+								</Sequence>
+							</SuppressFailure>
+							<IfElseCondition failOnCondition="false" condition="$lastPositionAvailable" saveVersion="2">
+								<Then canSkip="1">
+									<Sequence>
+										<Expression expressions="$teleportRequest.positionVec3 = $lastNavmeshPosition &#10;$teleportRequest.shouldUseWuidPosition = false" />
+										<InstantSendMessageToNPC target="$this.id" variable="$teleportRequest" />
+									</Sequence>
+								</Then>
+								<Else canSkip="1">
+									<Sequence>
+										<Selector>
+											<GraphSearch Origin="$__land" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+												<LinkTagFilter tag="&apos;npcEmergencyPoint&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+												<Nodalyzer Quantifiers="ForAll" Parent="" Child="$points" saveVersion="2">
+													<Child0 canSkip="1">
+														<RangeSorter point="$this.id" SortOrder="Ascending" Source="Child" />
+													</Child0>
+												</Nodalyzer>
+											</GraphSearch>
+											<ErrorNode Message="&apos;[$this.name;] npcEmergency - unable to find a point for teleport&apos;" />
+										</Selector>
+										<ForEach startIndex="0" step="1" array="$points" iterator="" value="$points_val" break="$breakLoop">
+											<Sequence>
+												<MeasureDistance position1="$__player" position2="$points_val" mode="ThreeDimensions" result="$distancePointToPlayer" />
+												<IfCondition failOnCondition="false" condition="$distancePointToPlayer &gt; $data:script_param[&apos;switch_npcEmergency_minimalDistanceToPlayer&apos;].value | &#10;$this.id == $__player">
+													<Sequence>
+														<Expression expressions="$teleportRequest.positionWuid = $points_val &#10;$teleportRequest.shouldUseWuidPosition = true" />
+														<InstantSendMessageToNPC target="$this.id" variable="$teleportRequest" />
+														<Expression expressions="$breakLoop = true" />
+													</Sequence>
+												</IfCondition>
+											</Sequence>
+										</ForEach>
+									</Sequence>
+								</Else>
+							</IfElseCondition>
+						</Sequence>
+					</ProcessMessage>
+				</While>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="breakLoop" comment="" />
+				<Variable name="distancePlayerToLastNavmesh" comment="" />
+				<Variable name="distancePointToPlayer" comment="" />
+				<Variable name="lastNavmeshPosition" comment="" />
+				<Variable name="lastPositionAvailable" comment="" />
+				<Variable name="npcEmergency" comment="" />
+				<Variable name="npcType" comment="" />
+				<Variable name="points" comment="" />
+				<Variable name="points_val" comment="" />
+				<Variable name="teleportRequest" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetType>
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<GetLastNavmeshPosition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetLastNavmeshPosition>
+											</Then>
+											<Else>
+												<GetLastNavmeshPosition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetLastNavmeshPosition>
+											</Else>
+										</IfElseCondition>
+										<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</MeasureDistance>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</IfCondition>
+									</Sequence>
+								</SuppressFailure>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</InstantSendMessageToNPC>
+										</Sequence>
+									</Then>
+									<Else>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</LinkTagFilter>
+													<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Child0>
+															<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</RangeSorter>
+														</Child0>
+													</Nodalyzer>
+												</GraphSearch>
+												<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</ErrorNode>
+											</Selector>
+											<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</MeasureDistance>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</InstantSendMessageToNPC>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Sequence>
+													</IfCondition>
+												</Sequence>
+											</ForEach>
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+						</ProcessMessage>
+					</While>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

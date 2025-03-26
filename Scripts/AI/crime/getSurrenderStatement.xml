@@ -1,0 +1,367 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="crime_getSurrenderStatement" is_function="1">
+    <Variables>
+      <Variable name="bestSelfhelper" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="crimesResolved" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="doResolve" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="knownMurderedFriend" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="npcCooldowns" type="crime:npcCooldowns" values="" isPersistent="0" form="single" />
+      <Variable name="participantOnSurrenderCooldown" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="questSurrender" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="reactionSuppressed" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="resolutionDialogIntroKind" type="enum:crime_resolutionDialogIntroKind" values="" isPersistent="0" form="single" />
+      <Variable name="resolveData" type="switch:interruptData:resolve" values="" isPersistent="0" form="single" />
+      <Variable name="responsibleAuthority" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="selfhelp_resolveData" type="switch:interruptData:selfhelp_resolve" values="" isPersistent="0" form="single" />
+      <Variable name="skirmishParticipant_value" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="surrenderCooldownData" type="crime:surrenderCooldown" values="" isPersistent="0" form="single" />
+      <Variable name="surrenderRejected" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="surrenderTimeNow" type="_int64" values="" isPersistent="0" form="single" />
+      <Variable name="trespassArea" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="trespassReaction" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="trespassSevereness" type="enum:trespassLevel" values="" isPersistent="0" form="single" />
+      <Variable name="unableToSurrender" type="_bool" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="attackData" type="switch:interruptData:attack" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="attackState" type="enum:crime_interruptAttackState" values="" isPersistent="0" form="single" requirementType="Reference" />
+      <Variable name="finalSkirmishParticipants" type="_wuid" values="" isPersistent="0" form="array" requirementType="Out" />
+      <Variable name="surrenderChatResult" type="crime:playerSurrenderChatFeedback" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="surrenderStatement" type="enum:crime_surrenderStatement" values="" isPersistent="0" form="single" requirementType="Out" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <EntityContextCheck context="combat_neverAcceptSurrender" target="$this.id" saveVersion="2">
+          <Then canSkip="1">
+            <Sequence>
+              <GameContextCheck context="crime_surrender_debugEnabled" saveVersion="2">
+                <Then canSkip="1">
+                  <ExecuteLua code="Game.SendInfoText(&apos;DEBUG_____player_is_surrendering_NPC_non-surrendering_context&apos;,false)" />
+                </Then>
+              </GameContextCheck>
+              <Callback_empty EventName="&apos;surrenderRejectedContext&apos;" />
+            </Sequence>
+          </Then>
+          <Else canSkip="1">
+            <Sequence>
+              <Function_crime_resolveSkirmishParticipants referenceNPC="$this.id" bestSelfhelper="$bestSelfhelper" doResolve="$doResolve" finalParticipants="$finalSkirmishParticipants" knownMurderedFriend="$knownMurderedFriend" questSurrender="$questSurrender" responsibleAuthority="$responsibleAuthority" unableToSurrender="$unableToSurrender" nodeLabel="88072651" />
+              <IfElseCondition failOnCondition="false" condition="$knownMurderedFriend" saveVersion="2">
+                <Then canSkip="1">
+                  <Callback_empty EventName="&apos;knownMurderedFriend&apos;" />
+                </Then>
+                <Else canSkip="1">
+                  <IfElseCondition failOnCondition="false" condition="$questSurrender" saveVersion="2">
+                    <Then canSkip="1">
+                      <Callback_passParticipants skirmishParticipantsToSendMessage="$finalSkirmishParticipants" EventName="&apos;solvedByQuest&apos;" />
+                    </Then>
+                    <Else canSkip="1">
+                      <IfElseCondition failOnCondition="false" condition="$surrenderChatResult.force" saveVersion="2">
+                        <Then canSkip="1">
+                          <EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+                            <Then canSkip="1">
+                              <Callback_passParticipants skirmishParticipantsToSendMessage="$finalSkirmishParticipants" EventName="&apos;solvedByAuthority&apos;" />
+                            </Then>
+                            <Else canSkip="1">
+                              <Callback_passParticipants skirmishParticipantsToSendMessage="$finalSkirmishParticipants" EventName="&apos;solvedBySelfHelper&apos;" />
+                            </Else>
+                          </EntityContextCheck>
+                        </Then>
+                        <Else canSkip="1">
+                          <IfElseCondition failOnCondition="false" condition="$unableToSurrender" saveVersion="2">
+                            <Then canSkip="1">
+                              <Callback_empty EventName="&apos;threeWaySkirmish&apos;" />
+                            </Then>
+                            <Else canSkip="1">
+                              <Sequence>
+                                <IfCondition failOnCondition="false" condition="~$surrenderRejected">
+                                  <AtomicDecorator>
+                                    <Sequence>
+                                      <Expression expressions="$surrenderRejected = true" />
+                                      <GetTime TimeType="GameTime" OutVar="$surrenderTimeNow" Delta="" />
+                                      <ForEach startIndex="0" step="1" array="$finalSkirmishParticipants" iterator="" value="$skirmishParticipant_value" break="$surrenderRejected">
+                                        <Function_crime_isNpcOnSurrenderCooldown npc="$skirmishParticipant_value" isOnCooldown="$surrenderRejected" nodeLabel="16365549" />
+                                      </ForEach>
+                                    </Sequence>
+                                  </AtomicDecorator>
+                                </IfCondition>
+                                <IfElseCondition failOnCondition="false" condition="$surrenderRejected" saveVersion="2">
+                                  <Then canSkip="1">
+                                    <Sequence>
+                                      <GameContextCheck context="crime_surrender_debugEnabled" saveVersion="2">
+                                        <Then canSkip="1">
+                                          <ExecuteLua code="Game.SendInfoText(&apos;DEBUG_____player_is_surrendering_NPC_on_cooldown&apos;,false)" />
+                                        </Then>
+                                      </GameContextCheck>
+                                      <Callback_empty EventName="&apos;surrenderRejected&apos;" />
+                                    </Sequence>
+                                  </Then>
+                                  <Else canSkip="1">
+                                    <Sequence>
+                                      <GameContextCheck context="crime_surrender_debugEnabled" saveVersion="2">
+                                        <Then canSkip="1">
+                                          <ExecuteLua code="Game.SendInfoText(&apos;DEBUG_____player_is_surrendering_npc_should_resolve&apos;,false)" />
+                                        </Then>
+                                      </GameContextCheck>
+                                      <IfElseCondition failOnCondition="false" condition="$doResolve" saveVersion="2">
+                                        <Then canSkip="1">
+                                          <IfElseCondition failOnCondition="false" condition="$responsibleAuthority == $__null" saveVersion="2">
+                                            <Then canSkip="1">
+                                              <IfElseCondition failOnCondition="false" condition="$bestSelfhelper == $this.id" saveVersion="2">
+                                                <Then canSkip="1">
+                                                  <Callback_passParticipants skirmishParticipantsToSendMessage="$finalSkirmishParticipants" EventName="&apos;solvedBySelfHelper&apos;" />
+                                                </Then>
+                                                <Else canSkip="1">
+                                                  <Callback_passToResponsibleNpc responsibleNpc="$bestSelfhelper" EventName="&apos;passToResponsibleNpc&apos;" />
+                                                </Else>
+                                              </IfElseCondition>
+                                            </Then>
+                                            <Else canSkip="1">
+                                              <EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+                                                <Then canSkip="1">
+                                                  <Callback_passParticipants skirmishParticipantsToSendMessage="$finalSkirmishParticipants" EventName="&apos;solvedByAuthority&apos;" />
+                                                </Then>
+                                                <Else canSkip="1">
+                                                  <Callback_passToResponsibleNpc responsibleNpc="$responsibleAuthority" EventName="&apos;passToResponsibleNpc&apos;" />
+                                                </Else>
+                                              </EntityContextCheck>
+                                            </Else>
+                                          </IfElseCondition>
+                                        </Then>
+                                        <Else canSkip="1">
+                                          <Callback_passParticipants skirmishParticipantsToSendMessage="$finalSkirmishParticipants" EventName="&apos;noInformation&apos;" />
+                                        </Else>
+                                      </IfElseCondition>
+                                    </Sequence>
+                                  </Else>
+                                </IfElseCondition>
+                              </Sequence>
+                            </Else>
+                          </IfElseCondition>
+                        </Else>
+                      </IfElseCondition>
+                    </Else>
+                  </IfElseCondition>
+                </Else>
+              </IfElseCondition>
+            </Sequence>
+          </Else>
+        </EntityContextCheck>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="surrenderStatement">
+      <Variables>
+        <Variable name="bestSelfhelper" comment="" />
+        <Variable name="crimesResolved" comment="" />
+        <Variable name="doResolve" comment="" />
+        <Variable name="knownMurderedFriend" comment="" />
+        <Variable name="npcCooldowns" comment="" />
+        <Variable name="participantOnSurrenderCooldown" comment="" />
+        <Variable name="questSurrender" comment="" />
+        <Variable name="reactionSuppressed" comment="" />
+        <Variable name="resolutionDialogIntroKind" comment="" />
+        <Variable name="resolveData" comment="" />
+        <Variable name="responsibleAuthority" comment="" />
+        <Variable name="selfhelp_resolveData" comment="" />
+        <Variable name="skirmishParticipant_value" comment="" />
+        <Variable name="surrenderCooldownData" comment="" />
+        <Variable name="surrenderRejected" comment="" />
+        <Variable name="surrenderTimeNow" comment="" />
+        <Variable name="trespassArea" comment="" />
+        <Variable name="trespassReaction" comment="" />
+        <Variable name="trespassSevereness" comment="" />
+        <Variable name="unableToSurrender" comment="" />
+        <Variable name="attackData" comment="" />
+        <Variable name="attackState" comment="" />
+        <Variable name="finalSkirmishParticipants" comment="" />
+        <Variable name="surrenderChatResult" comment="" />
+        <Variable name="surrenderStatement" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+            <OutputBreakpoints />
+            <Then>
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                  <OutputBreakpoints />
+                  <Then>
+                    <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </ExecuteLua>
+                  </Then>
+                </GameContextCheck>
+                <Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Callback_empty>
+              </Sequence>
+            </Then>
+            <Else>
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Function_crime_resolveSkirmishParticipants hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Function_crime_resolveSkirmishParticipants>
+                <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                  <OutputBreakpoints />
+                  <Then>
+                    <Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Callback_empty>
+                  </Then>
+                  <Else>
+                    <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Then>
+                        <Callback_passParticipants hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Callback_passParticipants>
+                      </Then>
+                      <Else>
+                        <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                          <OutputBreakpoints />
+                          <Then>
+                            <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                              <OutputBreakpoints />
+                              <Then>
+                                <Callback_passParticipants hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Callback_passParticipants>
+                              </Then>
+                              <Else>
+                                <Callback_passParticipants hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Callback_passParticipants>
+                              </Else>
+                            </EntityContextCheck>
+                          </Then>
+                          <Else>
+                            <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                              <OutputBreakpoints />
+                              <Then>
+                                <Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Callback_empty>
+                              </Then>
+                              <Else>
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </Expression>
+                                        <GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </GetTime>
+                                        <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <Function_crime_isNpcOnSurrenderCooldown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </Function_crime_isNpcOnSurrenderCooldown>
+                                        </ForEach>
+                                      </Sequence>
+                                    </AtomicDecorator>
+                                  </IfCondition>
+                                  <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                    <OutputBreakpoints />
+                                    <Then>
+                                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                          <OutputBreakpoints />
+                                          <Then>
+                                            <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </ExecuteLua>
+                                          </Then>
+                                        </GameContextCheck>
+                                        <Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </Callback_empty>
+                                      </Sequence>
+                                    </Then>
+                                    <Else>
+                                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                          <OutputBreakpoints />
+                                          <Then>
+                                            <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </ExecuteLua>
+                                          </Then>
+                                        </GameContextCheck>
+                                        <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                          <OutputBreakpoints />
+                                          <Then>
+                                            <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                              <OutputBreakpoints />
+                                              <Then>
+                                                <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                                  <OutputBreakpoints />
+                                                  <Then>
+                                                    <Callback_passParticipants hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                      <OutputBreakpoints />
+                                                    </Callback_passParticipants>
+                                                  </Then>
+                                                  <Else>
+                                                    <Callback_passToResponsibleNpc hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                      <OutputBreakpoints />
+                                                    </Callback_passToResponsibleNpc>
+                                                  </Else>
+                                                </IfElseCondition>
+                                              </Then>
+                                              <Else>
+                                                <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                                  <OutputBreakpoints />
+                                                  <Then>
+                                                    <Callback_passParticipants hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                      <OutputBreakpoints />
+                                                    </Callback_passParticipants>
+                                                  </Then>
+                                                  <Else>
+                                                    <Callback_passToResponsibleNpc hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                      <OutputBreakpoints />
+                                                    </Callback_passToResponsibleNpc>
+                                                  </Else>
+                                                </EntityContextCheck>
+                                              </Else>
+                                            </IfElseCondition>
+                                          </Then>
+                                          <Else>
+                                            <Callback_passParticipants hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </Callback_passParticipants>
+                                          </Else>
+                                        </IfElseCondition>
+                                      </Sequence>
+                                    </Else>
+                                  </IfElseCondition>
+                                </Sequence>
+                              </Else>
+                            </IfElseCondition>
+                          </Else>
+                        </IfElseCondition>
+                      </Else>
+                    </IfElseCondition>
+                  </Else>
+                </IfElseCondition>
+              </Sequence>
+            </Else>
+          </EntityContextCheck>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

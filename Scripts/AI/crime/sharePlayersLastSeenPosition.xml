@@ -1,0 +1,471 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_sharePlayersLastSeenPosition" is_function="1">
+		<Variables>
+			<Variable name="lastSeenData" type="crime:playerLastSeen" values="" isPersistent="0" form="single" />
+			<Variable name="lastSeenDataFromNearbys" type="_wuid,crime:playerLastSeen" values="" isPersistent="0" form="custom_associative" />
+			<Variable name="lastSeenDataFromNearbys_key" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="lastSeenDataFromNearbys_value" type="crime:playerLastSeen" values="" isPersistent="0" form="single" />
+			<Variable name="newPosition" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="now" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="playerFound" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="posDelta" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="shareData" type="crime:playersLastSeenPositionShare" values="" isPersistent="0" form="single" />
+			<Variable name="sharedFrom" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="visualAssistanceSuppressed" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="visualAssistanceTimestamp" type="_int64" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="allowedAssistance" type="enum:crime_allowedSharePlayerPosAssistance" values="$enum:crime_allowedSharePlayerPosAssistance.none" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="direction" type="vec3" values="" isPersistent="0" form="single" requirementType="Reference" optional="1" />
+			<Variable name="position" type="vec3" values="" isPersistent="0" form="single" requirementType="Reference" optional="1" />
+			<Variable name="requestVisualAssistanceFromOthers" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<Parallel successMode="Any" failureMode="Any">
+							<Loop count="-1">
+								<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$shareData" senderInfo="" inbox="&apos;crime_playersLastSeenPositionShared&apos;" condition="" answerVar="">
+									<Sequence>
+										<GetTime TimeType="GameTime" OutVar="$now" Delta="" />
+										<IfCondition failOnCondition="false" condition="$visualAssistanceTimestamp == 0 |  &#10;$visualAssistanceTimestamp + $data:script_param[&apos;crime_sharePlayerPos_visualAssistanceCooldown&apos;].value &lt; $now">
+											<Sequence>
+												<Switch>
+													<IfCondition failOnCondition="false" condition="$allowedAssistance == $enum:crime_allowedSharePlayerPosAssistance.barkAndAnimation">
+														<SubtreeDecorator saveVersion="2">
+															<Init canSkip="1">
+																<InstantCallback_empty EventName="&apos;PointingStart&apos;" />
+															</Init>
+															<Subtree canSkip="1">
+																<Sequence>
+																	<WaitAction />
+																	<Turn target="$position" align="false" />
+																	<Parallel successMode="All" failureMode="Any">
+																		<HasSeenPlayer NPC="" FullyAwareOnly="true" saveVersion="2">
+																			<Then canSkip="1">
+																				<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$shareData.receiver" metarole="&apos;CUMIL_PROZRAZUJE_HRACE&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="46132190" />
+																			</Then>
+																			<Else canSkip="1">
+																				<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$shareData.receiver" metarole="&apos;CUMIL_PROZRAZUJE_KUDY_HRAC_BEZEL&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="67187488" />
+																			</Else>
+																		</HasSeenPlayer>
+																		<AnimationAction fragment="&apos;Pointing&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																	</Parallel>
+																</Sequence>
+															</Subtree>
+															<Cleanup canSkip="1">
+																<InstantCallback_empty EventName="&apos;PointingEnd&apos;" />
+															</Cleanup>
+														</SubtreeDecorator>
+													</IfCondition>
+													<IfCondition failOnCondition="false" condition="$allowedAssistance == $enum:crime_allowedSharePlayerPosAssistance.onlyBark">
+														<HasSeenPlayer NPC="" FullyAwareOnly="true" saveVersion="2">
+															<Then canSkip="1">
+																<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$shareData.receiver" metarole="&apos;CUMIL_PROZRAZUJE_HRACE&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="50892714" />
+															</Then>
+															<Else canSkip="1">
+																<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$shareData.receiver" metarole="&apos;CUMIL_PROZRAZUJE_KUDY_HRAC_BEZEL&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="63192214" />
+															</Else>
+														</HasSeenPlayer>
+													</IfCondition>
+													<DefaultBranch>
+														<Success />
+													</DefaultBranch>
+												</Switch>
+												<GetTime TimeType="GameTime" OutVar="$visualAssistanceTimestamp" Delta="" />
+											</Sequence>
+										</IfCondition>
+									</Sequence>
+								</ProcessMessage>
+							</Loop>
+							<While doFail="false" propagateChildFail="false" condition="true">
+								<Sequence>
+									<AtomicDecorator>
+										<GameContextCheck context="crime_global_disableCriminalPlayerReaction" saveVersion="2">
+											<Else canSkip="1">
+												<HasSeenPlayer NPC="" FullyAwareOnly="true" saveVersion="2">
+													<Then canSkip="1">
+														<Sequence>
+															<GetSpatialInfo In="$__player" Out="$position" What="Position" />
+															<Expression expressions="$lastSeenData.position = $position" />
+															<GetTime TimeType="GameTime" OutVar="$lastSeenData.time" Delta="" />
+															<AddLink From="$__player" To="$this.id" Tag="&apos;crime_playerLastSeen&apos;" Data="$lastSeenData" LinkOpHandleMode="OverWrite" />
+														</Sequence>
+													</Then>
+													<Else canSkip="1">
+														<SuppressFailure>
+															<Sequence>
+																<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																	<LinkTagFilter tag="&apos;crime_playerLastSeen&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																	<LinkDataFilter tag="&apos;crime_playerLastSeen&apos;" condition="$__link_crime_playerLastSeen.time &gt; $lastSeenData.time" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																	<RangeFilter min="0.000000" max="$data:script_param[&apos;crime_sharePlayerPos_posShareDistance&apos;].value" point="$this.id" excludeRef="true" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																	<EvaLLyzer Expresion="$lastSeenDataFromNearbys[$__to] = $__link_crime_playerLastSeen" Quantifiers="ForAll" saveVersion="2" />
+																</GraphSearch>
+																<VarOperation varName="$sharedFrom" targetVarName="" operation="Reinit" argument="" />
+																<VarOperation varName="$playerFound" targetVarName="" operation="Reinit" argument="" />
+																<VarOperation varName="$visualAssistanceSuppressed" targetVarName="" operation="Reinit" argument="" />
+																<ForEach startIndex="0" step="1" array="$lastSeenDataFromNearbys" iterator="$lastSeenDataFromNearbys_key" value="$lastSeenDataFromNearbys_value" break="">
+																	<CheckRelationshipInterval_SoulToSoul TargetSoul="$lastSeenDataFromNearbys_key" Soul="$this.id" Flag="friend" saveVersion="2">
+																		<Then canSkip="1">
+																			<Sequence>
+																				<EntityContextCheck context="crime_interrupt" target="$lastSeenDataFromNearbys_key" saveVersion="2">
+																					<Then canSkip="1">
+																						<IsDeadCheck SoulWUID="$lastSeenDataFromNearbys_key" FailSubtMissing="false" saveVersion="2">
+																							<Else canSkip="1">
+																								<HasSeenPlayer NPC="$lastSeenDataFromNearbys_key" FullyAwareOnly="true" saveVersion="2">
+																									<Then canSkip="1">
+																										<Sequence>
+																											<DistanceCondition Origin="$this.id" ReferencePt="$__player" Low="$data:script_param[&apos;crime_sharePlayerPos_directShareDistance&apos;].value" High="$data:script_param[&apos;crime_sharePlayerPos_directShareDistance&apos;].value" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+																												<Expression expressions="$playerFound = true" />
+																											</DistanceCondition>
+																											<EntityContextCheck context="crime_escalationLevel_script_confrontingGeneral" target="$lastSeenDataFromNearbys_key" saveVersion="2">
+																												<Then canSkip="1">
+																													<Expression expressions="$visualAssistanceSuppressed = true" />
+																												</Then>
+																											</EntityContextCheck>
+																										</Sequence>
+																									</Then>
+																								</HasSeenPlayer>
+																							</Else>
+																						</IsDeadCheck>
+																					</Then>
+																				</EntityContextCheck>
+																				<IfCondition failOnCondition="false" condition="$lastSeenDataFromNearbys_value.time &gt; $lastSeenData.time">
+																					<Expression expressions="$lastSeenData = $lastSeenDataFromNearbys_value &#10;$sharedFrom = $lastSeenDataFromNearbys_key &#10; &#10;$newPosition = $lastSeenDataFromNearbys_value.position" />
+																				</IfCondition>
+																			</Sequence>
+																		</Then>
+																	</CheckRelationshipInterval_SoulToSoul>
+																</ForEach>
+																<IfCondition failOnCondition="false" condition="$playerFound">
+																	<InstantCallback_empty EventName="&apos;PlayerFound&apos;" />
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="$sharedFrom ~= $__null">
+																	<Sequence>
+																		<MeasureDistance position1="$position" position2="$newPosition" mode="ThreeDimensions" result="$posDelta" />
+																		<Expression expressions="$direction.x = $position.x - $newPosition.x &#10;$direction.y = $position.y - $newPosition.y &#10;$direction.z = $position.z - $newPosition.z &#10; &#10;$position = $newPosition" />
+																		<AddLink From="$__player" To="$this.id" Tag="&apos;crime_playerLastSeen&apos;" Data="$lastSeenData" LinkOpHandleMode="OverWrite" />
+																		<IfCondition failOnCondition="false" condition="$posDelta &gt; 3">
+																			<Sequence>
+																				<IfCondition failOnCondition="false" condition="$requestVisualAssistanceFromOthers &amp; ~$visualAssistanceSuppressed">
+																					<DistanceCondition Origin="$this.id" ReferencePt="$sharedFrom" Low="10.000000" High="10.000000" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+																						<InstantSendMessageToNPC target="$sharedFrom" type="&apos;crime:playersLastSeenPositionShare&apos;" values="receiver($this.id)" />
+																					</DistanceCondition>
+																				</IfCondition>
+																				<InstantCallback_empty EventName="&apos;PositionUpdatedFromOtherNpc&apos;" />
+																			</Sequence>
+																		</IfCondition>
+																	</Sequence>
+																</IfCondition>
+															</Sequence>
+														</SuppressFailure>
+													</Else>
+												</HasSeenPlayer>
+											</Else>
+										</GameContextCheck>
+									</AtomicDecorator>
+									<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+								</Sequence>
+							</While>
+						</Parallel>
+					</Child>
+					<OnSuccess canSkip="1">
+						<RemoveLink From="$__player" To="$this.id" Tag="&apos;crime_playerLastSeen&apos;" LinkOpHandleMode="Success" />
+					</OnSuccess>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="crime_sharePlayersPosition">
+			<Variables>
+				<Variable name="lastSeenData" comment="" />
+				<Variable name="lastSeenDataFromNearbys" comment="" />
+				<Variable name="lastSeenDataFromNearbys_key" comment="" />
+				<Variable name="lastSeenDataFromNearbys_value" comment="" />
+				<Variable name="newPosition" comment="" />
+				<Variable name="now" comment="" />
+				<Variable name="playerFound" comment="" />
+				<Variable name="posDelta" comment="" />
+				<Variable name="shareData" comment="" />
+				<Variable name="sharedFrom" comment="" />
+				<Variable name="visualAssistanceSuppressed" comment="" />
+				<Variable name="visualAssistanceTimestamp" comment="" />
+				<Variable name="allowedAssistance" comment="" />
+				<Variable name="direction" comment="" />
+				<Variable name="position" comment="" />
+				<Variable name="requestVisualAssistanceFromOthers" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-440" editorPosY="10" hasInputBreakpoint="0" comment="KCD2-11476 - assign mailbox  &apos;perceptionInfo_sharePlayersLastSeenPosition&apos; to this function, remove from npc_basic brain" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="removed shortestRecurentIgnore because everything here uses secondaryPerception now" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetTime>
+											<IfCondition hasInputBreakpoint="0" comment="only react visually every couple seconds" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Init>
+																	<InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</InstantCallback_empty>
+																</Init>
+																<Subtree>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</WaitAction>
+																		<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Turn>
+																		<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<Function_crime_crimeBark hasInputBreakpoint="0" comment="duplicated below, make sure to reflect changes, or refac" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_crime_crimeBark>
+																				</Then>
+																				<Else>
+																					<Function_crime_crimeBark hasInputBreakpoint="0" comment="duplicated below, make sure to reflect changes, or refac" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_crime_crimeBark>
+																				</Else>
+																			</HasSeenPlayer>
+																			<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</AnimationAction>
+																		</Parallel>
+																	</Sequence>
+																</Subtree>
+																<Cleanup>
+																	<InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</InstantCallback_empty>
+																</Cleanup>
+															</SubtreeDecorator>
+														</IfCondition>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Function_crime_crimeBark hasInputBreakpoint="0" comment="duplicated above, make sure to reflect changes, or refac" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_crime_crimeBark>
+																</Then>
+																<Else>
+																	<Function_crime_crimeBark hasInputBreakpoint="0" comment="duplicated above, make sure to reflect changes, or refac" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_crime_crimeBark>
+																</Else>
+															</HasSeenPlayer>
+														</IfCondition>
+														<DefaultBranch>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Success>
+														</DefaultBranch>
+													</Switch>
+													<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</GetTime>
+												</Sequence>
+											</IfCondition>
+										</Sequence>
+									</ProcessMessage>
+								</Loop>
+								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GameContextCheck hasInputBreakpoint="0" comment="KCD2-498089" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Else>
+													<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetSpatialInfo>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetTime>
+																<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</AddLink>
+															</Sequence>
+														</Then>
+														<Else>
+															<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</LinkTagFilter>
+																		<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</LinkDataFilter>
+																		<RangeFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</RangeFilter>
+																		<EvaLLyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																		</EvaLLyzer>
+																	</GraphSearch>
+																	<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</VarOperation>
+																	<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</VarOperation>
+																	<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</VarOperation>
+																	<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Then>
+																							<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																								<OutputBreakpoints />
+																								<Else>
+																									<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																										<OutputBreakpoints />
+																										<Then>
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</Expression>
+																												</DistanceCondition>
+																												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																													<OutputBreakpoints />
+																													<Then>
+																														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Expression>
+																													</Then>
+																												</EntityContextCheck>
+																											</Sequence>
+																										</Then>
+																									</HasSeenPlayer>
+																								</Else>
+																							</IsDeadCheck>
+																						</Then>
+																					</EntityContextCheck>
+																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</IfCondition>
+																				</Sequence>
+																			</Then>
+																		</CheckRelationshipInterval_SoulToSoul>
+																	</ForEach>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<InstantCallback_empty hasInputBreakpoint="0" comment="if shared from NPC that has recently seen player and is in interrupt, also if player is very near" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</InstantCallback_empty>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</MeasureDistance>
+																			<Expression hasInputBreakpoint="0" comment="TODO: is z relevant?" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<AddLink hasInputBreakpoint="0" comment="TODO: this was above the if, was there a reason? i cant see one atm" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</AddLink>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</InstantSendMessageToNPC>
+																						</DistanceCondition>
+																					</IfCondition>
+																					<InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</InstantCallback_empty>
+																				</Sequence>
+																			</IfCondition>
+																		</Sequence>
+																	</IfCondition>
+																</Sequence>
+															</SuppressFailure>
+														</Else>
+													</HasSeenPlayer>
+												</Else>
+											</GameContextCheck>
+										</AtomicDecorator>
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</Sequence>
+								</While>
+							</Parallel>
+						</Child>
+						<OnSuccess>
+							<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</RemoveLink>
+						</OnSuccess>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

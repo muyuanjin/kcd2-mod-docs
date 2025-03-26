@@ -1,0 +1,504 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="situation_greeting_synchronization" is_function="1">
+		<Variables>
+			<Variable name="currentSchedulerPriority" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="greeters" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="greetingLock" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="greetingReceiver_local" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="isReceiverWithinDistance" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="leftHand" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="rightHand" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="shouldWaitForGreeting" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="synchronizationLock" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="synchronizationRequest" type="greeting:synchronizationRequest" values="" isPersistent="0" form="single" />
+			<Variable name="waveRequest" type="greeting:waveRequest" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="greetingReceiver" type="_wuid" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<SetExternalLock LockManagerType="Intellect" Locked="true" LockName="&apos;greeting_targetAcquiredWarlock&apos;" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<While doFail="false" propagateChildFail="false" condition="true">
+					<DetailBehaviorBarrier RunLogic="Halt">
+						<GameContextBarrier context="situation_global_disableGreetingsBetweenNPCs" Negation="true" RunLogic="Halt">
+							<Parallel successMode="Any" failureMode="Any">
+								<Loop count="-1">
+									<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;greeting_targetAcquiredWarlock&apos;" RunLogic="KeepRunning">
+										<Sequence>
+											<Expression expressions="$greetingReceiver_local = $greetingReceiver" />
+											<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+												<Child canSkip="1">
+													<IfCondition failOnCondition="false" condition="$greetingReceiver_local ~= $__null">
+														<Sequence>
+															<Expression expressions="$greeters[0] = $this.id &#10;$greeters[1] = $greetingReceiver_local" />
+															<VarOperation varName="$greeters" targetVarName="" operation="Sort" argument="&apos;desc&apos;" />
+															<Concatenation OutString="$greetingLock" Pattern="&apos;greeting_check_$greeters[0];_$greeters[1];&apos;" />
+															<InstantSemaphore SemaphoreCount="1" LockManagerType="Global" SemaphoreName="&apos;$greetingLock&apos;">
+																<Sequence>
+																	<Expression expressions="$shouldWaitForGreeting = true" />
+																	<LogToLabel Name="&apos;greeting&apos;" Wuid="" Message="&apos;Trying greeting &quot;$greetingLock;&quot;&apos;">
+																		<IfGate atomic="false" condition="$shouldWaitForGreeting" RunLogic="Halt">
+																			<Sequence>
+																				<LogToConsole LogLevel="Info" Message="&apos;[Greeting] $this.name trying to greet $greetingReceiver_local&apos;" />
+																				<Expression expressions="$isReceiverWithinDistance = false" />
+																				<Parallel successMode="Any" failureMode="Any">
+																					<DistanceGate Origin="$this.id" ReferencePt="$greetingReceiver_local" Low="6.000000" High="4000.000000" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+																						<Sequence>
+																							<Expression expressions="$isReceiverWithinDistance = true" />
+																							<SuppressFailure>
+																								<InstantSemaphore SemaphoreCount="1" LockManagerType="Intellect" SemaphoreName="&apos;personalGreetingMutex&apos;">
+																									<ForceLook LookTarget="$greetingReceiver_local" DisableVariations="false">
+																										<Sequence>
+																											<Concatenation OutString="$synchronizationLock" Pattern="&apos;greeting_synchronization_$greeters[0];_$greeters[1];&apos;" />
+																											<Expression expressions="$synchronizationRequest.sender = $this.id &#10;$synchronizationRequest.lock = $synchronizationLock" />
+																											<InstantSendMessageToNPC target="$greetingReceiver_local" variable="$synchronizationRequest" />
+																											<SuppressFailure>
+																												<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;400ms&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;400ms&apos;" LockManagerType="Global" SemaphoreName="&apos;$synchronizationRequest.lock&apos;" RunLogic="KeepRunning">
+																													<Sequence>
+																														<RecordGreeting Left="$this.id" Right="$greetingReceiver_local" />
+																														<SetExternalLock LockManagerType="Intellect" Locked="true" LockName="&apos;greeting_dialogueAvailable&apos;" />
+																														<Parallel successMode="All" failureMode="Any">
+																															<Parallel successMode="Any" failureMode="Any">
+																																<Function_speech_dialogInitiator alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="&apos;SITUACE_POZDRAVY&apos;" preset="$enum:dialogPreset.ingame" recipient="$greetingReceiver_local" recipientMetaroles="&apos;SITUACE_POZDRAVY&apos;" nodeLabel="56491343" />
+																																<Sequence>
+																																	<Wait duration="&apos;250ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																																	<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;greeting_dialogueAvailable&apos;" />
+																																	<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																																</Sequence>
+																															</Parallel>
+																															<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;greeting_dialogueAvailable&apos;" RunLogic="KeepRunning">
+																																<Sequence>
+																																	<IsInsideAreaWithLabel Position="$this.id" Label="&apos;interior&apos;" Area="" FailSubtMissing="false" saveVersion="2">
+																																		<Else canSkip="1">
+																																			<Sequence>
+																																				<HandCheck who="$this.id" LeftHand="$leftHand" RightHand="$rightHand" />
+																																				<IfElseCondition failOnCondition="false" condition="$leftHand == $__null" saveVersion="2">
+																																					<Then canSkip="1">
+																																						<PlayAdditiveAnimation Fragment="&apos;GreetingsUpperBody&apos;" Tags="&apos;waveSmall&apos;" />
+																																					</Then>
+																																					<Else canSkip="1">
+																																						<PlayAdditiveAnimation Fragment="&apos;GreetingsUpperBody&apos;" Tags="&apos;nod&apos;" />
+																																					</Else>
+																																				</IfElseCondition>
+																																			</Sequence>
+																																		</Else>
+																																	</IsInsideAreaWithLabel>
+																																	<Wait duration="&apos;250ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																																	<InstantSendMessageToNPC target="$greetingReceiver_local" variable="$waveRequest" />
+																																</Sequence>
+																															</ExternalLock>
+																														</Parallel>
+																													</Sequence>
+																												</Synchronize>
+																											</SuppressFailure>
+																										</Sequence>
+																									</ForceLook>
+																								</InstantSemaphore>
+																							</SuppressFailure>
+																						</Sequence>
+																					</DistanceGate>
+																					<Loop count="-1">
+																						<IfGate atomic="false" condition="~$isReceiverWithinDistance" RunLogic="Halt">
+																							<Sequence>
+																								<Wait duration="&apos;8s&apos;" timeType="GameTime" doFail="false" variation="" />
+																								<Expression expressions="$shouldWaitForGreeting = false" />
+																							</Sequence>
+																						</IfGate>
+																					</Loop>
+																				</Parallel>
+																			</Sequence>
+																		</IfGate>
+																	</LogToLabel>
+																</Sequence>
+															</InstantSemaphore>
+														</Sequence>
+													</IfCondition>
+												</Child>
+												<OnFail canSkip="1">
+													<SetExternalLock LockManagerType="Intellect" Locked="true" LockName="&apos;greeting_targetAcquiredWarlock&apos;" />
+												</OnFail>
+											</FuseBox>
+										</Sequence>
+									</ExternalLock>
+								</Loop>
+								<Loop count="-1">
+									<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$synchronizationRequest" senderInfo="" inbox="&apos;greeting_synchronizationRequest&apos;" condition="" answerVar="">
+										<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+											<Child canSkip="1">
+												<EntityContextCheck context="situation_suppressNPCGreetings" target="" saveVersion="2">
+													<Else canSkip="1">
+														<Sequence>
+															<GetScheduledPriority Priority="$currentSchedulerPriority" />
+															<IfCondition failOnCondition="false" condition="$currentSchedulerPriority &lt; 10">
+																<Semaphore SemaphoreCount="1" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;personalGreetingMutex&apos;">
+																	<SuppressFailure>
+																		<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;5s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;400ms&apos;" LockManagerType="Global" SemaphoreName="&apos;$synchronizationRequest.lock&apos;" RunLogic="Halt">
+																			<LogToLabel Name="&apos;greeting&apos;" Wuid="" Message="&apos;Receiving greeting &quot;$synchronizationRequest.lock;&quot;&apos;">
+																				<ForceLook LookTarget="$synchronizationRequest.sender" DisableVariations="false">
+																					<Sequence>
+																						<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$waveRequest" senderInfo="" inbox="&apos;greeting_waveRequest&apos;" condition="" answerVar="">
+																							<Sequence>
+																								<LogToConsole LogLevel="Info" Message="&apos;[Greeting] $this.name received request from $synchronizationRequest.sender&apos;" />
+																								<IsInsideAreaWithLabel Position="$this.id" Label="&apos;interior&apos;" Area="" FailSubtMissing="false" saveVersion="2">
+																									<Else canSkip="1">
+																										<Sequence>
+																											<HandCheck who="$this.id" LeftHand="$leftHand" RightHand="$rightHand" />
+																											<IfElseCondition failOnCondition="false" condition="$leftHand == $__null" saveVersion="2">
+																												<Then canSkip="1">
+																													<PlayAdditiveAnimation Fragment="&apos;GreetingsUpperBody&apos;" Tags="&apos;waveSmall&apos;" />
+																												</Then>
+																												<Else canSkip="1">
+																													<PlayAdditiveAnimation Fragment="&apos;GreetingsUpperBody&apos;" Tags="&apos;nod&apos;" />
+																												</Else>
+																											</IfElseCondition>
+																										</Sequence>
+																									</Else>
+																								</IsInsideAreaWithLabel>
+																							</Sequence>
+																						</ProcessMessage>
+																						<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																					</Sequence>
+																				</ForceLook>
+																			</LogToLabel>
+																		</Synchronize>
+																	</SuppressFailure>
+																</Semaphore>
+															</IfCondition>
+														</Sequence>
+													</Else>
+												</EntityContextCheck>
+											</Child>
+											<OnFail canSkip="1">
+												<Sequence>
+													<ClearInbox inbox="&apos;greeting_synchronizationRequest&apos;" type="" condition="" />
+													<ClearInbox inbox="&apos;greeting_waveRequest&apos;" type="" condition="" />
+												</Sequence>
+											</OnFail>
+										</FuseBox>
+									</ProcessMessage>
+								</Loop>
+							</Parallel>
+						</GameContextBarrier>
+					</DetailBehaviorBarrier>
+				</While>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="currentSchedulerPriority" comment="" />
+				<Variable name="greeters" comment="" />
+				<Variable name="greetingLock" comment="" />
+				<Variable name="greetingReceiver_local" comment="" />
+				<Variable name="isReceiverWithinDistance" comment="" />
+				<Variable name="leftHand" comment="" />
+				<Variable name="rightHand" comment="" />
+				<Variable name="shouldWaitForGreeting" comment="" />
+				<Variable name="synchronizationLock" comment="" />
+				<Variable name="synchronizationRequest" comment="" />
+				<Variable name="waveRequest" comment="" />
+				<Variable name="greetingReceiver" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<SetExternalLock hasInputBreakpoint="0" comment="RIP Byron" breakpointFlags="0">
+						<OutputBreakpoints />
+					</SetExternalLock>
+				</OnInit>
+				<Behavior>
+					<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<DetailBehaviorBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Loop hasInputBreakpoint="0" comment="Sending requests to people" breakpointFlags="0">
+										<OutputBreakpoints />
+										<ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="Root might change greetingReceiver while performing this tree - save a copy and use that" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Child>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</VarOperation>
+																<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Concatenation>
+																<InstantSemaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="Reset var" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																		<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<LogToConsole hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</LogToConsole>
+																					<Expression hasInputBreakpoint="0" comment="Reset var" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<InstantSemaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Concatenation>
+																												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Expression>
+																												<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</InstantSendMessageToNPC>
+																												<SuppressFailure hasInputBreakpoint="0" comment="Suppress because fail means the other party can&apos;t greet right now (high scheduler priority or dialog issue)" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<RecordGreeting hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</RecordGreeting>
+																															<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</SetExternalLock>
+																															<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</Function_speech_dialogInitiator>
+																																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Wait>
+																																		<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</SetExternalLock>
+																																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Wait>
+																																	</Sequence>
+																																</Parallel>
+																																<ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																			<OutputBreakpoints />
+																																			<Else>
+																																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																					<HandCheck hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																					</HandCheck>
+																																					<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																						<OutputBreakpoints />
+																																						<Then>
+																																							<PlayAdditiveAnimation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																							</PlayAdditiveAnimation>
+																																						</Then>
+																																						<Else>
+																																							<PlayAdditiveAnimation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																							</PlayAdditiveAnimation>
+																																						</Else>
+																																					</IfElseCondition>
+																																				</Sequence>
+																																			</Else>
+																																		</IsInsideAreaWithLabel>
+																																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Wait>
+																																		<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</InstantSendMessageToNPC>
+																																	</Sequence>
+																																</ExternalLock>
+																															</Parallel>
+																														</Sequence>
+																													</Synchronize>
+																												</SuppressFailure>
+																											</Sequence>
+																										</ForceLook>
+																									</InstantSemaphore>
+																								</SuppressFailure>
+																							</Sequence>
+																						</DistanceGate>
+																						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Wait>
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																								</Sequence>
+																							</IfGate>
+																						</Loop>
+																					</Parallel>
+																				</Sequence>
+																			</IfGate>
+																		</LogToLabel>
+																	</Sequence>
+																</InstantSemaphore>
+															</Sequence>
+														</IfCondition>
+													</Child>
+													<OnFail>
+														<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</SetExternalLock>
+													</OnFail>
+												</FuseBox>
+											</Sequence>
+										</ExternalLock>
+									</Loop>
+									<Loop hasInputBreakpoint="0" comment="Receiving request from other people" breakpointFlags="0">
+										<OutputBreakpoints />
+										<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Child>
+													<EntityContextCheck hasInputBreakpoint="0" comment="Ignore message if we don&apos;t allow Greetings" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Else>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GetScheduledPriority hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetScheduledPriority>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Semaphore hasInputBreakpoint="0" comment="At this moment, stop sending requests" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<LogToConsole hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</LogToConsole>
+																									<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																										<OutputBreakpoints />
+																										<Else>
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<HandCheck hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</HandCheck>
+																												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																													<OutputBreakpoints />
+																													<Then>
+																														<PlayAdditiveAnimation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</PlayAdditiveAnimation>
+																													</Then>
+																													<Else>
+																														<PlayAdditiveAnimation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</PlayAdditiveAnimation>
+																													</Else>
+																												</IfElseCondition>
+																											</Sequence>
+																										</Else>
+																									</IsInsideAreaWithLabel>
+																								</Sequence>
+																							</ProcessMessage>
+																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Wait>
+																						</Sequence>
+																					</ForceLook>
+																				</LogToLabel>
+																			</Synchronize>
+																		</SuppressFailure>
+																	</Semaphore>
+																</IfCondition>
+															</Sequence>
+														</Else>
+													</EntityContextCheck>
+												</Child>
+												<OnFail>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ClearInbox>
+														<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ClearInbox>
+													</Sequence>
+												</OnFail>
+											</FuseBox>
+										</ProcessMessage>
+									</Loop>
+								</Parallel>
+							</GameContextBarrier>
+						</DetailBehaviorBarrier>
+					</While>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

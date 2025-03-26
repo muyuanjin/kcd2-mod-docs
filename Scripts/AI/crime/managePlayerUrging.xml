@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_managePlayerUrging" is_function="1">
+		<Variables>
+			<Variable name="currentLoopPriority" type="enum:crime_playerUrgingPriority" values="" isPersistent="0" form="single" />
+			<Variable name="currentUrger" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="reset" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="urgingData" type="crime:playerUrging" values="" isPersistent="0" form="single" />
+			<Variable name="yieldPriorityMessage" type="crime:playerUrging:yieldPriorityMessage" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="canUrge" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="priority" type="enum:crime_playerUrgingPriority" values="$enum:crime_playerUrgingPriority.unknown" isPersistent="0" form="single" requirementType="Reference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<Parallel successMode="All" failureMode="Any">
+							<While doFail="false" propagateChildFail="false" condition="true">
+								<Sequence>
+									<AtomicDecorator>
+										<Sequence>
+											<Expression expressions="$currentLoopPriority = $priority" />
+											<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+												<LinkTagFilter tag="&apos;crime_playerUrging&apos;" prune="true" negprune="unknown" Parent="" Child="$currentUrger" Data="$urgingData" />
+											</GraphSearch>
+											<IfCondition failOnCondition="false" condition="$currentUrger == $__null | &#10;$currentUrger == $this.id | &#10;$urgingData.priority &lt; $priority">
+												<Sequence>
+													<IfCondition failOnCondition="false" condition="$currentUrger ~= $__null &amp; $currentUrger ~= this.id">
+														<Sequence>
+															<IfCondition failOnCondition="false" condition="($urgingData.priority == $enum:crime_playerUrgingPriority.selfhelp |  &#10;$urgingData.priority == $enum:crime_playerUrgingPriority.selfhelp_security) &amp; &#10;$priority == $enum:crime_playerUrgingPriority.arrest">
+																<RandomGate opensWithChance="0.500000" saveVersion="2">
+																	<Then canSkip="1">
+																		<InstantSendMessageToNPC target="$currentUrger" variable="$yieldPriorityMessage" />
+																	</Then>
+																	<Else canSkip="1">
+																		<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;crime_managePlayerUrging_takePriorityBark&apos;" />
+																	</Else>
+																</RandomGate>
+															</IfCondition>
+															<RemoveLink From="$__player" To="$currentUrger" Tag="&apos;crime_playerUrging&apos;" LinkOpHandleMode="Success" />
+														</Sequence>
+													</IfCondition>
+													<Expression expressions="$urgingData.priority = $priority" />
+													<AddLink From="$__player" To="$this.id" Tag="&apos;crime_playerUrging&apos;" Data="$urgingData" LinkOpHandleMode="OverWrite" />
+													<Expression expressions="$canUrge = true &#10;$currentUrger = $this.id" />
+												</Sequence>
+											</IfCondition>
+										</Sequence>
+									</AtomicDecorator>
+									<Expression expressions="$reset = false" />
+									<IfGate atomic="false" condition="~$reset" RunLogic="Halt">
+										<ContinuousSwitch>
+											<IfCondition failOnCondition="false" condition="$canUrge">
+												<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+													<Child canSkip="1">
+														<Sequence>
+															<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;crime_playerUrging_urging&apos;" />
+															<ContinuousSwitch>
+																<IfCondition failOnCondition="false" condition="$currentLoopPriority ~= $priority">
+																	<AtomicDecorator>
+																		<Sequence>
+																			<RemoveLink From="$__player" To="$this.id" Tag="&apos;crime_playerUrging&apos;" LinkOpHandleMode="Success" />
+																			<Expression expressions="$urgingData.priority = $priority" />
+																			<AddLink From="$__player" To="$this.id" Tag="&apos;crime_playerUrging&apos;" Data="$urgingData" LinkOpHandleMode="OverWrite" />
+																			<Expression expressions="$reset = true" />
+																		</Sequence>
+																	</AtomicDecorator>
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="true">
+																	<LinkGate from="$__player" to="$this.id" tag="&apos;crime_playerUrging&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="KeepRunning">
+																		<Expression expressions="$canUrge = false &#10;$reset = true" />
+																	</LinkGate>
+																</IfCondition>
+															</ContinuousSwitch>
+														</Sequence>
+													</Child>
+													<OnFail canSkip="1">
+														<SetExternalLock LockManagerType="Intellect" Locked="true" LockName="&apos;crime_playerUrging_urging&apos;" />
+													</OnFail>
+												</FuseBox>
+											</IfCondition>
+											<IfCondition failOnCondition="false" condition="true">
+												<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+													<Child canSkip="1">
+														<Sequence>
+															<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;crime_playerUrging_waiting&apos;" />
+															<ContinuousSwitch>
+																<IfCondition failOnCondition="false" condition="$currentLoopPriority ~= $priority">
+																	<Expression expressions="$reset = true" />
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="true">
+																	<LinkGate from="$__player" to="$currentUrger" tag="&apos;crime_playerUrging&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="KeepRunning">
+																		<Expression expressions="$reset = true" />
+																	</LinkGate>
+																</IfCondition>
+															</ContinuousSwitch>
+														</Sequence>
+													</Child>
+													<OnFail canSkip="1">
+														<SetExternalLock LockManagerType="Intellect" Locked="true" LockName="&apos;crime_playerUrging_waiting&apos;" />
+													</OnFail>
+												</FuseBox>
+											</IfCondition>
+										</ContinuousSwitch>
+									</IfGate>
+								</Sequence>
+							</While>
+							<While doFail="false" propagateChildFail="false" condition="true">
+								<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$yieldPriorityMessage" senderInfo="" inbox="&apos;crime_managePlayerUrging_yieldPriorityBark&apos;" condition="" answerVar="">
+									<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_PRENECHAVA_ZATYKANI_STRAZI&apos;" priority="$enum:crime_barkPriority.addressingPlayer_important" nodeLabel="71951100" />
+								</ProcessMessage>
+							</While>
+							<While doFail="false" propagateChildFail="false" condition="true">
+								<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;crime_managePlayerUrging_takePriorityBark&apos;" RunLogic="Halt">
+									<Sequence>
+										<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;STRAZ_PREBIRA_ZATYKANI_ZE_SVEPOMOCI&apos;" priority="$enum:crime_barkPriority.addressingPlayer_important" nodeLabel="20764232" />
+										<SetExternalLock LockManagerType="Intellect" Locked="true" LockName="&apos;crime_managePlayerUrging_takePriorityBark&apos;" />
+									</Sequence>
+								</ExternalLock>
+							</While>
+						</Parallel>
+					</Child>
+					<OnFail canSkip="1">
+						<RemoveLink From="$__player" To="$this.id" Tag="&apos;crime_playerUrging&apos;" LinkOpHandleMode="Success" />
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="currentLoopPriority" comment="" />
+				<Variable name="currentUrger" comment="" />
+				<Variable name="reset" comment="" />
+				<Variable name="urgingData" comment="" />
+				<Variable name="yieldPriorityMessage" comment="" />
+				<Variable name="canUrge" comment="" />
+				<Variable name="priority" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</LinkTagFilter>
+												</GraphSearch>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfCondition hasInputBreakpoint="0" comment="selfhelp -&gt; arrest" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<RandomGate hasInputBreakpoint="0" comment="only one from the guard and the yielding NPC should bark " breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</InstantSendMessageToNPC>
+																		</Then>
+																		<Else>
+																			<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</SetExternalLock>
+																		</Else>
+																	</RandomGate>
+																</IfCondition>
+																<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</RemoveLink>
+															</Sequence>
+														</IfCondition>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</AddLink>
+														<Expression hasInputBreakpoint="0" comment="do this only after the link was added, just to be sure" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Sequence>
+												</IfCondition>
+											</Sequence>
+										</AtomicDecorator>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Child>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</SetExternalLock>
+																<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="this needs to be here, because it needs to be atomic" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</RemoveLink>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</AddLink>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Sequence>
+																		</AtomicDecorator>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</LinkGate>
+																	</IfCondition>
+																</ContinuousSwitch>
+															</Sequence>
+														</Child>
+														<OnFail>
+															<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</SetExternalLock>
+														</OnFail>
+													</FuseBox>
+												</IfCondition>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Child>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</SetExternalLock>
+																<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</LinkGate>
+																	</IfCondition>
+																</ContinuousSwitch>
+															</Sequence>
+														</Child>
+														<OnFail>
+															<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</SetExternalLock>
+														</OnFail>
+													</FuseBox>
+												</IfCondition>
+											</ContinuousSwitch>
+										</IfGate>
+									</Sequence>
+								</While>
+								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_crimeBark>
+									</ProcessMessage>
+								</While>
+								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_crimeBark>
+											<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</SetExternalLock>
+										</Sequence>
+									</ExternalLock>
+								</While>
+							</Parallel>
+						</Child>
+						<OnFail>
+							<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</RemoveLink>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

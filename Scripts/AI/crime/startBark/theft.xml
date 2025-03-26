@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="crime_startBark_theft" is_function="1">
+    <Variables>
+      <Variable name="dialogContext" type="_float" values="" isPersistent="0" form="associative" />
+      <Variable name="kettleType" type="enum:kettleType" values="" isPersistent="0" form="single" />
+      <Variable name="metarole" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="owner" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="seenEquipmentType" type="enum:crime_theft_seenEquippedType" values="" isPersistent="0" form="single" />
+      <Variable name="theftMethod" type="enum:crime_theftMethod" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="information" type="information" values="" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <LockDynamicInformationValues Information="$information">
+            <Sequence>
+              <GetDynamicInformationValue Information="$information" Tag="&apos;theftMethod&apos;" Out="$theftMethod" />
+              <GetDynamicInformationValue Information="$information" Tag="&apos;victim&apos;" Out="$owner" />
+            </Sequence>
+          </LockDynamicInformationValues>
+          <Switch>
+            <IfCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.seenEquipped">
+              <Sequence>
+                <LockDynamicInformationValues Information="$information">
+                  <GetDynamicInformationValue Information="$information" Tag="&apos;seenEquipedItemsType&apos;" Out="$seenEquipmentType" />
+                </LockDynamicInformationValues>
+                <Expression expressions="$metarole = &apos;NPC_VIDI_UKRADENOU_VEC_NA_HRACI_&apos;" />
+                <Switch>
+                  <HasGenderCheck Gender="Female" SoulWUID="$this.id" FailSubtMissing="false" saveVersion="2">
+                    <Then canSkip="1">
+                      <Expression expressions="$metarole += &apos;(MATE)&apos;" />
+                    </Then>
+                  </HasGenderCheck>
+                  <IfCondition failOnCondition="false" condition="$seenEquipmentType == $enum:crime_theft_seenEquippedType.owner_singleWeapon">
+                    <Expression expressions="$metarole += &apos;(ZBRAN)&apos;" />
+                  </IfCondition>
+                  <IfCondition failOnCondition="false" condition="$seenEquipmentType == $enum:crime_theft_seenEquippedType.owner_singleArmor">
+                    <Expression expressions="$metarole += &apos;(ARMOR)&apos;" />
+                  </IfCondition>
+                  <IfCondition failOnCondition="false" condition="$seenEquipmentType == $enum:crime_theft_seenEquippedType.owner_multipleItems">
+                    <Expression expressions="$metarole += &apos;(MULTIPLE)&apos;" />
+                  </IfCondition>
+                  <DefaultBranch>
+                    <Expression expressions="$metarole += &apos;(MATE)&apos;" />
+                  </DefaultBranch>
+                </Switch>
+              </Sequence>
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.pickpocket">
+              <Success />
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.pick">
+              <IfElseCondition failOnCondition="false" condition="$owner == $this.id" saveVersion="2">
+                <Then canSkip="1">
+                  <Expression expressions="$metarole = &apos;OWNER_VIDI_HRACE_KRAST_(PICK)&apos;" />
+                </Then>
+                <Else canSkip="1">
+                  <Expression expressions="$metarole = &apos;NPC_VIDI_HRACE_KRAST_(PICK)&apos;" />
+                </Else>
+              </IfElseCondition>
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.loot">
+              <IfElseCondition failOnCondition="false" condition="$owner == $this.id" saveVersion="2">
+                <Then canSkip="1">
+                  <Expression expressions="$metarole = &apos;OWNER_VIDI_HRACE_KRAST_(STASH)&apos;" />
+                </Then>
+                <Else canSkip="1">
+                  <Expression expressions="$metarole = &apos;NPC_VIDI_HRACE_KRAST_(STASH)&apos;" />
+                </Else>
+              </IfElseCondition>
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.lootCorpse | &#10;$theftMethod == $enum:crime_theftMethod.lootUnconsciousBody">
+              <Sequence>
+                <DetermineCrimeVictim Information="$information" Victim="$owner" />
+                <IfCondition failOnCondition="false" condition="$owner ~= $this.id">
+                  <Sequence>
+                    <HasGenderCheck Gender="Female" SoulWUID="$owner" FailSubtMissing="false" saveVersion="2">
+                      <Then canSkip="1">
+                        <Expression expressions="$dialogContext[&apos;isMan&apos;] = 0" />
+                      </Then>
+                      <Else canSkip="1">
+                        <Expression expressions="$dialogContext[&apos;isMan&apos;] = 1" />
+                      </Else>
+                    </HasGenderCheck>
+                    <IfElseCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.lootCorpse" saveVersion="2">
+                      <Then canSkip="1">
+                        <Expression expressions="$metarole = &apos;NPC_VIDI_HRACE_LOOTOVAT_MRTVOLU&apos;" />
+                      </Then>
+                      <Else canSkip="1">
+                        <Expression expressions="$metarole = &apos;NPC_VIDI_HRACE_LOOTOVAT_TELO_V_BEZVEDOMI&apos;" />
+                      </Else>
+                    </IfElseCondition>
+                  </Sequence>
+                </IfCondition>
+              </Sequence>
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.kettleEating">
+              <LockDynamicInformationValues Information="$information">
+                <Sequence>
+                  <GetDynamicInformationValue Information="$information" Tag="&apos;kettleType&apos;" Out="$kettleType" />
+                  <IfElseCondition failOnCondition="false" condition="$kettleType == $enum:kettleType.kettle" saveVersion="2">
+                    <Then canSkip="1">
+                      <Expression expressions="$metarole = &apos;NPC_VIDI_HRACE_JAK_MU_JI_Z_KOTLIKU_NEDOBRA_REPUTACE&apos;" />
+                    </Then>
+                    <Else canSkip="1">
+                      <Expression expressions="$metarole = &apos;NPC_VIDI_HRACE_JAK_MU_PIJE_ZE_SOUDKU_NEDOBRA_REPUTACE&apos;" />
+                    </Else>
+                  </IfElseCondition>
+                </Sequence>
+              </LockDynamicInformationValues>
+            </IfCondition>
+          </Switch>
+          <IfCondition failOnCondition="false" condition="$metarole ~= &apos;&apos;">
+            <Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="$dialogContext" dramaticBark="true" lookAt="$__player" metarole="$metarole" priority="$enum:crime_barkPriority.important" nodeLabel="15949542" />
+          </IfCondition>
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="dialogContext" comment="" />
+        <Variable name="kettleType" comment="" />
+        <Variable name="metarole" comment="" />
+        <Variable name="owner" comment="" />
+        <Variable name="seenEquipmentType" comment="" />
+        <Variable name="theftMethod" comment="" />
+        <Variable name="information" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </GetDynamicInformationValue>
+                <GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </GetDynamicInformationValue>
+              </Sequence>
+            </LockDynamicInformationValues>
+            <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </GetDynamicInformationValue>
+                  </LockDynamicInformationValues>
+                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Expression>
+                  <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <HasGenderCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Then>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                      </Then>
+                    </HasGenderCheck>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </IfCondition>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </IfCondition>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </IfCondition>
+                    <DefaultBranch>
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </DefaultBranch>
+                  </Switch>
+                </Sequence>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="no bark available, the one in checkPockets should be enough" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Success>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                  <OutputBreakpoints />
+                  <Then>
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </Then>
+                  <Else>
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </Else>
+                </IfElseCondition>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                  <OutputBreakpoints />
+                  <Then>
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </Then>
+                  <Else>
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </Else>
+                </IfElseCondition>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <DetermineCrimeVictim hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </DetermineCrimeVictim>
+                  <IfCondition hasInputBreakpoint="0" comment="KCD2-275755 bark is in checkPockets" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <HasGenderCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                        <OutputBreakpoints />
+                        <Then>
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                        </Then>
+                        <Else>
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                        </Else>
+                      </HasGenderCheck>
+                      <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                        <OutputBreakpoints />
+                        <Then>
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                        </Then>
+                        <Else>
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                        </Else>
+                      </IfElseCondition>
+                    </Sequence>
+                  </IfCondition>
+                </Sequence>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </GetDynamicInformationValue>
+                    <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Then>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                      </Then>
+                      <Else>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                      </Else>
+                    </IfElseCondition>
+                  </Sequence>
+                </LockDynamicInformationValues>
+              </IfCondition>
+            </Switch>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+              </Function_crime_crimeBark>
+            </IfCondition>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

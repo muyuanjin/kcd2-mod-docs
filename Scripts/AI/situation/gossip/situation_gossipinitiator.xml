@@ -1,0 +1,667 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="situation_gossipInitiator" is_function="0">
+		<Variables>
+			<Variable name="areMates" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="dialogueContext" type="_float" values="" isPersistent="0" form="associative" />
+			<Variable name="distanceMeOther" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="dotMeToOther" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="gossipState" type="enum:situation_gossipState" values="" isPersistent="0" form="single" />
+			<Variable name="gossipTheOther" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="lockName" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="lockName_exit" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="moveParams" type="additionalMoveParams" values="" isPersistent="0" form="single" />
+			<Variable name="polylog_animationApproach" type="enum:animationApproach" values="$enum:animationApproach.dontPlayDialogAnimations" isPersistent="0" form="single" />
+			<Variable name="polylog_participants" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="polylog_participantsMetaroles" type="soulToMetaroles" values="" isPersistent="0" form="array" />
+			<Variable name="shapeDir" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="shapePos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="shouldPlayDialogAnimations" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<Expression expressions="$gossipTheOther = $__sit_roleHolders[&apos;gossipReceiver&apos;].id &#10;$polylog_participants[0] = $gossipTheOther &#10;$polylog_participantsMetaroles[0].soul = $gossipTheOther &#10;$polylog_participantsMetaroles[0].metaroles = &apos;GOSSIP&apos;" />
+					<Concatenation OutString="$lockName" Pattern="&apos;situation_gossip_$__sit_contextVar&apos;" />
+					<Concatenation OutString="$lockName_exit" Pattern="&apos;situation_gossip_$__sit_contextVar;_exit&apos;" />
+					<SetExternalLock LockManagerType="Global" Locked="true" LockName="&apos;$lockName_exit&apos;" />
+					<GetAreMates Npc1="$this.id" Npc2="$gossipTheOther" AreMates="$areMates" />
+					<Expression expressions="$dialogueContext[&apos;areMates&apos;] = ($areMates) ? 1 : 0" />
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<AnyDecorator preset="crime_keepStateAndItems" enabled="true">
+					<EntityContext context="crime_dontGreetPlayer" target="">
+						<EntityContext context="situation_runningGossip" target="$this.id">
+							<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+								<Child canSkip="1">
+									<IfGate atomic="false" condition="$gossipState ~= $enum:situation_gossipState.exitGossipBehaviour" RunLogic="Halt">
+										<ForceLook LookTarget="$gossipTheOther" DisableVariations="false">
+											<Timeout duration="&apos;30m&apos;" timeType="GameTime" doFail="false" variation="">
+												<Parallel successMode="All" failureMode="Any">
+													<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;$lockName_exit&apos;" RunLogic="KeepRunning">
+														<Semaphore SemaphoreCount="1" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;TEST_ingameDialogPose_transition_out&apos;">
+															<Expression expressions="$gossipState = $enum:situation_gossipState.exitGossipBehaviour" />
+														</Semaphore>
+													</ExternalLock>
+													<Function_situation_gossipSharedBehavior gossipTheOther="$gossipTheOther" gossipState="$gossipState" shouldPlayDialogAnimations="$shouldPlayDialogAnimations" nodeLabel="13259502" />
+													<ContinuousSwitch>
+														<IfCondition failOnCondition="false" condition="$gossipState == $enum:situation_gossipState.useBasicMovement">
+															<Sequence>
+																<Expression expressions="$moveParams.destChangedThreshold = &apos;250ms&apos;" />
+																<Move stopWithinDistance="1.300000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$gossipTheOther" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="$moveParams" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																<Expression expressions="$gossipState = $enum:situation_gossipState.useTurn" />
+															</Sequence>
+														</IfCondition>
+														<IfCondition failOnCondition="false" condition="$gossipState == $enum:situation_gossipState.useShapePositionMovement">
+															<Sequence>
+																<Selector>
+																	<Timeout duration="&apos;1s&apos;" timeType="GameTime" doFail="true" variation="">
+																		<ShapePosition shapeName="" requestType="Path" ShapeTypeChoice="Regular polygon" diameter="1.300000" edgeCount="2" positionIndex="-1" positionVariable="$shapePos" directionVariable="$shapeDir" synchronizationId="$__sit_contextVar" />
+																	</Timeout>
+																	<Expression expressions="$gossipState = $enum:situation_gossipState.exitGossipBehaviour" />
+																</Selector>
+																<ExactMove directionType="FromVariable" directionSpecification="$shapeDir" animationTriggerDist="0.150000" precise="true" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$shapePos" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																<Expression expressions="$gossipState = $enum:situation_gossipState.useTurn" />
+															</Sequence>
+														</IfCondition>
+														<IfCondition failOnCondition="false" condition="$gossipState == $enum:situation_gossipState.useTurn">
+															<Sequence>
+																<UrgencyDecorator Urgency="Fast">
+																	<WaitAction />
+																</UrgencyDecorator>
+																<StopMovement waitUntilStopped="false" />
+																<Sequence>
+																	<NumericalOperation In1VariableName="this.id" In2VariableName="gossipTheOther" In3VariableName="" OutVariableName="$dotMeToOther" Operation="dot(w1_look_dir, w1_to_w2_dir)" />
+																	<IfCondition failOnCondition="false" condition="$dotMeToOther &lt; 0.95">
+																		<Turn target="$gossipTheOther" align="false" />
+																	</IfCondition>
+																</Sequence>
+																<Expression expressions="$gossipState = $enum:situation_gossipState.readyForDialog" />
+															</Sequence>
+														</IfCondition>
+														<IfCondition failOnCondition="false" condition="$gossipState == $enum:situation_gossipState.readyForDialog">
+															<Sequence>
+																<StanceCheck soul="$this.id" stance="standing" smartObject="$__null" negate="false" failOnCondition="false" saveVersion="2">
+																	<Then canSkip="1">
+																		<Sequence>
+																			<MeasureDistance position1="$this.id" position2="$gossipTheOther" mode="ThreeDimensions" result="$distanceMeOther" />
+																			<IfCondition failOnCondition="false" condition="$distanceMeOther &lt; 0.5">
+																				<Expression expressions="$gossipState = $enum:situation_gossipState.exitGossipBehaviour" />
+																			</IfCondition>
+																		</Sequence>
+																	</Then>
+																	<Else canSkip="1">
+																		<Success />
+																	</Else>
+																</StanceCheck>
+																<IfElseCondition failOnCondition="false" condition="$shouldPlayDialogAnimations" saveVersion="2">
+																	<Then canSkip="1">
+																		<Expression expressions="$polylog_animationApproach = $enum:animationApproach.tryDialogAnimations" />
+																	</Then>
+																	<Else canSkip="1">
+																		<Expression expressions="$polylog_animationApproach = $enum:animationApproach.dontPlayDialogAnimations" />
+																	</Else>
+																</IfElseCondition>
+																<IfCondition failOnCondition="false" condition="~$areMates">
+																	<IsGreetingOnCooldown Left="$this.id" Right="$gossipTheOther" saveVersion="2">
+																		<Then canSkip="1">
+																			<Success />
+																		</Then>
+																		<Else canSkip="1">
+																			<SuppressFailure>
+																				<Sequence>
+																					<Expression expressions="$polylog_participantsMetaroles[0].soul = $gossipTheOther &#10;$polylog_participantsMetaroles[0].metaroles = &apos;SITUACE_POZDRAVY&apos;" />
+																					<Function_speech_schedulerPolylog_initiator alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" areaForPlayer="" context="$dialogueContext" customParameters="" metarole="&apos;SITUACE_POZDRAVY&apos;" participants="$polylog_participants" participantsMetaroles="$polylog_participantsMetaroles" preset="$enum:dialogPreset.ingame" nodeLabel="80265196" />
+																					<RecordGreeting Left="$this.id" Right="$gossipTheOther" />
+																				</Sequence>
+																			</SuppressFailure>
+																		</Else>
+																	</IsGreetingOnCooldown>
+																</IfCondition>
+																<SuppressFailure>
+																	<Selector>
+																		<Sequence>
+																			<Expression expressions="$polylog_participantsMetaroles[0].soul = $gossipTheOther &#10;$polylog_participantsMetaroles[0].metaroles = &apos;GOSSIP&apos;" />
+																			<Function_speech_schedulerPolylog_initiator alias="" animationApproach="$polylog_animationApproach" areaForPlayer="" context="$dialogueContext" customParameters="" metarole="&apos;GOSSIP&apos;" participants="$polylog_participants" participantsMetaroles="$polylog_participantsMetaroles" preset="$enum:dialogPreset.ingame" nodeLabel="73132072" />
+																		</Sequence>
+																		<Sequence>
+																			<Expression expressions="$polylog_participantsMetaroles[0].metaroles = &apos;FALLBACK_GOSSIP&apos;" />
+																			<Function_speech_schedulerPolylog_initiator alias="" animationApproach="$polylog_animationApproach" areaForPlayer="" context="$dialogueContext" customParameters="" metarole="&apos;FALLBACK_GOSSIP&apos;" participants="$polylog_participants" participantsMetaroles="$polylog_participantsMetaroles" preset="$enum:dialogPreset.ingame" nodeLabel="74498230" />
+																		</Sequence>
+																	</Selector>
+																</SuppressFailure>
+																<SuppressFailure>
+																	<Sequence>
+																		<Expression expressions="$polylog_participantsMetaroles[0].soul = $gossipTheOther &#10;$polylog_participantsMetaroles[0].metaroles = &apos;SITUACE_ROZLOUCENI&apos;" />
+																		<Function_speech_schedulerPolylog_initiator alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" areaForPlayer="" context="$dialogueContext" customParameters="" metarole="&apos;SITUACE_ROZLOUCENI&apos;" participants="$polylog_participants" participantsMetaroles="$polylog_participantsMetaroles" preset="$enum:dialogPreset.ingame" nodeLabel="65138521" />
+																	</Sequence>
+																</SuppressFailure>
+																<Expression expressions="$gossipState = $enum:situation_gossipState.exitGossipBehaviour" />
+															</Sequence>
+														</IfCondition>
+														<IfCondition failOnCondition="false" condition="true">
+															<Sequence>
+																<Wait duration="&apos;1m&apos;" timeType="GameTime" doFail="false" variation="" />
+																<Expression expressions="$gossipState = $enum:situation_gossipState.exitGossipBehaviour" />
+															</Sequence>
+														</IfCondition>
+													</ContinuousSwitch>
+												</Parallel>
+											</Timeout>
+										</ForceLook>
+									</IfGate>
+								</Child>
+								<OnFail canSkip="1">
+									<SetExternalLock LockManagerType="Global" Locked="false" LockName="&apos;$lockName_exit&apos;" />
+								</OnFail>
+							</FuseBox>
+						</EntityContext>
+					</EntityContext>
+				</AnyDecorator>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;60s&apos;" LockManagerType="Global" SemaphoreName="&apos;$lockName&apos;" RunLogic="Halt">
+				<Function_speech_dialogInitiator alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="&apos;GOSSIP&apos;" preset="$enum:dialogPreset.ingame" recipient="$gossipTheOther" recipientMetaroles="&apos;GOSSIP&apos;" nodeLabel="31467922" />
+			</Synchronize>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="areMates" comment="" />
+				<Variable name="dialogueContext" comment="" />
+				<Variable name="distanceMeOther" comment="" />
+				<Variable name="dotMeToOther" comment="" />
+				<Variable name="gossipState" comment="" />
+				<Variable name="gossipTheOther" comment="" />
+				<Variable name="lockName" comment="" />
+				<Variable name="lockName_exit" comment="" />
+				<Variable name="moveParams" comment="" />
+				<Variable name="polylog_animationApproach" comment="" />
+				<Variable name="polylog_participants" comment="" />
+				<Variable name="polylog_participantsMetaroles" comment="" />
+				<Variable name="shapeDir" comment="" />
+				<Variable name="shapePos" comment="" />
+				<Variable name="shouldPlayDialogAnimations" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Expression hasInputBreakpoint="0" comment="" comment_box="IDA" comment_box_color="12,127,216,255" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Concatenation>
+						<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Concatenation>
+						<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</SetExternalLock>
+						<GetAreMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetAreMates>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Child>
+										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Timeout hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<ExternalLock hasInputBreakpoint="0" comment="In a case where first NPC exits behaviour first - exit this one as well" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Semaphore hasInputBreakpoint="0" comment="TODO: Remove after SAL merge of non-halting actions, also change preceding ExternalLock back to atomic" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="exit" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Semaphore>
+														</ExternalLock>
+														<Function_situation_gossipSharedBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_situation_gossipSharedBehavior>
+														<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																	<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Move>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Sequence>
+															</IfCondition>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Timeout hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<ShapePosition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</ShapePosition>
+																		</Timeout>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</Selector>
+																	<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</ExactMove>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Sequence>
+															</IfCondition>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</WaitAction>
+																	</UrgencyDecorator>
+																	<StopMovement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</StopMovement>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</NumericalOperation>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Turn>
+																		</IfCondition>
+																	</Sequence>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Sequence>
+															</IfCondition>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" comment_box="IDA" comment_box_color="12,127,216,255" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<StanceCheck hasInputBreakpoint="0" comment="KCD2-235392" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</MeasureDistance>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="exit" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</IfCondition>
+																			</Sequence>
+																		</Then>
+																		<Else>
+																			<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Success>
+																		</Else>
+																	</StanceCheck>
+																	<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Then>
+																		<Else>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Else>
+																	</IfElseCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IsGreetingOnCooldown hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Success>
+																			</Then>
+																			<Else>
+																				<SuppressFailure hasInputBreakpoint="0" comment="POZDRAV dialogue" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																						<Function_speech_schedulerPolylog_initiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_speech_schedulerPolylog_initiator>
+																						<RecordGreeting hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</RecordGreeting>
+																					</Sequence>
+																				</SuppressFailure>
+																			</Else>
+																		</IsGreetingOnCooldown>
+																	</IfCondition>
+																	<SuppressFailure hasInputBreakpoint="0" comment="GOSSIP dialogue" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<Function_speech_schedulerPolylog_initiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_speech_schedulerPolylog_initiator>
+																			</Sequence>
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<Function_speech_schedulerPolylog_initiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_speech_schedulerPolylog_initiator>
+																			</Sequence>
+																		</Selector>
+																	</SuppressFailure>
+																	<SuppressFailure hasInputBreakpoint="0" comment="ROZLOUCENI dialogue" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<Function_speech_schedulerPolylog_initiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_speech_schedulerPolylog_initiator>
+																		</Sequence>
+																	</SuppressFailure>
+																	<Expression hasInputBreakpoint="0" comment="exit" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Sequence>
+															</IfCondition>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Wait>
+																	<Expression hasInputBreakpoint="0" comment="exit" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Sequence>
+															</IfCondition>
+														</ContinuousSwitch>
+													</Parallel>
+												</Timeout>
+											</ForceLook>
+										</IfGate>
+									</Child>
+									<OnFail>
+										<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</SetExternalLock>
+									</OnFail>
+								</FuseBox>
+							</EntityContext>
+						</EntityContext>
+					</AnyDecorator>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Synchronize editorPosX="4470" editorPosY="860" hasInputBreakpoint="0" comment="Wait for receiver to be ready" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Function_speech_dialogInitiator>
+				</Synchronize>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="situation_gossipInitiator_bandit" is_function="0">
+		<Variables>
+			<Variable name="gossipState" type="enum:situation_gossipState" values="" isPersistent="0" form="single" />
+			<Variable name="gossipTheOther" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="lockName" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="lockName_exit" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="polylog_participants" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="polylog_participantsMetaroles" type="soulToMetaroles" values="" isPersistent="0" form="array" />
+			<Variable name="switchGossip" type="situation:switchGossip" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="true" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;2s&apos;" LockManagerType="Global" SemaphoreName="&apos;$this.id&apos;" RunLogic="KeepRunning">
+					<Sequence>
+						<Expression expressions="$switchGossip.initiator = $this.id &#10;$switchGossip.receiver = $__sit_roleHolders[&apos;gossipReceiver&apos;].id &#10;$switchGossip.area = $__area.id" />
+						<InstantSendMessageToNPC target="$this.id" variable="$switchGossip" />
+					</Sequence>
+				</Synchronize>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;60s&apos;" LockManagerType="Global" SemaphoreName="&apos;$lockName&apos;" RunLogic="Halt">
+				<Function_speech_dialogInitiator alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="&apos;GOSSIP&apos;" preset="$enum:dialogPreset.ingame" recipient="$gossipTheOther" recipientMetaroles="&apos;GOSSIP&apos;" nodeLabel="17237352" />
+			</Synchronize>
+			<Sequence>
+				<Expression expressions="$gossipTheOther = $__sit_roleHolders[&apos;gossipReceiver&apos;].id &#10;$polylog_participants[0] = $gossipTheOther &#10;$polylog_participantsMetaroles[0].soul = $gossipTheOther &#10;$polylog_participantsMetaroles[0].metaroles = &apos;GOSSIP&apos;" />
+				<Concatenation OutString="$lockName" Pattern="&apos;situation_gossip_$__sit_contextVar&apos;" />
+				<Concatenation OutString="$lockName_exit" Pattern="&apos;situation_gossip_$__sit_contextVar;_exit&apos;" />
+				<SetExternalLock LockManagerType="Global" Locked="true" LockName="&apos;$lockName_exit&apos;" />
+			</Sequence>
+			<AnyDecorator preset="crime_keepStateAndItems" enabled="true">
+				<EntityContext context="crime_dontGreetPlayer" target="">
+					<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+						<Child canSkip="1">
+							<IfGate atomic="false" condition="$gossipState ~= $enum:situation_gossipState.exitGossipBehaviour" RunLogic="Halt">
+								<Parallel successMode="All" failureMode="Any">
+									<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;$lockName_exit&apos;" RunLogic="KeepRunning">
+										<Semaphore SemaphoreCount="1" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;TEST_ingameDialogPose_transition_out&apos;">
+											<Expression expressions="$gossipState = $enum:situation_gossipState.exitGossipBehaviour" />
+										</Semaphore>
+									</ExternalLock>
+									<Sequence>
+										<Function_crime_addOpenWorldCooldown cooldownType="$enum:openWorld_cooldownEventType.situation_npcGreeting" crimeReactionPriority="0" nodeLabel="82509811" />
+										<SuppressFailure>
+											<Function_speech_schedulerPolylog_initiator alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" areaForPlayer="" context="" customParameters="" metarole="&apos;GOSSIP&apos;" participants="$polylog_participants" participantsMetaroles="$polylog_participantsMetaroles" preset="$enum:dialogPreset.ingame" nodeLabel="94978673" />
+										</SuppressFailure>
+										<SuppressFailure>
+											<Sequence>
+												<Expression expressions="$polylog_participantsMetaroles[0].soul = $gossipTheOther &#10;$polylog_participantsMetaroles[0].metaroles = &apos;SITUACE_ROZLOUCENI&apos;" />
+												<Function_speech_schedulerPolylog_initiator alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" areaForPlayer="" context="" customParameters="" metarole="&apos;SITUACE_ROZLOUCENI&apos;" participants="$polylog_participants" participantsMetaroles="$polylog_participantsMetaroles" preset="$enum:dialogPreset.ingame" nodeLabel="74684488" />
+											</Sequence>
+										</SuppressFailure>
+										<Expression expressions="$gossipState = $enum:situation_gossipState.exitGossipBehaviour" />
+									</Sequence>
+									<DistanceGate Origin="$this.id" ReferencePt="$gossipTheOther" Low="8.000000" High="8.000000" Negation="true" OpenInMiddle="false" RunLogic="KeepRunning">
+										<Expression expressions="$gossipState = $enum:situation_gossipState.exitGossipBehaviour" />
+									</DistanceGate>
+									<EntityContextBarrier context="situation_suppressGossipParticipation" target="$this.id" Negation="false" RunLogic="KeepRunning">
+										<Expression expressions="$gossipState = $enum:situation_gossipState.exitGossipBehaviour" />
+									</EntityContextBarrier>
+									<EntityContextBarrier context="situation_suppressGossipParticipation" target="$gossipTheOther" Negation="false" RunLogic="KeepRunning">
+										<Expression expressions="$gossipState = $enum:situation_gossipState.exitGossipBehaviour" />
+									</EntityContextBarrier>
+								</Parallel>
+							</IfGate>
+						</Child>
+						<OnFail canSkip="1">
+							<SetExternalLock LockManagerType="Global" Locked="false" LockName="&apos;$lockName_exit&apos;" />
+						</OnFail>
+					</FuseBox>
+				</EntityContext>
+			</AnyDecorator>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="gossipState" comment="" />
+				<Variable name="gossipTheOther" comment="" />
+				<Variable name="lockName" comment="" />
+				<Variable name="lockName_exit" comment="" />
+				<Variable name="polylog_participants" comment="" />
+				<Variable name="polylog_participantsMetaroles" comment="" />
+				<Variable name="switchGossip" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+							<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</InstantSendMessageToNPC>
+						</Sequence>
+					</Synchronize>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Synchronize editorPosX="3315" editorPosY="1873" hasInputBreakpoint="0" comment="Wait for receiver to be ready" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Function_speech_dialogInitiator>
+				</Synchronize>
+				<Sequence editorPosX="850" editorPosY="-450" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+					<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Concatenation>
+					<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Concatenation>
+					<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</SetExternalLock>
+				</Sequence>
+				<AnyDecorator editorPosX="1120" editorPosY="420" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Child>
+								<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<ExternalLock hasInputBreakpoint="0" comment="In a case where first NPC exits behaviour first - exit this one as well" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Semaphore hasInputBreakpoint="0" comment="TODO: Remove after SAL merge of non-halting actions, also change preceding ExternalLock back to atomic" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="exit" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Semaphore>
+										</ExternalLock>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_crime_addOpenWorldCooldown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_addOpenWorldCooldown>
+											<SuppressFailure hasInputBreakpoint="0" comment="GOSSIP dialogue" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_speech_schedulerPolylog_initiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_speech_schedulerPolylog_initiator>
+											</SuppressFailure>
+											<SuppressFailure hasInputBreakpoint="0" comment="ROZLOUCENI dialogue" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<Function_speech_schedulerPolylog_initiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_speech_schedulerPolylog_initiator>
+												</Sequence>
+											</SuppressFailure>
+											<Expression hasInputBreakpoint="0" comment="exit" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+										<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="exit" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</DistanceGate>
+										<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="exit" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</EntityContextBarrier>
+										<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="exit" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</EntityContextBarrier>
+									</Parallel>
+								</IfGate>
+							</Child>
+							<OnFail>
+								<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</SetExternalLock>
+							</OnFail>
+						</FuseBox>
+					</EntityContext>
+				</AnyDecorator>
+			</Forest>
+			<Comments>
+				<Comment text="IDA" posX="830" posY="-500" width="360" height="150" resizeBorderWidth="360" resizeBorderHeight="150" color="0.65,0.65,0.65" author="" />
+			</Comments>
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

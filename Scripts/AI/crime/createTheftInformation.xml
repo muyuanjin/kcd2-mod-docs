@@ -1,0 +1,526 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_createTheftInformation" is_function="1">
+		<Variables>
+			<Variable name="feelingsToken" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="items" type="itemPrescriptor" values="" isPersistent="0" form="array" />
+			<Variable name="items_inventoryWuids" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="price" type="_int" values="1" isPersistent="0" form="single" />
+			<Variable name="seenEquippedItems_value" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="seenEquippedItems_value_price" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="stealData" type="stealData" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItem" type="itemPrescriptor" values="" isPersistent="0" form="single" />
+			<Variable name="trespassInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="updateExistingInformation" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="count" type="_int" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="immediate" type="_bool" values="true" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="isNonAttributedCrime" type="_bool" values="false" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="kettleType" type="enum:kettleType" values="$enum:kettleType.kettle" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="method" type="enum:crime_theftMethod" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="owner" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="pivot" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="seenEquippedItems" type="_wuid" values="" isPersistent="0" form="array" requirementType="In" optional="1" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Switch>
+						<IfCondition failOnCondition="false" condition="$method == $enum:crime_theftMethod.pick">
+							<Sequence>
+								<Selector>
+									<GraphSearch Origin="$pivot" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;stealData&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;stealData&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+										<Datalyzer Tag="&apos;stealData&apos;" Quantifiers="ForAll" Parent="" Child="" Data="$stealData" saveVersion="2" />
+									</GraphSearch>
+									<Sequence>
+										<Expression expressions="$stealData.owner = $owner &#10;$stealData.count = $count &#10;$stealData.instance = $pivot" />
+										<GetItemProperty itemId="$stealData.instance" property="Guid" result="$stealData.class" />
+										<GetItemClassProperty ItemClass="$stealData.class" Property="Price" Out="$price" />
+									</Sequence>
+								</Selector>
+								<IfElseCondition failOnCondition="false" condition="$stealData.instance == $__null" saveVersion="2">
+									<Then canSkip="1">
+										<Sequence>
+											<Expression expressions="$stolenItem.class = $stealData.class &#10;$stolenItem.count = $stealData.count" />
+											<GetItemClassProperty ItemClass="$stolenItem.class" Property="Price" Out="$price" />
+											<Expression expressions="$price = $stolenItem.count * $price" />
+										</Sequence>
+									</Then>
+									<Else canSkip="1">
+										<Sequence>
+											<Expression expressions="$stolenItem.instance = $stealData.instance" />
+											<GetItemProperty itemId="$stolenItem.instance" property="Price" result="$price" />
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+								<Expression expressions="$items[0] = $stolenItem" />
+							</Sequence>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$method == $enum:crime_theftMethod.pickpocket | &#10;$method == $enum:crime_theftMethod.lootCorpse | &#10;$method == $enum:crime_theftMethod.lootUnconsciousBody | &#10;$method == $enum:crime_theftMethod.loot">
+							<Sequence>
+								<SuppressFailure>
+									<Sequence>
+										<RetrieveInformation PerceivedWuid="$pivot" label="&apos;theft&apos;" OutVariable="$information" />
+										<Expression expressions="$updateExistingInformation = true" />
+									</Sequence>
+								</SuppressFailure>
+								<IfElseCondition failOnCondition="false" condition="$updateExistingInformation" saveVersion="2">
+									<Then canSkip="1">
+										<IfElseCondition failOnCondition="false" condition="$immediate" saveVersion="2">
+											<Then canSkip="1">
+												<Sequence>
+													<IfElseCondition failOnCondition="false" condition="$method == $enum:crime_theftMethod.loot" saveVersion="2">
+														<Then canSkip="1">
+															<GetStashRobbedValue StashWUID="$pivot" Value="$price" />
+														</Then>
+														<Else canSkip="1">
+															<GetNPCRobbedValue NPC="$pivot" Value="$price" />
+														</Else>
+													</IfElseCondition>
+													<LockDynamicInformationValues Information="$information">
+														<SetDynamicInformationValue Information="$information" Tag="&apos;value&apos;" Variable="$price" Type="" Value="" />
+													</LockDynamicInformationValues>
+												</Sequence>
+											</Then>
+											<Else canSkip="1">
+												<Function_crime_updateStolenItemsOnInformation information="$information" nodeLabel="90577294" />
+											</Else>
+										</IfElseCondition>
+									</Then>
+									<Else canSkip="1">
+										<Sequence>
+											<IfElseCondition failOnCondition="false" condition="$method == $enum:crime_theftMethod.loot" saveVersion="2">
+												<Then canSkip="1">
+													<GetStashRobbedValue StashWUID="$pivot" Value="$price" />
+												</Then>
+												<Else canSkip="1">
+													<GetNPCRobbedValue NPC="$pivot" Value="$price" />
+												</Else>
+											</IfElseCondition>
+											<IfCondition failOnCondition="false" condition="$immediate">
+												<Sequence>
+													<Function_crime_findStolenItems filterByInventory="$pivot" stolenItems="$items_inventoryWuids" nodeLabel="80458035" />
+													<Function_crime_prescribeItems items="$items_inventoryWuids" prescribedItems="$items" nodeLabel="49523750" />
+												</Sequence>
+											</IfCondition>
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$method == $enum:crime_theftMethod.kettleEating">
+							<Expression expressions="$price = $data:script_param[&apos;crime_kettle_eatFine&apos;].value" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$method == $enum:crime_theftMethod.seenEquipped">
+							<Sequence>
+								<ForEach startIndex="0" step="1" array="$seenEquippedItems" iterator="" value="$seenEquippedItems_value" break="">
+									<Sequence>
+										<GetItemProperty itemId="$seenEquippedItems_value" property="Price" result="$seenEquippedItems_value_price" />
+										<Expression expressions="$price += $seenEquippedItems_value_price" />
+									</Sequence>
+								</ForEach>
+								<Function_crime_prescribeItems items="$seenEquippedItems" prescribedItems="$items" nodeLabel="20895746" />
+							</Sequence>
+						</IfCondition>
+						<DefaultBranch>
+							<ErrorNode Message="&apos;ERROR: Unknown theft method!&apos;" />
+						</DefaultBranch>
+					</Switch>
+					<AtomicDecorator>
+						<Sequence>
+							<IfCondition failOnCondition="false" condition="~$updateExistingInformation">
+								<Sequence>
+									<IfElseCondition failOnCondition="false" condition="$isNonAttributedCrime" saveVersion="2">
+										<Then canSkip="1">
+											<Sequence>
+												<CreateInformationWrapper Label="&apos;nonAttributedCrime&apos;" PerceivedWuid="$pivot" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$information" />
+												<LockDynamicInformationValues Information="$information">
+													<SetDynamicInformationValue Information="$information" Tag="&apos;stimulusKind&apos;" Variable="" Type="&apos;enum:crime_stimulusKind&apos;" Value="$enum:crime_stimulusKind.theft" />
+												</LockDynamicInformationValues>
+											</Sequence>
+										</Then>
+										<Else canSkip="1">
+											<IfElseCondition failOnCondition="false" condition="$immediate | $method == $enum:crime_theftMethod.seenEquipped" saveVersion="2">
+												<Then canSkip="1">
+													<CreateInformationWrapper Label="&apos;theft&apos;" PerceivedWuid="$pivot" PositionType="positionWuid" PositionVec3="" PositionWuid="$__player" Information="$information" />
+												</Then>
+												<Else canSkip="1">
+													<CreateInformationWrapper Label="&apos;theft&apos;" PerceivedWuid="$pivot" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$information" />
+												</Else>
+											</IfElseCondition>
+										</Else>
+									</IfElseCondition>
+									<LockDynamicInformationValues Information="$information">
+										<Sequence>
+											<SetDynamicInformationValue Information="$information" Tag="&apos;theftMethod&apos;" Variable="$method" Type="" Value="" />
+											<SetDynamicInformationValue Information="$information" Tag="&apos;items&apos;" Variable="$items" Type="" Value="" />
+											<SetDynamicInformationValue Information="$information" Tag="&apos;value&apos;" Variable="$price" Type="" Value="" />
+											<SetDynamicInformationValue Information="$information" Tag="&apos;victim&apos;" Variable="$owner" Type="" Value="" />
+											<SetDynamicInformationValue Information="$information" Tag="&apos;immediate&apos;" Variable="$immediate" Type="" Value="" />
+											<IfCondition failOnCondition="false" condition="$method == $enum:crime_theftMethod.kettleEating">
+												<SetDynamicInformationValue Information="$information" Tag="&apos;kettleType&apos;" Variable="$kettleType" Type="" Value="" />
+											</IfCondition>
+										</Sequence>
+									</LockDynamicInformationValues>
+								</Sequence>
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$immediate &amp; ~$isNonAttributedCrime">
+								<Sequence>
+									<Function_crime_addEyeWitness information="$information" npc="$this.id" nodeLabel="11573683" />
+									<Function_crime_assessTrespass observer="" information="$trespassInformation" nodeLabel="96246238" />
+								</Sequence>
+							</IfCondition>
+						</Sequence>
+					</AtomicDecorator>
+					<IfCondition failOnCondition="false" condition="$isNonAttributedCrime">
+						<Sequence>
+							<Switch>
+								<IfCondition failOnCondition="false" condition="$price &lt; $data:script_param[&apos;crime_checkHomeStashes_robbedValue_threshold_small&apos;].value">
+									<Expression expressions="$feelingsToken = &apos;witness_theft_small_unattributed&apos;" />
+								</IfCondition>
+								<IfCondition failOnCondition="false" condition="$price &lt; $data:script_param[&apos;crime_checkHomeStashes_robbedValue_threshold_medium&apos;].value">
+									<Expression expressions="$feelingsToken = &apos;witness_theft_medium_unattributed&apos;" />
+								</IfCondition>
+								<DefaultBranch>
+									<Expression expressions="$feelingsToken = &apos;witness_theft_large_unattributed&apos;" />
+								</DefaultBranch>
+							</Switch>
+							<Function_crime_addAngriness angriness="$feelingsToken" target="$this.id" nodeLabel="46916478" />
+						</Sequence>
+					</IfCondition>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="feelingsToken" comment="" />
+				<Variable name="items" comment="" />
+				<Variable name="items_inventoryWuids" comment="" />
+				<Variable name="price" comment="" />
+				<Variable name="seenEquippedItems_value" comment="" />
+				<Variable name="seenEquippedItems_value_price" comment="" />
+				<Variable name="stealData" comment="" />
+				<Variable name="stolenItem" comment="" />
+				<Variable name="trespassInformation" comment="" />
+				<Variable name="updateExistingInformation" comment="" />
+				<Variable name="count" comment="" />
+				<Variable name="immediate" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="isNonAttributedCrime" comment="" />
+				<Variable name="kettleType" comment="" />
+				<Variable name="method" comment="" />
+				<Variable name="owner" comment="" />
+				<Variable name="pivot" comment="" />
+				<Variable name="seenEquippedItems" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-50" editorPosY="-360" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="For normally picked items (pivot == volume)" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+											<Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+											</Datalyzer>
+										</GraphSearch>
+										<Sequence hasInputBreakpoint="0" comment="TODO: kinda sus, review after discussion about pushStimulus_theft data format  has ended" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="for items sent from QS" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetItemProperty>
+											<GetItemClassProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetItemClassProperty>
+										</Sequence>
+									</Selector>
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<GetItemClassProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetItemClassProperty>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Sequence>
+										</Then>
+										<Else>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetItemProperty>
+											</Sequence>
+										</Else>
+									</IfElseCondition>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+								</Sequence>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RetrieveInformation>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+									</SuppressFailure>
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<GetStashRobbedValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetStashRobbedValue>
+															</Then>
+															<Else>
+																<GetNPCRobbedValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetNPCRobbedValue>
+															</Else>
+														</IfElseCondition>
+														<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</SetDynamicInformationValue>
+														</LockDynamicInformationValues>
+													</Sequence>
+												</Then>
+												<Else>
+													<Function_crime_updateStolenItemsOnInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_updateStolenItemsOnInformation>
+												</Else>
+											</IfElseCondition>
+										</Then>
+										<Else>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<GetStashRobbedValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetStashRobbedValue>
+													</Then>
+													<Else>
+														<GetNPCRobbedValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetNPCRobbedValue>
+													</Else>
+												</IfElseCondition>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_crime_findStolenItems hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_findStolenItems>
+														<Function_crime_prescribeItems hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_prescribeItems>
+													</Sequence>
+												</IfCondition>
+											</Sequence>
+										</Else>
+									</IfElseCondition>
+								</Sequence>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetItemProperty>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+									</ForEach>
+									<Function_crime_prescribeItems hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_prescribeItems>
+								</Sequence>
+							</IfCondition>
+							<DefaultBranch>
+								<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</ErrorNode>
+							</DefaultBranch>
+						</Switch>
+						<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</CreateInformationWrapper>
+													<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</SetDynamicInformationValue>
+													</LockDynamicInformationValues>
+												</Sequence>
+											</Then>
+											<Else>
+												<IfElseCondition hasInputBreakpoint="0" comment="seenEquipped pos is always on player" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</CreateInformationWrapper>
+													</Then>
+													<Else>
+														<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</CreateInformationWrapper>
+													</Else>
+												</IfElseCondition>
+											</Else>
+										</IfElseCondition>
+										<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</SetDynamicInformationValue>
+												<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</SetDynamicInformationValue>
+												<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</SetDynamicInformationValue>
+												<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</SetDynamicInformationValue>
+												<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</SetDynamicInformationValue>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</SetDynamicInformationValue>
+												</IfCondition>
+											</Sequence>
+										</LockDynamicInformationValues>
+									</Sequence>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Function_crime_addEyeWitness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_addEyeWitness>
+										<Function_crime_assessTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_assessTrespass>
+									</Sequence>
+								</IfCondition>
+							</Sequence>
+						</AtomicDecorator>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</IfCondition>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</IfCondition>
+									<DefaultBranch>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</DefaultBranch>
+								</Switch>
+								<Function_crime_addAngriness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_addAngriness>
+							</Sequence>
+						</IfCondition>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

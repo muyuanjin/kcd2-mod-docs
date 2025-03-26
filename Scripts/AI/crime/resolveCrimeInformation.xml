@@ -1,0 +1,715 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_resolveCrimeInformation" is_function="1">
+		<Variables>
+			<Variable name="corpseMissingVolume" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="globalCooldowns" type="crime:globalCooldowns" values="" isPersistent="0" form="single" />
+			<Variable name="homeEscalationCounter" type="_int" values="1" isPersistent="0" form="single" />
+			<Variable name="isHomeEscalation" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="lockType" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="now" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="owner" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="perceivedWuidType" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="preunconsciousLastHit" type="crime:preUnconsciousnessLastHit" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItems" type="itemPrescriptor" values="" isPersistent="0" form="array" />
+			<Variable name="stolenItems_value" type="itemPrescriptor" values="" isPersistent="0" form="single" />
+			<Variable name="theftMethod" type="enum:crime_theftMethod" values="" isPersistent="0" form="single" />
+			<Variable name="theftVolume" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="theftVolumes" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Parameters>
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="resolutionKindIsSkillcheck" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Switch>
+						<IfCondition failOnCondition="false" condition="$information.label == &apos;sneak&apos;">
+							<Sequence>
+								<Success />
+								<GetTime TimeType="GameTime" OutVar="$now" Delta="" />
+								<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+									<LinkTagFilter tag="&apos;crime_globalCooldowns&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$globalCooldowns" />
+								</GraphSearch>
+								<Expression expressions="$globalCooldowns.lastNoTorchGuardTimestamp = $now" />
+								<AddLink From="$__player" To="$__player" Tag="&apos;crime_globalCooldowns&apos;" Data="$globalCooldowns" LinkOpHandleMode="OverWrite" />
+							</Sequence>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$information.label == &apos;drawnWeapon&apos;">
+							<IfCondition failOnCondition="false" condition="$resolutionKindIsSkillcheck">
+								<Sequence>
+									<GetTime TimeType="GameTime" OutVar="$now" Delta="" />
+									<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;crime_globalCooldowns&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$globalCooldowns" />
+									</GraphSearch>
+									<Expression expressions="$globalCooldowns.lastDrawnWeaponGuardTimestamp = $now" />
+									<AddLink From="$__player" To="$__player" Tag="&apos;crime_globalCooldowns&apos;" Data="$globalCooldowns" LinkOpHandleMode="OverWrite" />
+								</Sequence>
+							</IfCondition>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$information.label == &apos;murder&apos; | &#10;$information.label == &apos;murderByDog&apos; | &#10;$information.label == &apos;corpseViolation&apos;">
+							<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+								<Then canSkip="1">
+									<Sequence>
+										<Function_crime_addCorpseLink corpse="$information.perceivedWuid" corpseState="$enum:corpseState.watched" mateReacting="false" resolve="true" storeTime="false" nodeLabel="31317174" />
+										<SuppressFailure>
+											<Sequence>
+												<GraphSearch Origin="$information.perceivedWuid" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+													<LinkTagFilter tag="&apos;crime_missingCorpse_reverse&apos;" prune="true" negprune="unknown" Parent="" Child="$corpseMissingVolume" Data="" />
+												</GraphSearch>
+												<CheckWuidValid wuid="$corpseMissingVolume" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<DeSpawnPerceptibleVolume Wuid="$corpseMissingVolume" />
+													</Then>
+												</CheckWuidValid>
+											</Sequence>
+										</SuppressFailure>
+									</Sequence>
+								</Then>
+							</CheckWuidValid>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$information.label == &apos;assault&apos;">
+							<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+								<Then canSkip="1">
+									<IsUnconsciousCheck SoulWUID="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Sequence>
+												<SuppressFailure>
+													<Sequence>
+														<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+															<LinkTagFilter tag="&apos;crime_preUnconsciousnessLastHit&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+															<WUIDFilter WUID="$information.perceivedWuid" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+															<Datalyzer Tag="&apos;crime_preUnconsciousnessLastHit&apos;" Quantifiers="Exists" Parent="" Child="" Data="$preunconsciousLastHit" saveVersion="2" />
+														</GraphSearch>
+														<Expression expressions="$preunconsciousLastHit.resolved = true" />
+														<AddLink From="$__player" To="$information.perceivedWuid" Tag="&apos;crime_preUnconsciousnessLastHit&apos;" Data="$preunconsciousLastHit" LinkOpHandleMode="OverWrite" />
+													</Sequence>
+												</SuppressFailure>
+												<AddLink From="$this.id" To="$information.perceivedWuid" Tag="&apos;crime_followUpBehavior_wakeUp&apos;" Data="active(true)" LinkOpHandleMode="OverWrite" />
+												<RemoveLink From="$__player" To="$information.perceivedWuid" Tag="&apos;crime_lastHitByPlayer&apos;" LinkOpHandleMode="Success" />
+											</Sequence>
+										</Then>
+									</IsUnconsciousCheck>
+								</Then>
+							</CheckWuidValid>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$information.label == &apos;theft&apos;">
+							<Sequence>
+								<LockDynamicInformationValues Information="$information">
+									<Sequence>
+										<GetDynamicInformationValue Information="$information" Tag="&apos;theftMethod&apos;" Out="$theftMethod" />
+										<SuppressFailure>
+											<GetDynamicInformationValue Information="$information" Tag="&apos;items&apos;" Out="$stolenItems" />
+										</SuppressFailure>
+										<GetDynamicInformationValue Information="$information" Tag="&apos;victim&apos;" Out="$owner" />
+									</Sequence>
+								</LockDynamicInformationValues>
+								<IfCondition failOnCondition="false" condition="$theftMethod ~= $enum:crime_theftMethod.kettleEating">
+									<Sequence>
+										<ResolveStolenItems Items="$stolenItems" />
+										<IfCondition failOnCondition="false" condition="$resolutionKindIsSkillcheck">
+											<ForEach startIndex="0" step="1" array="$stolenItems" iterator="" value="$stolenItems_value" break="">
+												<CheckWuidValid wuid="$stolenItems_value.instance" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<LegalizeItem Item="$stolenItems_value.instance" />
+													</Then>
+													<Else canSkip="1">
+														<Success />
+													</Else>
+												</CheckWuidValid>
+											</ForEach>
+										</IfCondition>
+										<Switch>
+											<IfCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.loot">
+												<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<ResetStashRobbedValue StashWUID="$information.perceivedWuid" />
+													</Then>
+												</CheckWuidValid>
+											</IfCondition>
+											<IfCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.pickpocket | &#10;$theftMethod == $enum:crime_theftMethod.lootCorpse | &#10;$theftMethod == $enum:crime_theftMethod.lootUnconsciousBody">
+												<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Sequence>
+															<ResetNPCRobbedValue NPC="$information.perceivedWuid" />
+															<IfCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.lootCorpse">
+																<Function_crime_addCorpseLink corpse="$information.perceivedWuid" corpseState="$enum:corpseState.watched" mateReacting="false" resolve="true" storeTime="false" nodeLabel="47263886" />
+															</IfCondition>
+														</Sequence>
+													</Then>
+												</CheckWuidValid>
+											</IfCondition>
+											<IfCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.pick | &#10;$theftMethod == $enum:crime_theftMethod.seenEquipped">
+												<IfCondition failOnCondition="false" condition="$owner ~= $__null">
+													<CheckWuidValid wuid="$owner" FailSubtMissing="false" saveVersion="2">
+														<Then canSkip="1">
+															<Sequence>
+																<GraphSearch Origin="$owner" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																	<LinkTagFilter tag="&apos;stealDataReverse&apos;" prune="true" negprune="unknown" Parent="" Child="$theftVolume" Data="" />
+																	<ExistPath Origin="$theftVolume" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																		<LinkTagFilter tag="&apos;stealData&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																		<LinkDataFilter tag="&apos;stealData&apos;" condition="$__link_stealData.instance == $stolenItems[0].instance | &#10;($__link_stealData.instance == $__null &amp;  &#10;$__link_stealData.class == $stolenItems[0].class)" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																	</ExistPath>
+																	<Nodalyzer Quantifiers="ForAll" Parent="" Child="$theftVolumes" saveVersion="2" />
+																</GraphSearch>
+																<ForEach startIndex="0" step="1" array="$theftVolumes" iterator="" value="$theftVolume" break="">
+																	<DeSpawnPerceptibleVolume Wuid="$theftVolume" />
+																</ForEach>
+															</Sequence>
+														</Then>
+													</CheckWuidValid>
+												</IfCondition>
+											</IfCondition>
+											<DefaultBranch>
+												<Success />
+											</DefaultBranch>
+										</Switch>
+									</Sequence>
+								</IfCondition>
+							</Sequence>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$information.label == &apos;disturbance&apos;">
+							<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+								<Then canSkip="1">
+									<Sequence>
+										<GetType WUID="$information.perceivedWuid" OutString="$perceivedWuidType" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+										<IfCondition failOnCondition="false" condition="$perceivedWuidType == &apos;UNK&apos;">
+											<DeSpawnPerceptibleVolume Wuid="$information.perceivedWuid" />
+										</IfCondition>
+									</Sequence>
+								</Then>
+							</CheckWuidValid>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$information.label == &apos;pilloryBreak&apos;">
+							<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+								<Then canSkip="1">
+									<DeSpawnPerceptibleVolume Wuid="$information.perceivedWuid" />
+								</Then>
+							</CheckWuidValid>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$information.label == &apos;trespass&apos;">
+							<Sequence>
+								<LockDynamicInformationValues Information="$information">
+									<SuppressFailure>
+										<GetDynamicInformationValue Information="$information" Tag="&apos;isHomeTrespass&apos;" Out="$isHomeEscalation" />
+									</SuppressFailure>
+								</LockDynamicInformationValues>
+								<IfCondition failOnCondition="false" condition="$isHomeEscalation">
+									<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<AddHomeTrespassEscalation Home="$information.perceivedWuid" Counter="$homeEscalationCounter" IsPaused="true" />
+										</Then>
+									</CheckWuidValid>
+								</IfCondition>
+							</Sequence>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$information.label == &apos;murderAnimal&apos;">
+							<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+								<Then canSkip="1">
+									<Function_crime_addCorpseLink corpse="$information.perceivedWuid" corpseState="$enum:corpseState.cleared" mateReacting="false" resolve="true" storeTime="false" nodeLabel="96271194" />
+								</Then>
+							</CheckWuidValid>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$information.label == &apos;lockpick&apos;">
+							<SuppressFailure>
+								<Sequence>
+									<LockDynamicInformationValues Information="$information">
+										<GetDynamicInformationValue Information="$information" Tag="&apos;lockType&apos;" Out="$lockType" />
+									</LockDynamicInformationValues>
+									<IfElseCondition failOnCondition="false" condition="$lockType == &apos;STASH&apos; | $lockType == &apos;UNK&apos;" saveVersion="2">
+										<Then canSkip="1">
+											<ExecuteLua code="local stash = XGenAIModule.GetEntityByWUID(data.information.perceivedWuid) &#10;stash:Lock()" />
+										</Then>
+										<Else canSkip="1">
+											<ExecuteLua code="local door = XGenAIModule.GetEntityByWUID(data.information.perceivedWuid) &#10;if not door:IsOpen() then &#10;  door:Lock(false) &#10;end" />
+										</Else>
+									</IfElseCondition>
+								</Sequence>
+							</SuppressFailure>
+						</IfCondition>
+						<DefaultBranch>
+							<Success />
+						</DefaultBranch>
+					</Switch>
+					<SuppressFailure>
+						<Sequence>
+							<CheckInformationKnowledge Information="$information" Holder="$this.id" />
+							<DestroyInformationCompletely Information="$information" />
+						</Sequence>
+					</SuppressFailure>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<IfCondition failOnCondition="false" condition="$information.label == &apos;horseTheft&apos;">
+				<IsDeadCheck SoulWUID="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+					<Else canSkip="1">
+						<IfCondition failOnCondition="false" condition="$information.perceivedWuid ~= $__null">
+							<SuppressFailure>
+								<Sequence>
+									<GraphSearch Origin="$information.perceivedWuid" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;crime_horseMounted&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$horseMountedData" />
+									</GraphSearch>
+									<GetSpatialInfo In="$information.perceivedWuid" Out="$currentPosition" What="Position" />
+									<MeasureDistance position1="$currentPosition" position2="$horseMountedData.initialPosition" mode="ThreeDimensions" result="$horse_distanceNowToInitialPosition" />
+									<IfCondition failOnCondition="false" condition="$horse_distanceNowToInitialPosition &gt; $data:script_param[&apos;crime_horseTheft_teleportHorseIsDistanceGreaterThan&apos;].value">
+										<Success />
+									</IfCondition>
+									<RemoveLink From="$information.perceivedWuid" To="$information.perceivedWuid" Tag="&apos;crime_horseMounted&apos;" LinkOpHandleMode="OverWrite" />
+								</Sequence>
+							</SuppressFailure>
+						</IfCondition>
+					</Else>
+				</IsDeadCheck>
+			</IfCondition>
+			<AddLink From="$corpseMissingVolume" To="$this.id" Tag="&apos;crime_missingCorpse&apos;" Data="" LinkOpHandleMode="Error" />
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="corpseMissingVolume" comment="" />
+				<Variable name="globalCooldowns" comment="" />
+				<Variable name="homeEscalationCounter" comment="" />
+				<Variable name="isHomeEscalation" comment="" />
+				<Variable name="lockType" comment="" />
+				<Variable name="now" comment="" />
+				<Variable name="owner" comment="" />
+				<Variable name="perceivedWuidType" comment="" />
+				<Variable name="preunconsciousLastHit" comment="" />
+				<Variable name="stolenItems" comment="" />
+				<Variable name="stolenItems_value" comment="" />
+				<Variable name="theftMethod" comment="" />
+				<Variable name="theftVolume" comment="" />
+				<Variable name="theftVolumes" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="resolutionKindIsSkillcheck" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Success hasInputBreakpoint="0" comment="Concept gives player a torch" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Success>
+									<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetTime>
+									<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</LinkTagFilter>
+									</GraphSearch>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+								</Sequence>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetTime>
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</AddLink>
+									</Sequence>
+								</IfCondition>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_addCorpseLink>
+											<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</LinkTagFilter>
+													</GraphSearch>
+													<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<DeSpawnPerceptibleVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</DeSpawnPerceptibleVolume>
+														</Then>
+													</CheckWuidValid>
+												</Sequence>
+											</SuppressFailure>
+										</Sequence>
+									</Then>
+								</CheckWuidValid>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+																<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</WUIDFilter>
+																<Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																</Datalyzer>
+															</GraphSearch>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</AddLink>
+														</Sequence>
+													</SuppressFailure>
+													<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</AddLink>
+													<RemoveLink hasInputBreakpoint="0" comment="remove lastHit so that it can not be seen again on the body" breakpointFlags="0">
+														<OutputBreakpoints />
+													</RemoveLink>
+												</Sequence>
+											</Then>
+										</IsUnconsciousCheck>
+									</Then>
+								</CheckWuidValid>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetDynamicInformationValue>
+											<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetDynamicInformationValue>
+											</SuppressFailure>
+											<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetDynamicInformationValue>
+										</Sequence>
+									</LockDynamicInformationValues>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<ResolveStolenItems hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</ResolveStolenItems>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<CheckWuidValid hasInputBreakpoint="0" comment="TODO: remove after KCD2-62302" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<LegalizeItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</LegalizeItem>
+														</Then>
+														<Else>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Success>
+														</Else>
+													</CheckWuidValid>
+												</ForEach>
+											</IfCondition>
+											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<ResetStashRobbedValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</ResetStashRobbedValue>
+														</Then>
+													</CheckWuidValid>
+												</IfCondition>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<ResetNPCRobbedValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</ResetNPCRobbedValue>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_crime_addCorpseLink>
+																</IfCondition>
+															</Sequence>
+														</Then>
+													</CheckWuidValid>
+												</IfCondition>
+												<IfCondition hasInputBreakpoint="0" comment="despawn lingering theftVolumes" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</LinkTagFilter>
+																		<ExistPath hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</LinkTagFilter>
+																			<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</LinkDataFilter>
+																		</ExistPath>
+																		<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																		</Nodalyzer>
+																	</GraphSearch>
+																	<ForEach hasInputBreakpoint="0" comment="there can be multiple for divisible items" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<DeSpawnPerceptibleVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</DeSpawnPerceptibleVolume>
+																	</ForEach>
+																</Sequence>
+															</Then>
+														</CheckWuidValid>
+													</IfCondition>
+												</IfCondition>
+												<DefaultBranch>
+													<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Success>
+												</DefaultBranch>
+											</Switch>
+										</Sequence>
+									</IfCondition>
+								</Sequence>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetType>
+											<IfCondition hasInputBreakpoint="0" comment="only for animal startle" breakpointFlags="0">
+												<OutputBreakpoints />
+												<DeSpawnPerceptibleVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</DeSpawnPerceptibleVolume>
+											</IfCondition>
+										</Sequence>
+									</Then>
+								</CheckWuidValid>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<DeSpawnPerceptibleVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</DeSpawnPerceptibleVolume>
+									</Then>
+								</CheckWuidValid>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetDynamicInformationValue>
+										</SuppressFailure>
+									</LockDynamicInformationValues>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<AddHomeTrespassEscalation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</AddHomeTrespassEscalation>
+											</Then>
+										</CheckWuidValid>
+									</IfCondition>
+								</Sequence>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="#KCD2-339376, Clear animal corpse, so people don&apos;t react to its theft" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_addCorpseLink>
+									</Then>
+								</CheckWuidValid>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetDynamicInformationValue>
+										</LockDynamicInformationValues>
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</ExecuteLua>
+											</Then>
+											<Else>
+												<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</ExecuteLua>
+											</Else>
+										</IfElseCondition>
+									</Sequence>
+								</SuppressFailure>
+							</IfCondition>
+							<DefaultBranch>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</DefaultBranch>
+						</Switch>
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<CheckInformationKnowledge hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</CheckInformationKnowledge>
+								<DestroyInformationCompletely hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</DestroyInformationCompletely>
+							</Sequence>
+						</SuppressFailure>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest>
+				<IfCondition editorPosX="1980" editorPosY="850" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Else>
+							<IfCondition hasInputBreakpoint="0" comment="Pay&apos;n&apos;spray check" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SuppressFailure hasInputBreakpoint="0" comment="Teleport horse back to initialPosition" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+										<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetSpatialInfo>
+										<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</MeasureDistance>
+										<IfCondition hasInputBreakpoint="0" comment="tweak" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Success hasInputBreakpoint="0" comment="Replaced teleport" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</IfCondition>
+										<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</RemoveLink>
+									</Sequence>
+								</SuppressFailure>
+							</IfCondition>
+						</Else>
+					</IsDeadCheck>
+				</IfCondition>
+				<AddLink editorPosX="1433" editorPosY="-1313" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</AddLink>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

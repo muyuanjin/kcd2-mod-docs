@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="situation_eventHlasatel_listener" is_function="0">
+		<Variables>
+			<Variable name="audiencePoint" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="audiencePoints" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="dialogTrigger" type="event:hlasatel:dialogTrigger" values="" isPersistent="0" form="single" />
+			<Variable name="hlasatel" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="pointFound" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="reactionChance" type="_float" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<VariableExistsGate VarToTest="$__sit_roleHolders" VarIndexMode="All" FailSubtMissing="false" saveVersion="2">
+					<Then canSkip="1">
+						<AnyDecorator preset="crime_keepState" enabled="true">
+							<Sequence>
+								<Expression expressions="$hlasatel = $__sit_roleHolders[&apos;eventHlasatel_hlasatel&apos;].id" />
+								<EntityContextCheck context="event_hlasatelPogrom" target="$hlasatel" saveVersion="2">
+									<Then canSkip="1">
+										<Expression expressions="$reactionChance = 0" />
+									</Then>
+									<Else canSkip="1">
+										<Expression expressions="$reactionChance = 0.65" />
+									</Else>
+								</EntityContextCheck>
+								<Parallel successMode="Any" failureMode="Any">
+									<RandomGate opensWithChance="$reactionChance" saveVersion="2">
+										<Then canSkip="1">
+											<SubtreeDecorator saveVersion="2">
+												<Init canSkip="1">
+													<AtomicDecorator>
+														<Sequence>
+															<Expression expressions="$pointFound = false" />
+															<GraphSearch Origin="$__area.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																<LinkTagFilter tag="&apos;audiencePoint&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																<Nodalyzer Quantifiers="ForAll" Parent="" Child="$audiencePoints" saveVersion="2">
+																	<Child0 canSkip="1">
+																		<RangeSorter point="$this.id" SortOrder="Ascending" Source="Child" />
+																	</Child0>
+																</Nodalyzer>
+															</GraphSearch>
+															<ForEach startIndex="0" step="1" array="$audiencePoints" iterator="" value="$audiencePoint" break="$pointFound">
+																<Selector>
+																	<GraphSearch Origin="$audiencePoint" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																		<LinkTagFilter tag="&apos;hlasatel_pointReserved&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																	</GraphSearch>
+																	<Sequence>
+																		<Expression expressions="$pointFound = true" />
+																		<AddLink From="$audiencePoint" To="$this.id" Tag="&apos;hlasatel_pointReserved&apos;" Data="" LinkOpHandleMode="OverWrite" />
+																	</Sequence>
+																</Selector>
+															</ForEach>
+														</Sequence>
+													</AtomicDecorator>
+												</Init>
+												<Subtree canSkip="1">
+													<IfCondition failOnCondition="false" condition="$pointFound">
+														<ForceLook LookTarget="$hlasatel" DisableVariations="false">
+															<Sequence>
+																<Move stopWithinDistance="0.000000" stopDistanceVariation="0.000000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$audiencePoint" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																<Turn target="$hlasatel" align="false" />
+																<EntityContextBarrier context="event_started" target="$hlasatel" Negation="false" RunLogic="KeepRunning">
+																	<Parallel successMode="Any" failureMode="Any">
+																		<Wait duration="&apos;30s&apos;" timeType="GameTime" doFail="false" variation="&apos;10s&apos;" />
+																		<SubtreeDecorator saveVersion="2">
+																			<Init canSkip="1">
+																				<AddLink From="$hlasatel" To="$this.id" Tag="&apos;hlasatel_listener&apos;" Data="" LinkOpHandleMode="OverWrite" />
+																			</Init>
+																			<Subtree canSkip="1">
+																				<Loop count="-1">
+																					<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$dialogTrigger" senderInfo="" inbox="&apos;hlasatel_dialogTrigger&apos;" condition="" answerVar="">
+																						<SuppressFailure>
+																							<InstantSemaphore SemaphoreCount="2" LockManagerType="Global" SemaphoreName="&apos;eventHlasatel_listener_commenting&apos;">
+																								<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="" metarole="&apos;EVENT_HLASATEL_POSLUCHAC_SOUHLASI&apos;" skipInLod="false" subtitlesDown="false" nodeLabel="68361743" />
+																							</InstantSemaphore>
+																						</SuppressFailure>
+																					</ProcessMessage>
+																				</Loop>
+																			</Subtree>
+																			<Cleanup canSkip="1">
+																				<RemoveLink From="$hlasatel" To="$this.id" Tag="&apos;hlasatel_listener&apos;" LinkOpHandleMode="Success" />
+																			</Cleanup>
+																		</SubtreeDecorator>
+																	</Parallel>
+																</EntityContextBarrier>
+															</Sequence>
+														</ForceLook>
+													</IfCondition>
+												</Subtree>
+												<Cleanup canSkip="1">
+													<IfCondition failOnCondition="false" condition="$audiencePoint ~= $__null">
+														<RemoveLink From="$audiencePoint" To="$this.id" Tag="&apos;hlasatel_pointReserved&apos;" LinkOpHandleMode="OverWrite" />
+													</IfCondition>
+												</Cleanup>
+											</SubtreeDecorator>
+										</Then>
+										<Else canSkip="1">
+											<ForceLook LookTarget="$hlasatel" DisableVariations="false">
+												<Sequence>
+													<Move stopWithinDistance="8.000000" stopDistanceVariation="2.000000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$hlasatel" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+													<Turn target="$hlasatel" align="false" />
+													<EntityContextBarrier context="event_started" target="$hlasatel" Negation="false" RunLogic="KeepRunning">
+														<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="" metarole="&apos;EVENT_HLASATEL_POSLUCHAC_NESOUHLASI&apos;" skipInLod="false" subtitlesDown="false" nodeLabel="63599610" />
+													</EntityContextBarrier>
+												</Sequence>
+											</ForceLook>
+										</Else>
+									</RandomGate>
+									<EntityContextBarrier context="situation_eventHlasatel_hlasatel" target="$hlasatel" Negation="true" RunLogic="KeepRunning">
+										<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="&apos;1s&apos;" />
+									</EntityContextBarrier>
+								</Parallel>
+							</Sequence>
+						</AnyDecorator>
+					</Then>
+					<Else canSkip="1">
+						<Success />
+					</Else>
+				</VariableExistsGate>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="audiencePoint" comment="" />
+				<Variable name="audiencePoints" comment="" />
+				<Variable name="dialogTrigger" comment="" />
+				<Variable name="hlasatel" comment="" />
+				<Variable name="pointFound" comment="" />
+				<Variable name="reactionChance" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-30" editorPosY="-10" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<VariableExistsGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Then>
+							<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Then>
+										<Else>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Else>
+									</EntityContextCheck>
+									<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Init>
+														<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</LinkTagFilter>
+																	<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Child0>
+																			<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</RangeSorter>
+																		</Child0>
+																	</Nodalyzer>
+																</GraphSearch>
+																<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</LinkTagFilter>
+																		</GraphSearch>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</AddLink>
+																		</Sequence>
+																	</Selector>
+																</ForEach>
+															</Sequence>
+														</AtomicDecorator>
+													</Init>
+													<Subtree>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Move>
+																	<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Turn>
+																	<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Wait>
+																			<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Init>
+																					<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</AddLink>
+																				</Init>
+																				<Subtree>
+																					<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<InstantSemaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Function_speech_schedulerMonolog>
+																								</InstantSemaphore>
+																							</SuppressFailure>
+																						</ProcessMessage>
+																					</Loop>
+																				</Subtree>
+																				<Cleanup>
+																					<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</RemoveLink>
+																				</Cleanup>
+																			</SubtreeDecorator>
+																		</Parallel>
+																	</EntityContextBarrier>
+																</Sequence>
+															</ForceLook>
+														</IfCondition>
+													</Subtree>
+													<Cleanup>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</RemoveLink>
+														</IfCondition>
+													</Cleanup>
+												</SubtreeDecorator>
+											</Then>
+											<Else>
+												<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Move>
+														<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Turn>
+														<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_speech_schedulerMonolog>
+														</EntityContextBarrier>
+													</Sequence>
+												</ForceLook>
+											</Else>
+										</RandomGate>
+										<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</EntityContextBarrier>
+									</Parallel>
+								</Sequence>
+							</AnyDecorator>
+						</Then>
+						<Else>
+							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Success>
+						</Else>
+					</VariableExistsGate>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

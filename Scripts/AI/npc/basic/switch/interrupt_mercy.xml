@@ -1,0 +1,621 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_mercy" is_function="0">
+		<Variables>
+			<Variable name="assaultData" type="crime:assaultData" values="" isPersistent="0" form="single" />
+			<Variable name="calmDownAfterMercy" type="_bool" values="" isPersistent="1" form="single" />
+			<Variable name="dot" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="hitReaction" type="hitReaction" values="" isPersistent="0" form="single" />
+			<Variable name="mercyDialogueResult" type="crime:mercyDialogueResult" values="" isPersistent="0" form="single" />
+			<Variable name="questMercy" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="solved" type="_bool" values="" isPersistent="1" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="mercyData" type="switch:interruptData:mercy" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<Parallel successMode="All" failureMode="Any">
+							<EntityContextCheck context="crime_questMercy" target="" saveVersion="2">
+								<Then canSkip="1">
+									<IfCondition failOnCondition="false" condition="!$solved">
+										<IfGate atomic="false" condition="!$solved" RunLogic="Halt">
+											<EntityContext context="crime_questMercy" target="">
+												<Sequence>
+													<Expression expressions="$questMercy = true" />
+													<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+												</Sequence>
+											</EntityContext>
+										</IfGate>
+									</IfCondition>
+								</Then>
+							</EntityContextCheck>
+							<Sequence>
+								<IfCondition failOnCondition="false" condition="!$calmDownAfterMercy">
+									<EntityContextCheck context="combat_calmDownAfterSurrendering" target="" saveVersion="2">
+										<Then canSkip="1">
+											<Expression expressions="$calmDownAfterMercy = true" />
+										</Then>
+										<Else canSkip="1">
+											<Success />
+										</Else>
+									</EntityContextCheck>
+								</IfCondition>
+								<AddBuff SoulWUID="$this.id" BuffGUID="&apos;8a4eec60-a667-4921-806f-05e3592c2de2&apos;" />
+								<EntityContext context="switch_disabledHitBehavioralReaction" target="">
+									<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" />
+								</EntityContext>
+							</Sequence>
+							<EntityContext context="crime_preventDespawn" target="">
+								<AnyDecorator preset="crime_keepStateAndItems" enabled="true">
+									<EntityContext context="crime_interrupt" target="">
+										<DecoratorBuff BuffId="&apos;d5996d8b-611d-4cc8-bfbd-7ab2c8884cf6&apos;" SoulWUID="">
+											<DecoratorBuff BuffId="&apos;f46120bf-b45f-4ec5-95c6-03d526cb40bf&apos;" SoulWUID="">
+												<EntityContext context="crime_interruptMercy" target="$this.id">
+													<EntityContext context="combat_alwaysWithdrawSkirmish" target="">
+														<EntityContext context="combat_surrender" target="$this.id">
+															<GameContext context="crime_music_lowest">
+																<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+																	<DecoratorBuff BuffId="&apos;5d070c0b-5891-4e1e-83c5-72120a90b015&apos;" SoulWUID="$this.id">
+																		<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:mercy&apos;">
+																			<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$mercyData.stimulusKind&apos;">
+																				<IfCondition failOnCondition="false" condition="!$solved">
+																					<IfGate atomic="false" condition="!$solved" RunLogic="Halt">
+																						<Sequence>
+																							<Function_crime_limits_confirmReactionLink reactionKind="$enum:crime_reactionKind.mercy" nodeLabel="11076486" />
+																							<AddBuff SoulWUID="$this.id" BuffGUID="&apos;46683e3b-e261-412f-b402-99ee17dda62a&apos;" />
+																							<Function_crime_checkInterruptInformation information="$mercyData.information" nodeLabel="67643739" />
+																							<RemoveBuffs SoulWUID="" BuffGUID="&apos;ffc20522-134d-4811-8bc5-e933b74b7081&apos;" BuffTagId="-1" />
+																							<ClearInbox inbox="&apos;crime_mercyDialogueResult&apos;" type="" condition="" />
+																							<Parallel successMode="All" failureMode="Any">
+																								<SuppressFailure>
+																									<Sequence>
+																										<Timeout duration="&apos;3s&apos;" timeType="GameTime" doFail="true" variation="">
+																											<DialogGate Who="$this.id" Negation="true" EndDialogInRoot="false" Condition="InIngame" RunLogic="KeepRunning">
+																												<Success />
+																											</DialogGate>
+																										</Timeout>
+																										<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="" metarole="&apos;NPC_SE_VZDAVA_PO_COMBATU&apos;" skipInLod="false" subtitlesDown="false" nodeLabel="80754340" />
+																									</Sequence>
+																								</SuppressFailure>
+																								<EntityContextCheck context="combat_decentMercy" target="" saveVersion="2">
+																									<Then canSkip="1">
+																										<Sequence>
+																											<AnimationAction fragment="&apos;TournamentSurrender&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																											<Expression expressions="$solved = true" />
+																										</Sequence>
+																									</Then>
+																									<Else canSkip="1">
+																										<EntityContext context="combat_actorSupressHitreactionAnimation" target="$this.id">
+																											<UnstanceAction unstance="CrimeSurrender" locationObject="$__null" slaveObject="" />
+																										</EntityContext>
+																									</Else>
+																								</EntityContextCheck>
+																							</Parallel>
+																							<Parallel successMode="Any" failureMode="Any">
+																								<IfElseCondition failOnCondition="false" condition="$questMercy" saveVersion="2">
+																									<Then canSkip="1">
+																										<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$mercyDialogueResult" senderInfo="" inbox="&apos;crime_mercyDialogueResult&apos;" condition="" answerVar="">
+																											<Sequence>
+																												<IfCondition failOnCondition="false" condition="$mercyDialogueResult.result == $enum:crime_mercyDialogueResult.friendsAgain">
+																													<Sequence>
+																														<Expression expressions="$solved = true" />
+																														<Function_crime_mercy_friendsAgain calmDown="$calmDownAfterMercy" nodeLabel="17296566" />
+																													</Sequence>
+																												</IfCondition>
+																												<IfCondition failOnCondition="false" condition="$mercyDialogueResult.result == $enum:crime_mercyDialogueResult.run">
+																													<Function_crime_mercy_run leaveLevel="false" mercyData="$mercyData" mercyDialogResult="$enum:crime_mercyDialogueResult.run" priority="135" nodeLabel="49179737" />
+																												</IfCondition>
+																												<IfCondition failOnCondition="false" condition="$mercyDialogueResult.result == $enum:crime_mercyDialogueResult.continueFight">
+																													<Function_callInterrupt_attack assaultData="$assaultData" criminalFreshness="$enum:crime_criminalFreshness.unknown" defenceMode="false" escalatedFromFailedSurrender="false" freshlyAttributedCrime="false" ignorePriority="true" information="$mercyData.information" initiator="$enum:switch_interruptInitiator.scheduler" previousReaction="$enum:crime_reactionKind.mercy" priority="160" questBehavior="false" relationOverride="true" stimulusKind="$enum:crime_stimulusKind.enemy" target="$__player" nodeLabel="94274750" />
+																												</IfCondition>
+																											</Sequence>
+																										</ProcessMessage>
+																									</Then>
+																									<Else canSkip="1">
+																										<EntityContext context="crime_openWorldMercy" target="">
+																											<Parallel successMode="Any" failureMode="Any">
+																												<While doFail="false" propagateChildFail="false" condition="!$solved">
+																													<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$mercyDialogueResult" senderInfo="" inbox="&apos;crime_mercyDialogueResult&apos;" condition="" answerVar="">
+																														<Sequence>
+																															<IfCondition failOnCondition="false" condition="$mercyDialogueResult.result == $enum:crime_mercyDialogueResult.standUp">
+																																<UrgencyDecorator Urgency="Fast">
+																																	<Sequence>
+																																		<WaitAction />
+																																		<Turn target="$__player" align="false" />
+																																		<SendAIConceptSignal_surrenderingStandUp done="true" />
+																																	</Sequence>
+																																</UrgencyDecorator>
+																															</IfCondition>
+																															<IfCondition failOnCondition="false" condition="$mercyDialogueResult.result == $enum:crime_mercyDialogueResult.continueFight">
+																																<Function_callInterrupt_attack assaultData="$assaultData" criminalFreshness="$enum:crime_criminalFreshness.unknown" defenceMode="false" escalatedFromFailedSurrender="false" freshlyAttributedCrime="false" ignorePriority="true" information="$mercyData.information" initiator="$enum:switch_interruptInitiator.scheduler" previousReaction="$enum:crime_reactionKind.mercy" priority="160" questBehavior="false" relationOverride="true" stimulusKind="$enum:crime_stimulusKind.enemy" target="$__player" nodeLabel="80824046" />
+																															</IfCondition>
+																															<IfCondition failOnCondition="false" condition="$mercyDialogueResult.result == $enum:crime_mercyDialogueResult.itemsGiven">
+																																<Function_crime_mercy_run leaveLevel="true" mercyData="$mercyData" mercyDialogResult="$enum:crime_mercyDialogueResult.itemsGiven" priority="158" nodeLabel="61029705" />
+																															</IfCondition>
+																															<IfCondition failOnCondition="false" condition="$mercyDialogueResult.result == $enum:crime_mercyDialogueResult.friendsAgain">
+																																<Sequence>
+																																	<Function_crime_mercy_friendsAgain calmDown="false" nodeLabel="15700400" />
+																																	<Expression expressions="$solved = true" />
+																																</Sequence>
+																															</IfCondition>
+																															<IfCondition failOnCondition="false" condition="$mercyDialogueResult.result == $enum:crime_mercyDialogueResult.run">
+																																<Function_crime_mercy_run leaveLevel="true" mercyData="$mercyData" mercyDialogResult="$enum:crime_mercyDialogueResult.run" priority="158" nodeLabel="74220993" />
+																															</IfCondition>
+																														</Sequence>
+																													</ProcessMessage>
+																												</While>
+																												<Sequence>
+																													<Wait duration="&apos;550s&apos;" timeType="WorldTime" doFail="false" variation="" />
+																													<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="12.000000" High="12.000000" Negation="true" OpenInMiddle="false" RunLogic="KeepRunning">
+																														<Function_crime_mercy_run leaveLevel="false" mercyData="$mercyData" mercyDialogResult="$enum:crime_mercyDialogueResult.playerAway" priority="135" nodeLabel="59884509" />
+																													</DistanceGate>
+																												</Sequence>
+																											</Parallel>
+																										</EntityContext>
+																									</Else>
+																								</IfElseCondition>
+																								<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="25.000000" High="25.000000" Negation="true" OpenInMiddle="false" RunLogic="KeepRunning">
+																									<AtomicDecorator>
+																										<Sequence>
+																											<SendAIConceptSignal_mercy_playerLeft sender="$this.id" />
+																											<IfElseCondition failOnCondition="false" condition="$calmDownAfterMercy" saveVersion="2">
+																												<Then canSkip="1">
+																													<Sequence>
+																														<Expression expressions="$solved = true" />
+																														<Function_crime_mercy_friendsAgain calmDown="$calmDownAfterMercy" nodeLabel="37543543" />
+																													</Sequence>
+																												</Then>
+																												<Else canSkip="1">
+																													<Function_crime_mercy_run leaveLevel="false" mercyData="$mercyData" mercyDialogResult="$enum:crime_mercyDialogueResult.playerAway" priority="135" nodeLabel="72395629" />
+																												</Else>
+																											</IfElseCondition>
+																										</Sequence>
+																									</AtomicDecorator>
+																								</DistanceGate>
+																								<Loop count="-1">
+																									<EntityContextCheck context="crime_questMercy" target="$this.id" saveVersion="2">
+																										<Then canSkip="1">
+																											<Wait duration="&apos;3s&apos;" timeType="GameTime" doFail="false" variation="" />
+																										</Then>
+																										<Else canSkip="1">
+																											<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;observerModeAim_lock&apos;" RunLogic="Halt">
+																												<Sequence>
+																													<NumericalOperation In1VariableName="__player" In2VariableName="this.id" In3VariableName="" OutVariableName="$dot" Operation="dot(w1_look_dir, w1_to_w2_dir)" />
+																													<IfElseCondition failOnCondition="false" condition="$dot &gt; 0.985" saveVersion="2">
+																														<Then canSkip="1">
+																															<Sequence>
+																																<NumericalOperation In1VariableName="this.id" In2VariableName="__player" In3VariableName="" OutVariableName="$dot" Operation="dot(w1_look_dir, w1_to_w2_dir)" />
+																																<IfCondition failOnCondition="false" condition="$dot &gt; 0.25">
+																																	<Function_crime_mercy_run leaveLevel="false" mercyData="$mercyData" mercyDialogResult="$enum:crime_mercyDialogueResult.unknown" priority="135" nodeLabel="11112707" />
+																																</IfCondition>
+																															</Sequence>
+																														</Then>
+																													</IfElseCondition>
+																													<Wait duration="&apos;150ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																												</Sequence>
+																											</ExternalLock>
+																										</Else>
+																									</EntityContextCheck>
+																								</Loop>
+																							</Parallel>
+																						</Sequence>
+																					</IfGate>
+																				</IfCondition>
+																			</LogToLabel>
+																		</LogToLabel>
+																	</DecoratorBuff>
+																</AddPerceivableState>
+															</GameContext>
+														</EntityContext>
+													</EntityContext>
+												</EntityContext>
+											</DecoratorBuff>
+										</DecoratorBuff>
+									</EntityContext>
+								</AnyDecorator>
+							</EntityContext>
+						</Parallel>
+					</Child>
+					<OnFail canSkip="1">
+						<Sequence>
+							<Function_crime_addLeavingInterruptCooldown nodeLabel="52892230" />
+							<Function_crime_limits_removeReactionLink information="$mercyData.information" reactionKind="$enum:crime_reactionKind.mercy" nodeLabel="10244210" />
+							<RemoveLink From="$this.id" To="$this.id" Tag="&apos;combat_questFightStatus&apos;" LinkOpHandleMode="Success" />
+						</Sequence>
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="assaultData" comment="" />
+				<Variable name="calmDownAfterMercy" comment="" />
+				<Variable name="dot" comment="" />
+				<Variable name="hitReaction" comment="" />
+				<Variable name="mercyDialogueResult" comment="" />
+				<Variable name="questMercy" comment="" />
+				<Variable name="solved" comment="" />
+				<Variable name="mercyData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-1210" editorPosY="-200" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<EntityContext hasInputBreakpoint="0" comment="KCD2-456904" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Wait>
+													</Sequence>
+												</EntityContext>
+											</IfGate>
+										</IfCondition>
+									</Then>
+								</EntityContextCheck>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Then>
+											<Else>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Else>
+										</EntityContextCheck>
+									</IfCondition>
+									<AddBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddBuff>
+									<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</EntityContext>
+								</Sequence>
+								<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<DecoratorBuff hasInputBreakpoint="0" comment="stealProt KCD2-117857" breakpointFlags="0">
+												<OutputBreakpoints />
+												<DecoratorBuff hasInputBreakpoint="0" comment="unconciousness protection" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GameContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<DecoratorBuff hasInputBreakpoint="0" comment="surrendering - prevents denial dialogue" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Function_crime_limits_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_crime_limits_confirmReactionLink>
+																								<AddBuff hasInputBreakpoint="0" comment="REMOVE INJURIES + KCD2-373849" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</AddBuff>
+																								<Function_crime_checkInterruptInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_crime_checkInterruptInformation>
+																								<RemoveBuffs hasInputBreakpoint="0" comment="rm drunkeness" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</RemoveBuffs>
+																								<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</ClearInbox>
+																								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Timeout hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<DialogGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</Success>
+																												</DialogGate>
+																											</Timeout>
+																											<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Function_speech_schedulerMonolog>
+																										</Sequence>
+																									</SuppressFailure>
+																									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																										<OutputBreakpoints />
+																										<Then>
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</AnimationAction>
+																												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Expression>
+																											</Sequence>
+																										</Then>
+																										<Else>
+																											<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</UnstanceAction>
+																											</EntityContext>
+																										</Else>
+																									</EntityContextCheck>
+																								</Parallel>
+																								<Parallel hasInputBreakpoint="0" comment="solved = true OR flee" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																										<OutputBreakpoints />
+																										<Then>
+																											<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</Expression>
+																															<Function_crime_mercy_friendsAgain hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</Function_crime_mercy_friendsAgain>
+																														</Sequence>
+																													</IfCondition>
+																													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Function_crime_mercy_run hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Function_crime_mercy_run>
+																													</IfCondition>
+																													<IfCondition hasInputBreakpoint="0" comment="KCD2-271420" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Function_callInterrupt_attack hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Function_callInterrupt_attack>
+																													</IfCondition>
+																												</Sequence>
+																											</ProcessMessage>
+																										</Then>
+																										<Else>
+																											<EntityContext hasInputBreakpoint="0" comment="is condition for mercy dialogue" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																			<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																			</WaitAction>
+																																			<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																			</Turn>
+																																			<SendAIConceptSignal_surrenderingStandUp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																			</SendAIConceptSignal_surrenderingStandUp>
+																																		</Sequence>
+																																	</UrgencyDecorator>
+																																</IfCondition>
+																																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<Function_callInterrupt_attack hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</Function_callInterrupt_attack>
+																																</IfCondition>
+																																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<Function_crime_mercy_run hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</Function_crime_mercy_run>
+																																</IfCondition>
+																																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<Function_crime_mercy_friendsAgain hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Function_crime_mercy_friendsAgain>
+																																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Expression>
+																																	</Sequence>
+																																</IfCondition>
+																																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<Function_crime_mercy_run hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</Function_crime_mercy_run>
+																																</IfCondition>
+																															</Sequence>
+																														</ProcessMessage>
+																													</While>
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Wait>
+																														<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<Function_crime_mercy_run hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</Function_crime_mercy_run>
+																														</DistanceGate>
+																													</Sequence>
+																												</Parallel>
+																											</EntityContext>
+																										</Else>
+																									</IfElseCondition>
+																									<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<SendAIConceptSignal_mercy_playerLeft hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</SendAIConceptSignal_mercy_playerLeft>
+																												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																													<OutputBreakpoints />
+																													<Then>
+																														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</Expression>
+																															<Function_crime_mercy_friendsAgain hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</Function_crime_mercy_friendsAgain>
+																														</Sequence>
+																													</Then>
+																													<Else>
+																														<Function_crime_mercy_run hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Function_crime_mercy_run>
+																													</Else>
+																												</IfElseCondition>
+																											</Sequence>
+																										</AtomicDecorator>
+																									</DistanceGate>
+																									<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																											<OutputBreakpoints />
+																											<Then>
+																												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Wait>
+																											</Then>
+																											<Else>
+																												<ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</NumericalOperation>
+																														<IfElseCondition hasInputBreakpoint="0" comment="$dot &gt; 0.25" breakpointFlags="0" saveVersion="2">
+																															<OutputBreakpoints />
+																															<Then>
+																																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</NumericalOperation>
+																																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<Function_crime_mercy_run hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Function_crime_mercy_run>
+																																	</IfCondition>
+																																</Sequence>
+																															</Then>
+																														</IfElseCondition>
+																														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Wait>
+																													</Sequence>
+																												</ExternalLock>
+																											</Else>
+																										</EntityContextCheck>
+																									</Loop>
+																								</Parallel>
+																							</Sequence>
+																						</IfGate>
+																					</IfCondition>
+																				</LogToLabel>
+																			</LogToLabel>
+																		</DecoratorBuff>
+																	</AddPerceivableState>
+																</GameContext>
+															</EntityContext>
+														</EntityContext>
+													</EntityContext>
+												</DecoratorBuff>
+											</DecoratorBuff>
+										</EntityContext>
+									</AnyDecorator>
+								</EntityContext>
+							</Parallel>
+						</Child>
+						<OnFail>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_crime_addLeavingInterruptCooldown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_addLeavingInterruptCooldown>
+								<Function_crime_limits_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_limits_removeReactionLink>
+								<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</RemoveLink>
+							</Sequence>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

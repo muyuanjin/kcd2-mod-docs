@@ -1,0 +1,451 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_returnWithHelp" is_function="1">
+		<Variables>
+			<Variable name="breakCheckNotifications" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="cooperationNotification" type="enum:crime_cooperationNotification" values="" isPersistent="0" form="single" />
+			<Variable name="moveParamts" type="additionalMoveParams" values="" isPersistent="0" form="single" />
+			<Variable name="nextMostImportantInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="pauseMove" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playersLastSeenDirection" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="playersLastSeenPosition" type="vec3" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="returnWithHelpData" type="switch:interruptData:returnWithHelp" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<EntityContext context="crime_preventDespawn" target="">
+							<AnyDecorator preset="crime_keepState" enabled="true">
+								<EntityContextPreset preset="crime_greyOutEAndDisableChat" target="$this.id">
+									<EntityContextPresetElement contextPreset="crime_greyOutEAndDisableChat" enabled="true">
+										<EntityContextElement context="crime_interrupt" enabled="true">
+											<EntityContext context="crime_interruptReturnWithHelp" target="$this.id">
+												<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+													<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:returnWithHelp&apos;">
+														<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$returnWithHelpData.stimulusKind&apos;">
+															<SubtreeDecorator saveVersion="2">
+																<Init canSkip="1">
+																	<AddLink From="$this.id" To="$returnWithHelpData.helpingNpc" Tag="&apos;crime_returningWithHelp&apos;" Data="" LinkOpHandleMode="OverWrite" />
+																</Init>
+																<Subtree canSkip="1">
+																	<Sequence>
+																		<Function_crime_limits_confirmReactionLink reactionKind="$enum:crime_reactionKind.returnWithHelp" nodeLabel="12350718" />
+																		<Function_crime_checkInterruptInformation information="$returnWithHelpData.information" nodeLabel="39443327" />
+																		<RemoveBuffs SoulWUID="" BuffGUID="&apos;ffc20522-134d-4811-8bc5-e933b74b7081&apos;" BuffTagId="-1" />
+																		<Parallel successMode="Any" failureMode="Any">
+																			<While doFail="false" propagateChildFail="false" condition="~$breakCheckNotifications">
+																				<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$cooperationNotification" senderInfo="" inbox="&apos;crime_cooperationNotification&apos;" condition="" answerVar="">
+																					<Switch>
+																						<IfCondition failOnCondition="false" condition="$cooperationNotification == $enum:crime_cooperationNotification.crimeResolved | &#10;$cooperationNotification == $enum:crime_cooperationNotification.informationTransformed">
+																							<Selector>
+																								<CheckInformationKnowledge Information="$returnWithHelpData.information" Holder="$this.id" />
+																								<Sequence>
+																									<ReinitVariable variable="$nextMostImportantInformation" />
+																									<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+																										<Then canSkip="1">
+																											<GetMostImportantCrimeInformation Npc="$this.id" OnlyRelated="false" MostImportantInformation="$nextMostImportantInformation" />
+																										</Then>
+																										<Else canSkip="1">
+																											<GetMostImportantCrimeInformation Npc="$this.id" OnlyRelated="true" MostImportantInformation="$nextMostImportantInformation" />
+																										</Else>
+																									</EntityContextCheck>
+																									<IfElseCondition failOnCondition="false" condition="$nextMostImportantInformation.label == &apos;&apos;" saveVersion="2">
+																										<Then canSkip="1">
+																											<Expression expressions="$breakCheckNotifications = true" />
+																										</Then>
+																										<Else canSkip="1">
+																											<Sequence>
+																												<Expression expressions="$returnWithHelpData.information = $nextMostImportantInformation" />
+																												<LinkDataExpression From="$__player" To="$this.id" Expresssion="$__link_crime_reactor.information = $nextMostImportantInformation" />
+																											</Sequence>
+																										</Else>
+																									</IfElseCondition>
+																								</Sequence>
+																							</Selector>
+																						</IfCondition>
+																						<DefaultBranch>
+																							<Success />
+																						</DefaultBranch>
+																					</Switch>
+																				</ProcessMessage>
+																			</While>
+																			<Loop count="-1">
+																				<IfGate atomic="false" condition="~$pauseMove" RunLogic="Halt">
+																					<Function_crime_followHelpingNpc helpingNpc="$returnWithHelpData.helpingNpc" nodeLabel="96287263" />
+																				</IfGate>
+																			</Loop>
+																			<Wait duration="&apos;15m&apos;" timeType="GameTime" doFail="false" variation="" />
+																			<Sequence>
+																				<Parallel successMode="Any" failureMode="Any">
+																					<EntityContextBarrier context="crime_interrupt" target="$returnWithHelpData.helpingNpc" Negation="false" RunLogic="KeepRunning">
+																						<Success />
+																					</EntityContextBarrier>
+																					<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" />
+																				</Parallel>
+																				<Parallel successMode="Any" failureMode="Any">
+																					<EntityContextBarrier context="crime_interruptFlee" target="$returnWithHelpData.helpingNpc" Negation="false" RunLogic="KeepRunning">
+																						<Success />
+																					</EntityContextBarrier>
+																					<EntityContextBarrier context="crime_interruptReport" target="$returnWithHelpData.helpingNpc" Negation="false" RunLogic="KeepRunning">
+																						<Success />
+																					</EntityContextBarrier>
+																					<EntityContextBarrier context="crime_interruptMercy" target="$returnWithHelpData.helpingNpc" Negation="false" RunLogic="KeepRunning">
+																						<Success />
+																					</EntityContextBarrier>
+																					<EntityContextBarrier context="crime_interruptWatchCorpse" target="$returnWithHelpData.helpingNpc" Negation="false" RunLogic="KeepRunning">
+																						<Success />
+																					</EntityContextBarrier>
+																					<EntityContextBarrier context="crime_interrupt" target="$returnWithHelpData.helpingNpc" Negation="true" RunLogic="KeepRunning">
+																						<Success />
+																					</EntityContextBarrier>
+																				</Parallel>
+																			</Sequence>
+																			<IfElseCondition failOnCondition="false" condition="$returnWithHelpData.information.label ~= &apos;&apos;" saveVersion="2">
+																				<Then canSkip="1">
+																					<IfElseCondition failOnCondition="false" condition="$data:crime[$returnWithHelpData.information.label].isCrime" saveVersion="2">
+																						<Then canSkip="1">
+																							<CallDecorator_crime_sharePlayersPosition>
+																								<Subtree canSkip="1">
+																									<Function_crime_sharePlayersLastSeenPosition allowedAssistance="$enum:crime_allowedSharePlayerPosAssistance.barkAndAnimation" requestVisualAssistanceFromOthers="false" direction="$playersLastSeenDirection" position="$playersLastSeenPosition" nodeLabel="99764556" />
+																								</Subtree>
+																								<PositionUpdatedFromOtherNpc canSkip="1">
+																									<CallbackEventCatch_empty>
+																										<Success />
+																									</CallbackEventCatch_empty>
+																								</PositionUpdatedFromOtherNpc>
+																								<PlayerFound canSkip="1">
+																									<CallbackEventCatch_empty>
+																										<Success />
+																									</CallbackEventCatch_empty>
+																								</PlayerFound>
+																								<PointingStart canSkip="1">
+																									<CallbackEventCatch_empty>
+																										<Expression expressions="$pauseMove = true" />
+																									</CallbackEventCatch_empty>
+																								</PointingStart>
+																								<PointingEnd canSkip="1">
+																									<CallbackEventCatch_empty>
+																										<Expression expressions="$pauseMove = false" />
+																									</CallbackEventCatch_empty>
+																								</PointingEnd>
+																							</CallDecorator_crime_sharePlayersPosition>
+																						</Then>
+																						<Else canSkip="1">
+																							<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																						</Else>
+																					</IfElseCondition>
+																				</Then>
+																				<Else canSkip="1">
+																					<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																				</Else>
+																			</IfElseCondition>
+																		</Parallel>
+																		<Function_callFollowUpBehavior previousReaction="$enum:crime_reactionKind.returnWithHelp" nodeLabel="79974772" />
+																	</Sequence>
+																</Subtree>
+																<Cleanup canSkip="1">
+																	<RemoveLink From="$this.id" To="$returnWithHelpData.helpingNpc" Tag="&apos;crime_returningWithHelp&apos;" LinkOpHandleMode="Success" />
+																</Cleanup>
+															</SubtreeDecorator>
+														</LogToLabel>
+													</LogToLabel>
+												</AddPerceivableState>
+											</EntityContext>
+										</EntityContextElement>
+									</EntityContextPresetElement>
+								</EntityContextPreset>
+							</AnyDecorator>
+						</EntityContext>
+					</Child>
+					<OnFail canSkip="1">
+						<Sequence>
+							<Function_crime_addLeavingInterruptCooldown nodeLabel="78419815" />
+							<Function_crime_limits_removeReactionLink information="$returnWithHelpData.information" reactionKind="$enum:crime_reactionKind.returnWithHelp" nodeLabel="86428504" />
+						</Sequence>
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="returnWithHelp" EventSet="">
+			<Variables>
+				<Variable name="breakCheckNotifications" comment="" />
+				<Variable name="cooperationNotification" comment="" />
+				<Variable name="moveParamts" comment="" />
+				<Variable name="nextMostImportantInformation" comment="" />
+				<Variable name="pauseMove" comment="" />
+				<Variable name="playersLastSeenDirection" comment="" />
+				<Variable name="playersLastSeenPosition" comment="" />
+				<Variable name="returnWithHelpData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContextPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextPresetElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Init>
+																		<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</AddLink>
+																	</Init>
+																	<Subtree>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Function_crime_limits_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_limits_confirmReactionLink>
+																			<Function_crime_checkInterruptInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_checkInterruptInformation>
+																			<RemoveBuffs hasInputBreakpoint="0" comment="rm drunkeness" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</RemoveBuffs>
+																			<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<CheckInformationKnowledge hasInputBreakpoint="0" comment="This node fails if we don&apos;t known the information anymore" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</CheckInformationKnowledge>
+																									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</ReinitVariable>
+																										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																											<OutputBreakpoints />
+																											<Then>
+																												<GetMostImportantCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</GetMostImportantCrimeInformation>
+																											</Then>
+																											<Else>
+																												<GetMostImportantCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</GetMostImportantCrimeInformation>
+																											</Else>
+																										</EntityContextCheck>
+																										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																											<OutputBreakpoints />
+																											<Then>
+																												<Expression hasInputBreakpoint="0" comment="Break this behavior" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Expression>
+																											</Then>
+																											<Else>
+																												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Expression hasInputBreakpoint="0" comment="Update information to the next most critical one" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</Expression>
+																													<LinkDataExpression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</LinkDataExpression>
+																												</Sequence>
+																											</Else>
+																										</IfElseCondition>
+																									</Sequence>
+																								</Selector>
+																							</IfCondition>
+																							<DefaultBranch>
+																								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Success>
+																							</DefaultBranch>
+																						</Switch>
+																					</ProcessMessage>
+																				</While>
+																				<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Function_crime_followHelpingNpc hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_followHelpingNpc>
+																					</IfGate>
+																				</Loop>
+																				<Wait hasInputBreakpoint="0" comment="just a failsafe" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Wait>
+																				<Sequence hasInputBreakpoint="0" comment="when helper is no longer involved, leave aswell" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Parallel hasInputBreakpoint="0" comment="wait for helper to enter interrupt" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Success>
+																						</EntityContextBarrier>
+																						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Wait>
+																					</Parallel>
+																					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Success>
+																						</EntityContextBarrier>
+																						<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Success>
+																						</EntityContextBarrier>
+																						<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Success>
+																						</EntityContextBarrier>
+																						<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Success>
+																						</EntityContextBarrier>
+																						<EntityContextBarrier hasInputBreakpoint="0" comment="leave when he leaves" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Success>
+																						</EntityContextBarrier>
+																					</Parallel>
+																				</Sequence>
+																				<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Then>
+																						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																							<OutputBreakpoints />
+																							<Then>
+																								<CallDecorator_crime_sharePlayersPosition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Subtree>
+																										<Function_crime_sharePlayersLastSeenPosition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Function_crime_sharePlayersLastSeenPosition>
+																									</Subtree>
+																									<PositionUpdatedFromOtherNpc>
+																										<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Success>
+																										</CallbackEventCatch_empty>
+																									</PositionUpdatedFromOtherNpc>
+																									<PlayerFound>
+																										<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Success>
+																										</CallbackEventCatch_empty>
+																									</PlayerFound>
+																									<PointingStart>
+																										<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Expression>
+																										</CallbackEventCatch_empty>
+																									</PointingStart>
+																									<PointingEnd>
+																										<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Expression>
+																										</CallbackEventCatch_empty>
+																									</PointingEnd>
+																								</CallDecorator_crime_sharePlayersPosition>
+																							</Then>
+																							<Else>
+																								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Wait>
+																							</Else>
+																						</IfElseCondition>
+																					</Then>
+																					<Else>
+																						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Wait>
+																					</Else>
+																				</IfElseCondition>
+																			</Parallel>
+																			<Function_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_callFollowUpBehavior>
+																		</Sequence>
+																	</Subtree>
+																	<Cleanup>
+																		<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</RemoveLink>
+																	</Cleanup>
+																</SubtreeDecorator>
+															</LogToLabel>
+														</LogToLabel>
+													</AddPerceivableState>
+												</EntityContext>
+											</EntityContextElement>
+										</EntityContextPresetElement>
+									</EntityContextPreset>
+								</AnyDecorator>
+							</EntityContext>
+						</Child>
+						<OnFail>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_crime_addLeavingInterruptCooldown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_addLeavingInterruptCooldown>
+								<Function_crime_limits_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_limits_removeReactionLink>
+							</Sequence>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleAwareness_playerCompanion" is_function="1">
+		<Variables>
+			<Variable name="banishSuppressed" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="canBanish" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="dialogContext" type="_float" values="" isPersistent="0" form="associative" />
+			<Variable name="isBandit" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="isInTrespass" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="observableActivity" type="enum:dogObservableActivityType" values="" isPersistent="0" form="single" />
+			<Variable name="reactionSuppressed" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="shouldCheckBanish" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="shouldForceSemipublicReaction" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus" type="switch:stimulus:playerCompanion" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusEnemy" type="switch:stimulus:enemy" values="" isPersistent="0" form="single" />
+			<Variable name="trespassArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="trespassSevereness" type="enum:trespassLevel" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="companion" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="companionType" type="enum:crime_banishCompanionType" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="reactionIntermediateData" type="switch:reactionIntermediateData" values="" isPersistent="0" form="single" requirementType="Reference" optional="1" />
+			<Variable name="shouldForcePublicReaction" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Expression expressions="$stimulus.companion = $companion &#10;$stimulusEnemy.enemy = $companion" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<Switch>
+					<EntityContextCheck context="crime_ignorePlayerPerception" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Success />
+						</Then>
+					</EntityContextCheck>
+					<EntityContextCheck context="crime_bff" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Success />
+						</Then>
+					</EntityContextCheck>
+					<DefaultBranch>
+						<Sequence>
+							<Switch>
+								<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Dog">
+									<Sequence>
+										<Expression expressions="$shouldCheckBanish = true" />
+										<IsBandit Npc="$this.id" IsBandit="$isBandit" />
+										<IfElseCondition failOnCondition="false" condition="$isBandit" saveVersion="2">
+											<Then canSkip="1">
+												<Expression expressions="$shouldForcePublicReaction = true" />
+											</Then>
+											<Else canSkip="1">
+												<GetDogObservableActivity Companion="$__playerDog" ObservableActivity="" Target="" IsBarking="$shouldForceSemipublicReaction" />
+											</Else>
+										</IfElseCondition>
+									</Sequence>
+								</IfCondition>
+								<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Horse">
+									<Expression expressions="$shouldCheckBanish = true &#10;$shouldForceSemipublicReaction = false" />
+								</IfCondition>
+								<DefaultBranch>
+									<ErrorNode Message="&apos;[$this.name;] Unknown banishCompanionType in handleAwareness_playerCompanion&apos;" />
+								</DefaultBranch>
+							</Switch>
+							<Switch>
+								<IfCondition failOnCondition="false" condition="$shouldCheckBanish">
+									<Sequence>
+										<IfCondition failOnCondition="false" condition="~$shouldForcePublicReaction">
+											<DetermineTrespassReaction Observer="$this.id" Target="$companion" Position="" ForceSemipublicReaction="$shouldForceSemipublicReaction" ShouldUseVec3Position="false" TrespassAreaSevereness="$trespassSevereness" TrespassArea="$trespassArea" Reaction="$isInTrespass" ReactionSuppressed="$reactionSuppressed" />
+										</IfCondition>
+										<EntityContextCheck context="crime_suppressBanishCompanion" target="" saveVersion="2">
+											<Then canSkip="1">
+												<Expression expressions="$banishSuppressed = true" />
+											</Then>
+										</EntityContextCheck>
+										<Switch>
+											<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Dog">
+												<IfElseCondition failOnCondition="false" condition="$shouldForcePublicReaction | &#10;($isInTrespass &amp;  &#10; ($trespassSevereness &gt;= $enum:trespassLevel.semipersonal |  &#10;  $shouldForceSemipublicReaction &#10; ) &#10;)" saveVersion="2">
+													<Then canSkip="1">
+														<Sequence>
+															<IfCondition failOnCondition="false" condition="~$banishSuppressed">
+																<GetDogObservableActivity Companion="$__playerDog" ObservableActivity="" Target="" IsBarking="$canBanish" />
+															</IfCondition>
+															<IfElseCondition failOnCondition="false" condition="$canBanish" saveVersion="2">
+																<Then canSkip="1">
+																	<Function_switch_handleStimulusPlayerCompanion stimulus="$stimulus" nodeLabel="95079833" />
+																</Then>
+																<Else canSkip="1">
+																	<EntityContextCheck context="crime_dontCommentPlayersDog" target="" saveVersion="2">
+																		<Else canSkip="1">
+																			<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.priority &lt; $data:script_param[&apos;crime_barkReactionPriority_companion&apos;].value">
+																				<Expression expressions="$reactionIntermediateData.barkData.priority = $data:script_param[&apos;crime_barkReactionPriority_companion&apos;].value &#10;$reactionIntermediateData.barkData.lookAt = $__playerDog &#10;$reactionIntermediateData.barkData.metarole = &apos;NPC_VYHANENI_HRACOVA_PSA_(DISTRACTION)&apos; &#10;$reactionIntermediateData.barkData.barkKind = $enum:crime_barkReactionKind.companionDog &#10;$reactionIntermediateData.barkData.barkType = $enum:crime_barkReactionType.ingameMonolog" />
+																			</IfCondition>
+																		</Else>
+																	</EntityContextCheck>
+																</Else>
+															</IfElseCondition>
+														</Sequence>
+													</Then>
+													<Else canSkip="1">
+														<Switch>
+															<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+																<Then canSkip="1">
+																	<Success />
+																</Then>
+															</EntityContextCheck>
+															<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+																<Then canSkip="1">
+																	<Success />
+																</Then>
+															</EntityContextCheck>
+															<DefaultBranch>
+																<EntityContextCheck context="crime_dontCommentPlayersDog" target="" saveVersion="2">
+																	<Else canSkip="1">
+																		<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.priority &lt; $data:script_param[&apos;crime_barkReactionPriority_companion&apos;].value">
+																			<Sequence>
+																				<GetDogObservableActivity Companion="$__playerDog" ObservableActivity="$observableActivity" Target="" IsBarking="" />
+																				<IfElseCondition failOnCondition="false" condition="$observableActivity == $enum:dogObservableActivityType.forsaken" saveVersion="2">
+																					<Then canSkip="1">
+																						<Expression expressions="$reactionIntermediateData.barkData.priority = $data:script_param[&apos;crime_barkReactionPriority_companion&apos;].value &#10;$reactionIntermediateData.barkData.lookAt = $__playerDog &#10;$reactionIntermediateData.barkData.metarole = &apos;NPC_REAGUJE_NA_OPUSTENEHO_PSA&apos; &#10;$reactionIntermediateData.barkData.barkKind = $enum:crime_barkReactionKind.companionDog &#10;$reactionIntermediateData.barkData.barkType = $enum:crime_barkReactionType.ingameMonolog" />
+																					</Then>
+																					<Else canSkip="1">
+																						<Expression expressions="$reactionIntermediateData.barkData.priority = $data:script_param[&apos;crime_barkReactionPriority_companion&apos;].value &#10;$reactionIntermediateData.barkData.lookAt = $__playerDog &#10;$reactionIntermediateData.barkData.metarole = &apos;NPC_REAGUJE_NA_HRACOVA_PSA&apos; &#10;$reactionIntermediateData.barkData.barkKind = $enum:crime_barkReactionKind.companionDog &#10;$reactionIntermediateData.barkData.barkType = $enum:crime_barkReactionType.ingameMonolog" />
+																					</Else>
+																				</IfElseCondition>
+																			</Sequence>
+																		</IfCondition>
+																	</Else>
+																</EntityContextCheck>
+															</DefaultBranch>
+														</Switch>
+													</Else>
+												</IfElseCondition>
+											</IfCondition>
+											<IfCondition failOnCondition="false" condition="$companionType == $enum:crime_banishCompanionType.Horse">
+												<IfElseCondition failOnCondition="false" condition="~$banishSuppressed &amp; &#10;$isInTrespass" saveVersion="2">
+													<Then canSkip="1">
+														<StanceCheck soul="$__player" stance="horse" smartObject="$companion" negate="false" failOnCondition="false" saveVersion="2">
+															<Then canSkip="1">
+																<Success />
+															</Then>
+															<Else canSkip="1">
+																<Function_switch_handleStimulusPlayerCompanion stimulus="$stimulus" nodeLabel="11210739" />
+															</Else>
+														</StanceCheck>
+													</Then>
+													<Else canSkip="1">
+														<Switch>
+															<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+																<Then canSkip="1">
+																	<Success />
+																</Then>
+															</EntityContextCheck>
+															<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+																<Then canSkip="1">
+																	<Success />
+																</Then>
+															</EntityContextCheck>
+															<DefaultBranch>
+																<EntityContextCheck context="crime_dontCommentPlayersHorse" target="" saveVersion="2">
+																	<Else canSkip="1">
+																		<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.priority &lt; $data:script_param[&apos;crime_barkReactionPriority_companion&apos;].value">
+																			<Sequence>
+																				<ExecuteLua code="-- using horse&apos;s NominalPrice derivedStat &#10;-- NominalPrice is in groschen &#10;local horseEntity = XGenAIModule.GetEntityByWUID(data.companion) &#10;data.dialogContext[&quot;horse_price&quot;] = horseEntity.soul:GetDerivedStat(&apos;cnp&apos;)" />
+																				<Expression expressions="$reactionIntermediateData.barkData.priority = $data:script_param[&apos;crime_barkReactionPriority_companion&apos;].value &#10;$reactionIntermediateData.barkData.lookAt = $companion &#10;$reactionIntermediateData.barkData.metarole = &apos;NPC_KOMENTUJE_KONE&apos; &#10;$reactionIntermediateData.barkData.barkKind = $enum:crime_barkReactionKind.companionHorse &#10;$reactionIntermediateData.barkData.barkType = $enum:crime_barkReactionType.ingameMonolog &#10;$reactionIntermediateData.barkData.animationApproach = $enum:animationApproach.tryDialogAnimations" />
+																				<Function_switch_serializeDialogueContext dialogContext="$dialogContext" serializedString="$reactionIntermediateData.barkData.serializedDialogContext" nodeLabel="25095808" />
+																			</Sequence>
+																		</IfCondition>
+																	</Else>
+																</EntityContextCheck>
+															</DefaultBranch>
+														</Switch>
+													</Else>
+												</IfElseCondition>
+											</IfCondition>
+											<DefaultBranch>
+												<ErrorNode Message="&apos;[$this.name;] Unknown banishCompanionType in handleAwareness_playerCompanion&apos;" />
+											</DefaultBranch>
+										</Switch>
+									</Sequence>
+								</IfCondition>
+								<DefaultBranch>
+									<Success />
+								</DefaultBranch>
+							</Switch>
+						</Sequence>
+					</DefaultBranch>
+				</Switch>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="banishSuppressed" comment="" />
+				<Variable name="canBanish" comment="" />
+				<Variable name="dialogContext" comment="" />
+				<Variable name="isBandit" comment="" />
+				<Variable name="isInTrespass" comment="" />
+				<Variable name="observableActivity" comment="" />
+				<Variable name="reactionSuppressed" comment="" />
+				<Variable name="shouldCheckBanish" comment="" />
+				<Variable name="shouldForceSemipublicReaction" comment="" />
+				<Variable name="stimulus" comment="" />
+				<Variable name="stimulusEnemy" comment="" />
+				<Variable name="trespassArea" comment="" />
+				<Variable name="trespassSevereness" comment="" />
+				<Variable name="companion" comment="" />
+				<Variable name="companionType" comment="" />
+				<Variable name="reactionIntermediateData" comment="" />
+				<Variable name="shouldForcePublicReaction" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-260" editorPosY="100" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+				</OnInit>
+				<Behavior>
+					<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<EntityContextCheck hasInputBreakpoint="0" comment="TODO: can this be too restrictive? dont think so " breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Then>
+						</EntityContextCheck>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Then>
+						</EntityContextCheck>
+						<DefaultBranch>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<IsBandit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</IsBandit>
+											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Expression hasInputBreakpoint="0" comment="Bandit&apos;s should banish even not barking dogs" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Then>
+												<Else>
+													<GetDogObservableActivity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</GetDogObservableActivity>
+												</Else>
+											</IfElseCondition>
+										</Sequence>
+									</IfCondition>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</IfCondition>
+									<DefaultBranch>
+										<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ErrorNode>
+									</DefaultBranch>
+								</Switch>
+								<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</DetermineTrespassReaction>
+											</IfCondition>
+											<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Then>
+											</EntityContextCheck>
+											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GetDogObservableActivity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetDogObservableActivity>
+																</IfCondition>
+																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Function_switch_handleStimulusPlayerCompanion hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_switch_handleStimulusPlayerCompanion>
+																	</Then>
+																	<Else>
+																		<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Else>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</IfCondition>
+																			</Else>
+																		</EntityContextCheck>
+																	</Else>
+																</IfElseCondition>
+															</Sequence>
+														</Then>
+														<Else>
+															<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Success>
+																	</Then>
+																</EntityContextCheck>
+																<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Success>
+																	</Then>
+																</EntityContextCheck>
+																<DefaultBranch>
+																	<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Else>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<GetDogObservableActivity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GetDogObservableActivity>
+																					<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Then>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</Then>
+																						<Else>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</Else>
+																					</IfElseCondition>
+																				</Sequence>
+																			</IfCondition>
+																		</Else>
+																	</EntityContextCheck>
+																</DefaultBranch>
+															</Switch>
+														</Else>
+													</IfElseCondition>
+												</IfCondition>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<StanceCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Success hasInputBreakpoint="0" comment="ignore" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Success>
+																</Then>
+																<Else>
+																	<Function_switch_handleStimulusPlayerCompanion hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_switch_handleStimulusPlayerCompanion>
+																</Else>
+															</StanceCheck>
+														</Then>
+														<Else>
+															<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Success>
+																	</Then>
+																</EntityContextCheck>
+																<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Success>
+																	</Then>
+																</EntityContextCheck>
+																<DefaultBranch>
+																	<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Else>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</ExecuteLua>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<Function_switch_serializeDialogueContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_switch_serializeDialogueContext>
+																				</Sequence>
+																			</IfCondition>
+																		</Else>
+																	</EntityContextCheck>
+																</DefaultBranch>
+															</Switch>
+														</Else>
+													</IfElseCondition>
+												</IfCondition>
+												<DefaultBranch>
+													<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</ErrorNode>
+												</DefaultBranch>
+											</Switch>
+										</Sequence>
+									</IfCondition>
+									<DefaultBranch>
+										<Success hasInputBreakpoint="0" comment="Ignore companion" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Success>
+									</DefaultBranch>
+								</Switch>
+							</Sequence>
+						</DefaultBranch>
+					</Switch>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

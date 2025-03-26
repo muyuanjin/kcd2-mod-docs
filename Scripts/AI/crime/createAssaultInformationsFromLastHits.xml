@@ -1,0 +1,458 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_createAssaultInformationsFromLastHits" is_function="1">
+		<Variables>
+			<Variable name="allInformationsInSkirmish" type="information" values="" isPersistent="0" form="array" />
+			<Variable name="allInformationsInSkirmish_value" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="animalMates" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="candidates_value" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="createdInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="deadOrUnconscious" type="_bool" values="" isPersistent="0" form="array" />
+			<Variable name="ignore" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="isCorpseViolation" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="label" type="_string" values="&apos;assault&apos;" isPersistent="0" form="single" />
+			<Variable name="lastHitData" type="crime:lastHitByPlayer" values="" isPersistent="0" form="array" />
+			<Variable name="lastHitData_value" type="crime:lastHitByPlayer" values="" isPersistent="0" form="single" />
+			<Variable name="lastHitIterator" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="lastHitVictim" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="lastHitVictimType" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="lastHitVictims" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="oldAttackKind" type="enum:crime_attackKind" values="$enum:crime_attackKind.unknown" isPersistent="0" form="single" />
+			<Variable name="realSkirmishParticipants" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="time" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="victimIsCandidate" type="_int" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="candidates" type="_wuid" values="" isPersistent="0" form="array" requirementType="Reference" />
+			<Variable name="informations" type="information" values="" isPersistent="0" form="array" requirementType="Out" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<ErrorNode Message="&apos;Function is obsolete. Use its code successor.&apos;" />
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<GetLastHitData AttackerNPC="" TargetNPC="" MaxTime="300" LastHitsOutVar="" />
+			<Sequence>
+				<GetTime TimeType="GameTime" OutVar="$time" Delta="" />
+				<SuppressFailure>
+					<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;crime_lastHitByPlayer&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+						<Datalyzer Tag="&apos;crime_lastHitByPlayer&apos;" Quantifiers="ForAll" Parent="" Child="$lastHitVictims" Data="$lastHitData" saveVersion="2" />
+						<UnionOp Results="true" Advance="true" EndOp="true" ShortCircuit="false" LocalNodalyzers="false">
+							<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+								<Child0 canSkip="1">
+									<SoulIsAliveFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+								</Child0>
+							</NegationOp>
+							<SoulIsUnconsciousFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+						</UnionOp>
+					</GraphSearch>
+				</SuppressFailure>
+				<ForEach startIndex="0" step="1" array="$lastHitData" iterator="$lastHitIterator" value="$lastHitData_value" break="">
+					<IfElseCondition failOnCondition="false" condition="$time &gt; $lastHitData_value.time + $data:script_param[&apos;crime_lastHit_expiration_time&apos;].value" saveVersion="2">
+						<Then canSkip="1">
+							<RemoveLink From="$__player" To="$lastHitVictims[$lastHitIterator]" Tag="&apos;crime_lastHitByPlayer&apos;" LinkOpHandleMode="Error" />
+						</Then>
+						<Else canSkip="1">
+							<Sequence>
+								<VarOperation varName="$candidates" targetVarName="$victimIsCandidate" operation="Find" argument="$lastHitVictims[$lastHitIterator]" />
+								<IfCondition failOnCondition="false" condition="$victimIsCandidate ~= -1">
+									<CheckRelationshipInterval_SoulToSoul TargetSoul="$this.id" Soul="$lastHitVictims[$lastHitIterator]" Flag="friend" saveVersion="2">
+										<Then canSkip="1">
+											<IsIndifferent NPC="$lastHitVictims[$lastHitIterator]" saveVersion="2">
+												<Else canSkip="1">
+													<EntityContextCheck context="combat_suppressInterference" target="$lastHitVictims[$lastHitIterator]" saveVersion="2">
+														<Else canSkip="1">
+															<IfCondition failOnCondition="false" condition="!$lastHitData_value.hitIsIndifferent">
+																<Sequence>
+																	<GetType WUID="$lastHitVictims[$lastHitIterator]" OutString="$lastHitVictimType" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+																	<Switch>
+																		<IfCondition failOnCondition="false" condition="$lastHitVictimType == &apos;NPC&apos;">
+																			<Sequence>
+																				<IsDeadCheck SoulWUID="$lastHitVictims[$lastHitIterator]" FailSubtMissing="false" saveVersion="2">
+																					<Then canSkip="1">
+																						<SuppressFailure>
+																							<Sequence>
+																								<GraphSearch Origin="$lastHitVictims[$lastHitIterator]" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																									<LinkDataFilter tag="&apos;switch_corpse&apos;" condition="$__link_switch_corpse.timeOfDeath + 10000 &lt; $lastHitData_value.time |  &#10;( &#10;  $__link_switch_corpse.resolved &amp; &#10;  $__link_switch_corpse.timeOfDeath + 5000 &lt; $lastHitData_value.time &#10;)" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																								</GraphSearch>
+																								<Expression expressions="$isCorpseViolation = true" />
+																							</Sequence>
+																						</SuppressFailure>
+																					</Then>
+																				</IsDeadCheck>
+																				<IfElseCondition failOnCondition="false" condition="$isCorpseViolation" saveVersion="2">
+																					<Then canSkip="1">
+																						<Sequence>
+																							<CreateInformationWrapper Label="&apos;corpseViolation&apos;" PerceivedWuid="$lastHitVictims[$lastHitIterator]" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$createdInformation" />
+																							<LockDynamicInformationValues Information="$createdInformation">
+																								<SetDynamicInformationValue Information="$createdInformation" Tag="&apos;victim&apos;" Variable="$lastHitVictims[$lastHitIterator]" Type="" Value="" />
+																							</LockDynamicInformationValues>
+																							<Expression expressions="$lastHitVictim = $lastHitVictims[$lastHitIterator]" />
+																						</Sequence>
+																					</Then>
+																					<Else canSkip="1">
+																						<Sequence>
+																							<CreateCombatInformation Victim="$lastHitVictims[$lastHitIterator]" AttackKind="$lastHitData.kind" DirectHit="true" AddConfiscation="false" Information="$createdInformation" />
+																							<Expression expressions="$lastHitVictim = $lastHitVictims[$lastHitIterator]" />
+																						</Sequence>
+																					</Else>
+																				</IfElseCondition>
+																			</Sequence>
+																		</IfCondition>
+																		<IfCondition failOnCondition="false" condition="$lastHitVictimType == &apos;NHNPC&apos;">
+																			<Sequence>
+																				<CreateInformationWrapper Label="&apos;assaultAnimal&apos;" PerceivedWuid="$lastHitVictims[$lastHitIterator]" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$createdInformation" />
+																				<GetMates Target="$lastHitVictims[$lastHitIterator]" Mates="$animalMates" />
+																				<GetHighestStatusNpc Npcs="$animalMates" HighestStatusNpc="$lastHitVictim" />
+																				<LockDynamicInformationValues Information="$createdInformation">
+																					<Sequence>
+																						<ReinitVariable variable="$oldAttackKind" />
+																						<SuppressFailure>
+																							<GetDynamicInformationValue Information="$createdInformation" Tag="&apos;kind&apos;" Out="$oldAttackKind" />
+																						</SuppressFailure>
+																						<IfCondition failOnCondition="false" condition="$oldAttackKind &lt; $lastHitData_value.kind">
+																							<SetDynamicInformationValue Information="$createdInformation" Tag="&apos;kind&apos;" Variable="$lastHitData_value.kind" Type="" Value="" />
+																						</IfCondition>
+																						<SetDynamicInformationValue Information="$createdInformation" Tag="&apos;victim&apos;" Variable="$lastHitVictim" Type="" Value="" />
+																					</Sequence>
+																				</LockDynamicInformationValues>
+																			</Sequence>
+																		</IfCondition>
+																		<DefaultBranch>
+																			<Fail />
+																		</DefaultBranch>
+																	</Switch>
+																	<VarOperation varName="$informations" targetVarName="" operation="PushFront" argument="($createdInformation)" />
+																</Sequence>
+															</IfCondition>
+														</Else>
+													</EntityContextCheck>
+												</Else>
+											</IsIndifferent>
+										</Then>
+										<Else canSkip="1">
+											<Success />
+										</Else>
+									</CheckRelationshipInterval_SoulToSoul>
+								</IfCondition>
+							</Sequence>
+						</Else>
+					</IfElseCondition>
+				</ForEach>
+				<AtomicDecorator>
+					<Sequence>
+						<ForEach startIndex="0" step="1" array="$candidates" iterator="" value="$candidates_value" break="">
+							<CheckWuidValid wuid="$candidates_value" FailSubtMissing="false" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$realSkirmishParticipants[#realSkirmishParticipants] = $candidates_value" />
+								</Then>
+							</CheckWuidValid>
+						</ForEach>
+						<GetKnownInformationsFromGroup OutArray="$allInformationsInSkirmish" Holders="$realSkirmishParticipants" />
+						<ForEach startIndex="0" step="1" array="$allInformationsInSkirmish" iterator="" value="$allInformationsInSkirmish_value" break="">
+							<IfCondition failOnCondition="false" condition="$allInformationsInSkirmish_value.label == &apos;assault&apos; | &#10;$allInformationsInSkirmish_value.label == &apos;aggression&apos; | &#10;$allInformationsInSkirmish_value.label == &apos;assaultByDog&apos; | &#10;$allInformationsInSkirmish_value.label == &apos;murder&apos; | &#10;$allInformationsInSkirmish_value.label == &apos;murderByDog&apos;">
+								<CheckRelationshipInterval_SoulToSoul TargetSoul="$this.id" Soul="$allInformationsInSkirmish_value.perceivedWuid" Flag="friend" saveVersion="2">
+									<Then canSkip="1">
+										<Selector>
+											<Sequence>
+												<RetrieveInformation PerceivedWuid="$allInformationsInSkirmish_value.perceivedWuid" label="$allInformationsInSkirmish_value.label" OutVariable="$allInformationsInSkirmish_value" />
+												<CheckInformationKnowledge Information="$allInformationsInSkirmish_value" Holder="$this.id" />
+											</Sequence>
+											<CreateInformationWrapper Label="$allInformationsInSkirmish_value.label" PerceivedWuid="$allInformationsInSkirmish_value.perceivedWuid" PositionType="positionVec3" PositionVec3="$allInformationsInSkirmish_value.position" PositionWuid="" Information="$allInformationsInSkirmish_value" />
+										</Selector>
+									</Then>
+									<Else canSkip="1">
+										<Success />
+									</Else>
+								</CheckRelationshipInterval_SoulToSoul>
+							</IfCondition>
+						</ForEach>
+					</Sequence>
+				</AtomicDecorator>
+			</Sequence>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="allInformationsInSkirmish" comment="" />
+				<Variable name="allInformationsInSkirmish_value" comment="" />
+				<Variable name="animalMates" comment="" />
+				<Variable name="candidates_value" comment="" />
+				<Variable name="createdInformation" comment="" />
+				<Variable name="deadOrUnconscious" comment="" />
+				<Variable name="ignore" comment="" />
+				<Variable name="isCorpseViolation" comment="" />
+				<Variable name="label" comment="" />
+				<Variable name="lastHitData" comment="" />
+				<Variable name="lastHitData_value" comment="" />
+				<Variable name="lastHitIterator" comment="" />
+				<Variable name="lastHitVictim" comment="" />
+				<Variable name="lastHitVictimType" comment="" />
+				<Variable name="lastHitVictims" comment="" />
+				<Variable name="oldAttackKind" comment="" />
+				<Variable name="realSkirmishParticipants" comment="" />
+				<Variable name="time" comment="" />
+				<Variable name="victimIsCandidate" comment="" />
+				<Variable name="candidates" comment="" />
+				<Variable name="informations" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-410" editorPosY="190" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</ErrorNode>
+				</Behavior>
+			</Root>
+			<Forest>
+				<GetLastHitData editorPosX="-30" editorPosY="-370" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</GetLastHitData>
+				<Sequence editorPosX="190" editorPosY="200" hasInputBreakpoint="0" comment="KCD2-6680" breakpointFlags="0">
+					<OutputBreakpoints />
+					<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</GetTime>
+					<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="get only dead or unconscious NPC, alive ones are taken care of just below" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+							<Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+							</Datalyzer>
+							<UnionOp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Child0>
+										<SoulIsAliveFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</SoulIsAliveFilter>
+									</Child0>
+								</NegationOp>
+								<SoulIsUnconsciousFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</SoulIsUnconsciousFilter>
+							</UnionOp>
+						</GraphSearch>
+					</SuppressFailure>
+					<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<RemoveLink hasInputBreakpoint="0" comment="expired lastHitByPlayer" breakpointFlags="0">
+									<OutputBreakpoints />
+								</RemoveLink>
+							</Then>
+							<Else>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</VarOperation>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<IsIndifferent hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Else>
+														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Else>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</GetType>
+																		<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Then>
+																							<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</LinkDataFilter>
+																									</GraphSearch>
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																								</Sequence>
+																							</SuppressFailure>
+																						</Then>
+																					</IsDeadCheck>
+																					<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Then>
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</CreateInformationWrapper>
+																								<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</SetDynamicInformationValue>
+																								</LockDynamicInformationValues>
+																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																							</Sequence>
+																						</Then>
+																						<Else>
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<CreateCombatInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</CreateCombatInformation>
+																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																							</Sequence>
+																						</Else>
+																					</IfElseCondition>
+																				</Sequence>
+																			</IfCondition>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</CreateInformationWrapper>
+																					<GetMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GetMates>
+																					<GetHighestStatusNpc hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GetHighestStatusNpc>
+																					<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</ReinitVariable>
+																							<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</GetDynamicInformationValue>
+																							</SuppressFailure>
+																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</SetDynamicInformationValue>
+																							</IfCondition>
+																							<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</SetDynamicInformationValue>
+																						</Sequence>
+																					</LockDynamicInformationValues>
+																				</Sequence>
+																			</IfCondition>
+																			<DefaultBranch>
+																				<Fail hasInputBreakpoint="0" comment="huh, hitting &apos;em volumes?" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Fail>
+																			</DefaultBranch>
+																		</Switch>
+																		<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</VarOperation>
+																	</Sequence>
+																</IfCondition>
+															</Else>
+														</EntityContextCheck>
+													</Else>
+												</IsIndifferent>
+											</Then>
+											<Else>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Else>
+										</CheckRelationshipInterval_SoulToSoul>
+									</IfCondition>
+								</Sequence>
+							</Else>
+						</IfElseCondition>
+					</ForEach>
+					<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+								</CheckWuidValid>
+							</ForEach>
+							<GetKnownInformationsFromGroup hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</GetKnownInformationsFromGroup>
+							<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="TODO: maybe isCrime is better?" breakpointFlags="0">
+									<OutputBreakpoints />
+									<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="TODO: maybe indiff + defenceMode checks are needed?" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</RetrieveInformation>
+													<CheckInformationKnowledge hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</CheckInformationKnowledge>
+												</Sequence>
+												<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</CreateInformationWrapper>
+											</Selector>
+										</Then>
+										<Else>
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</Else>
+									</CheckRelationshipInterval_SoulToSoul>
+								</IfCondition>
+							</ForEach>
+						</Sequence>
+					</AtomicDecorator>
+				</Sequence>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

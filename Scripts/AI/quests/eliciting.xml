@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="onUpdate" is_function="0">
+		<Variables>
+			<Variable name="barkSoul" type="cast:wuid_soul" values="" isPersistent="0" form="single" />
+			<Variable name="counter" type="_int" values="0" isPersistent="0" form="single" />
+			<Variable name="crowdCheckResult" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="current_onlooker" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="eraseWuid" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="incommingMessage" type="eliciting:crowdCheck_impulse" values="" isPersistent="0" form="single" />
+			<Variable name="initialRun" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="onlooker_type" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="onlookers" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="rejectedOnlooker" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="scoredPeople" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Loop count="-1">
+					<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$incommingMessage" senderInfo="" inbox="&apos;eliciting_crowdCheck&apos;" condition="" answerVar="">
+						<Parallel successMode="Any" failureMode="Any">
+							<Loop count="-1">
+								<GameContextBarrier context="vyvolavani_reaction" Negation="false" RunLogic="Halt">
+									<Sequence>
+										<CircularSpatialQuery Radius="10.000000" Center="$__player" ToFill="$onlookers" Precision="Exact" Filter="HumanNPCsPlayerExcluded" />
+										<ForEach startIndex="0" step="1" array="$onlookers" iterator="" value="$current_onlooker" break="">
+											<Selector>
+												<FindInArray array="$scoredPeople" keyOut="$rejectedOnlooker" condition="$__value == $current_onlooker" />
+												<Sequence>
+													<PushToArray array="$scoredPeople" value="$current_onlooker" direction="Back" />
+													<AddInterrupt Target="$current_onlooker" Host="$this.id" Behavior="&apos;barkAtPlayer&apos;" Priority="130" IgnorePriorityOnPreviousInterrupt="false" urgency="Default" Aliveness="Alive" Privileged="false" FastForward="false" />
+												</Sequence>
+											</Selector>
+										</ForEach>
+										<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</GameContextBarrier>
+							</Loop>
+							<GameContextBarrier context="vyvolavani_reaction" Negation="true" RunLogic="KeepRunning">
+								<Sequence>
+									<Expression expressions="$crowdCheckResult = #scoredPeople" />
+									<SendAIConceptSignal_eliciting_crowdCheck crowdSize="$crowdCheckResult" />
+									<Selector>
+										<IfCondition failOnCondition="true" condition="$counter &lt; 2">
+											<Sequence>
+												<Expression expressions="$counter += 1" />
+											</Sequence>
+										</IfCondition>
+										<Sequence>
+											<Expression expressions="$counter = 0" />
+											<EraseFromArray array="$scoredPeople" condition="$__value ~= $__null" />
+										</Sequence>
+									</Selector>
+								</Sequence>
+							</GameContextBarrier>
+						</Parallel>
+					</ProcessMessage>
+				</Loop>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<GetAreaInhabitants area="$this.id" targetVar="$onlookers" />
+			<Sequence>
+				<GetType WUID="$current_onlooker" OutString="$onlooker_type" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+				<IfCondition failOnCondition="false" condition="$onlooker_type == &apos;NPC&apos;" />
+			</Sequence>
+			<IfCondition failOnCondition="false" condition="$current_onlooker ~= $__player">
+				<DistanceCondition Origin="$__player" ReferencePt="$current_onlooker" Low="20.000000" High="20.000000" Negation="false" ValueOnMiddle="false" failOnCondition="false" />
+			</IfCondition>
+			<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+			<Selector>
+				<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+			</Selector>
+			<Sequence>
+				<GameContextBarrier context="vyvolavani_reaction" Negation="true" RunLogic="KeepRunning">
+					<Expression expressions="$initialRun = true" />
+				</GameContextBarrier>
+			</Sequence>
+			<Sequence />
+			<AddLink From="$this.id" To="$current_onlooker" Tag="&apos;eliciting_onlookerHeard&apos;" Data="" LinkOpHandleMode="Fail" />
+			<Selector>
+				<RemoveLink From="$this.id" To="$current_onlooker" Tag="&apos;eliciting_onlookerHeard&apos;" LinkOpHandleMode="Error" />
+			</Selector>
+			<Semaphore SemaphoreCount="5" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;elicitingReactionLock&apos;" />
+			<Expression expressions="$barkSoul.value = $scoredPeople[1]" />
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="barkSoul" comment="" />
+				<Variable name="counter" comment="" />
+				<Variable name="crowdCheckResult" comment="" />
+				<Variable name="current_onlooker" comment="" />
+				<Variable name="eraseWuid" comment="" />
+				<Variable name="incommingMessage" comment="" />
+				<Variable name="initialRun" comment="" />
+				<Variable name="onlooker_type" comment="" />
+				<Variable name="onlookers" comment="" />
+				<Variable name="rejectedOnlooker" comment="" />
+				<Variable name="scoredPeople" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<CircularSpatialQuery hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</CircularSpatialQuery>
+											<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</FindInArray>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</PushToArray>
+														<AddInterrupt hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</AddInterrupt>
+													</Sequence>
+												</Selector>
+											</ForEach>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</GameContextBarrier>
+								</Loop>
+								<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<SendAIConceptSignal_eliciting_crowdCheck hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</SendAIConceptSignal_eliciting_crowdCheck>
+										<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Sequence>
+											</IfCondition>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</EraseFromArray>
+											</Sequence>
+										</Selector>
+									</Sequence>
+								</GameContextBarrier>
+							</Parallel>
+						</ProcessMessage>
+					</Loop>
+				</Behavior>
+			</Root>
+			<Forest>
+				<GetAreaInhabitants editorPosX="730" editorPosY="-630" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</GetAreaInhabitants>
+				<Sequence editorPosX="950" editorPosY="-740" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</GetType>
+					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</IfCondition>
+				</Sequence>
+				<IfCondition editorPosX="1560" editorPosY="-740" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</DistanceCondition>
+				</IfCondition>
+				<Wait editorPosX="490" editorPosY="300" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</Wait>
+				<Selector editorPosX="310" editorPosY="510" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Wait>
+				</Selector>
+				<Sequence editorPosX="260" editorPosY="-220" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+					</GameContextBarrier>
+				</Sequence>
+				<Sequence editorPosX="1088" editorPosY="98" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</Sequence>
+				<AddLink editorPosX="1540" editorPosY="-590" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</AddLink>
+				<Selector editorPosX="2110" editorPosY="-680" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</RemoveLink>
+				</Selector>
+				<Semaphore editorPosX="1840" editorPosY="-550" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</Semaphore>
+				<Expression editorPosX="1830" editorPosY="540" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</Expression>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="onRequest" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Wait>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="onRelease" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Wait>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="onEnter" is_function="0">
+		<Variables>
+			<Variable name="new_onlooker" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Selector>
+					<AddLink From="$this.id" To="$__bodyInfo.id" Tag="&apos;eliciting_onlookerHeard&apos;" Data="" LinkOpHandleMode="Fail" />
+					<RemoveLink From="$this.id" To="$__bodyInfo.id" Tag="&apos;eliciting_onlookerHeard&apos;" LinkOpHandleMode="Error" />
+				</Selector>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="new_onlooker" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</AddLink>
+						<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</RemoveLink>
+					</Selector>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="barkAtPlayer" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Selector>
+					<GameContextBarrier context="vyvolavani_reaction" Negation="false" RunLogic="KeepRunning">
+						<Parallel successMode="Any" failureMode="Any">
+							<Sequence>
+								<Move stopWithinDistance="5.000000" stopDistanceVariation="2.000000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$__player" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+								<Turn target="$__player" align="false" />
+								<Function_speech_schedulerMonolog alias="&apos;vyvolavani_reakceNaVyvolavaniZacatek&apos;" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="$__player" metarole="" skipInLod="false" subtitlesDown="false" nodeLabel="97117494" />
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Sequence>
+							<GameContextBarrier context="vyvolavani_reaction" Negation="true" RunLogic="KeepRunning">
+								<Fail />
+							</GameContextBarrier>
+						</Parallel>
+					</GameContextBarrier>
+					<Function_speech_schedulerMonolog alias="&apos;vyvolavani_reakceNaHracovoVyvolavani&apos;" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="$__player" metarole="" skipInLod="false" subtitlesDown="false" nodeLabel="19401240" />
+				</Selector>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<StanceCheck soul="$this.id" stance="standing" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
+				<Else canSkip="1">
+					<Success />
+				</Else>
+			</StanceCheck>
+			<Sequence />
+			<StanceCheck soul="$this.id" stance="standing" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
+				<Else canSkip="1">
+					<Success />
+				</Else>
+			</StanceCheck>
+			<ExactMove directionType="FromVariable" directionSpecification="$__player" animationTriggerDist="0.150000" precise="false" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$this.id" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Move>
+									<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Turn>
+									<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_speech_schedulerMonolog>
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Sequence>
+								<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Fail>
+								</GameContextBarrier>
+							</Parallel>
+						</GameContextBarrier>
+						<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_speech_schedulerMonolog>
+					</Selector>
+				</Behavior>
+			</Root>
+			<Forest>
+				<StanceCheck editorPosX="340" editorPosY="-760" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+					<OutputBreakpoints />
+					<Else>
+						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Success>
+					</Else>
+				</StanceCheck>
+				<Sequence editorPosX="730" editorPosY="340" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</Sequence>
+				<StanceCheck editorPosX="790" editorPosY="-730" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+					<OutputBreakpoints />
+					<Else>
+						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Success>
+					</Else>
+				</StanceCheck>
+				<ExactMove editorPosX="1260" editorPosY="-850" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</ExactMove>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

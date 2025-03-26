@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="player_timeskipInTrespass" is_function="1">
+		<Variables>
+			<Variable name="break" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="home" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="nearbyNpcs" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="nearbyNpcs_value" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="privateArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="reaction" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="reactionSuppressed" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="trespassArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="trespassSevereness" type="enum:trespassLevel" values="" isPersistent="0" form="single" />
+			<Variable name="zDifference" type="_float" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<While doFail="false" propagateChildFail="false" condition="true">
+					<GameContextBarrier context="crime_disabledTrespassReactions" Negation="true" RunLogic="Halt">
+						<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;private&apos;" Negation="false" RunLogic="Halt">
+							<GameContextBarrier context="crime_escalationLevel_script_global_confrontingGeneral" Negation="true" RunLogic="Halt">
+								<GameContextBarrier context="crime_escalationLevel_script_global_confrontingTrespass" Negation="true" RunLogic="Halt">
+									<While doFail="false" propagateChildFail="false" condition="true">
+										<IsTimeSkipping saveVersion="2">
+											<Then canSkip="1">
+												<Sequence>
+													<AtomicDecorator>
+														<IsInsideAreaWithLabel Position="$__player" Label="&apos;private&apos;" Area="$privateArea" FailSubtMissing="false" saveVersion="2">
+															<Then canSkip="1">
+																<Sequence>
+																	<GetHomeFromArea Area="$privateArea" Home="$home" />
+																	<IfCondition failOnCondition="false" condition="$home ~= $__null">
+																		<SuppressFailure>
+																			<Sequence>
+																				<GraphSearch Origin="$home" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																					<LinkTagFilter tag="&apos;home_inhabitant&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																					<EntityClassFilter Class="NPC" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																					<RangeFilter min="0.000000" max="$data:script_param[&apos;crime_timeSkipInTrespass_detectionRange&apos;].value" point="$__player" excludeRef="true" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																					<SoulIsAliveFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																					<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+																						<Child0 canSkip="1">
+																							<SoulIsUnconsciousFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																						</Child0>
+																					</NegationOp>
+																					<Nodalyzer Quantifiers="ForAll" Parent="" Child="$nearbyNpcs" saveVersion="2">
+																						<Child0 canSkip="1">
+																							<RangeSorter point="$__player" SortOrder="Ascending" Source="Child" />
+																						</Child0>
+																					</Nodalyzer>
+																				</GraphSearch>
+																				<ForEach startIndex="0" step="1" array="$nearbyNpcs" iterator="" value="$nearbyNpcs_value" break="$break">
+																					<EntityContextCheck context="crime_sleeping" target="$nearbyNpcs_value" saveVersion="2">
+																						<Else canSkip="1">
+																							<Sequence>
+																								<DetermineTrespassReaction Observer="$nearbyNpcs_value" Target="$__player" Position="" ForceSemipublicReaction="false" ShouldUseVec3Position="false" TrespassAreaSevereness="$trespassSevereness" TrespassArea="$trespassArea" Reaction="$reaction" ReactionSuppressed="$reactionSuppressed" />
+																								<IsPublicEnemy Soul="$nearbyNpcs_value" FailOnSubtreeMissing="false" saveVersion="2">
+																									<Else canSkip="1">
+																										<StanceCheck soul="$__player" stance="lying" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
+																											<Then canSkip="1">
+																												<Success />
+																											</Then>
+																											<Else canSkip="1">
+																												<Expression expressions="$reaction = $reaction &amp; $trespassSevereness &gt;= $enum:trespassLevel.personal" />
+																											</Else>
+																										</StanceCheck>
+																									</Else>
+																								</IsPublicEnemy>
+																								<IfCondition failOnCondition="false" condition="$reaction">
+																									<Sequence>
+																										<Function_crime_getZDifferenceBetweenWuids wuid1="$__player" wuid2="$nearbyNpcs_value" difference="$zDifference" nodeLabel="21202995" />
+																										<IfCondition failOnCondition="false" condition="$zDifference &lt; $data:script_param[&apos;crime_timeSkipInTrespass_detectionRange_z&apos;].value">
+																											<Sequence>
+																												<InstantSendMessageToNPC target="$nearbyNpcs_value" type="&apos;switch:interruptData:kickPlayerFromTimeskip&apos;" values="initiatedBy($enum:switch_interruptInitiator.switch),stimulusKind($enum:crime_stimulusKind.trespass)" />
+																												<Expression expressions="$break = true" />
+																											</Sequence>
+																										</IfCondition>
+																									</Sequence>
+																								</IfCondition>
+																							</Sequence>
+																						</Else>
+																					</EntityContextCheck>
+																				</ForEach>
+																				<ReinitVariable variable="$nearbyNpcs" />
+																			</Sequence>
+																		</SuppressFailure>
+																	</IfCondition>
+																</Sequence>
+															</Then>
+														</IsInsideAreaWithLabel>
+													</AtomicDecorator>
+													<Function_crime_waitMiliseconds miliseconds="$data:script_param[&apos;crime_timeSkipInTrespass_detectionPeriod&apos;].value" nodeLabel="79721380" />
+												</Sequence>
+											</Then>
+											<Else canSkip="1">
+												<Function_crime_waitMiliseconds miliseconds="$data:script_param[&apos;crime_timeSkipInTrespass_detectionPeriod&apos;].value" nodeLabel="42450452" />
+											</Else>
+										</IsTimeSkipping>
+									</While>
+								</GameContextBarrier>
+							</GameContextBarrier>
+						</IsInsideAreaWithLabelBarrier>
+					</GameContextBarrier>
+				</While>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="break" comment="" />
+				<Variable name="home" comment="" />
+				<Variable name="nearbyNpcs" comment="" />
+				<Variable name="nearbyNpcs_value" comment="" />
+				<Variable name="privateArea" comment="" />
+				<Variable name="reaction" comment="" />
+				<Variable name="reactionSuppressed" comment="" />
+				<Variable name="trespassArea" comment="" />
+				<Variable name="trespassSevereness" comment="" />
+				<Variable name="zDifference" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IsTimeSkipping hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<GetHomeFromArea hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</GetHomeFromArea>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<SuppressFailure hasInputBreakpoint="0" comment="if no NPC is nearby" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</LinkTagFilter>
+																						<EntityClassFilter hasInputBreakpoint="0" comment="no animals" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</EntityClassFilter>
+																						<RangeFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</RangeFilter>
+																						<SoulIsAliveFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</SoulIsAliveFilter>
+																						<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																							<OutputBreakpoints />
+																							<Child0>
+																								<SoulIsUnconsciousFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</SoulIsUnconsciousFilter>
+																							</Child0>
+																						</NegationOp>
+																						<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																							<OutputBreakpoints />
+																							<Child0>
+																								<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</RangeSorter>
+																							</Child0>
+																						</Nodalyzer>
+																					</GraphSearch>
+																					<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																							<OutputBreakpoints />
+																							<Else>
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</DetermineTrespassReaction>
+																									<IsPublicEnemy hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																										<OutputBreakpoints />
+																										<Else>
+																											<StanceCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																												<OutputBreakpoints />
+																												<Then>
+																													<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</Success>
+																												</Then>
+																												<Else>
+																													<Expression hasInputBreakpoint="0" comment="for publicFriends enable in personal+ only" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</Expression>
+																												</Else>
+																											</StanceCheck>
+																										</Else>
+																									</IsPublicEnemy>
+																									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Function_crime_getZDifferenceBetweenWuids hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Function_crime_getZDifferenceBetweenWuids>
+																											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</InstantSendMessageToNPC>
+																													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</Expression>
+																												</Sequence>
+																											</IfCondition>
+																										</Sequence>
+																									</IfCondition>
+																								</Sequence>
+																							</Else>
+																						</EntityContextCheck>
+																					</ForEach>
+																					<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</ReinitVariable>
+																				</Sequence>
+																			</SuppressFailure>
+																		</IfCondition>
+																	</Sequence>
+																</Then>
+															</IsInsideAreaWithLabel>
+														</AtomicDecorator>
+														<Function_crime_waitMiliseconds hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_waitMiliseconds>
+													</Sequence>
+												</Then>
+												<Else>
+													<Function_crime_waitMiliseconds hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_waitMiliseconds>
+												</Else>
+											</IsTimeSkipping>
+										</While>
+									</GameContextBarrier>
+								</GameContextBarrier>
+							</IsInsideAreaWithLabelBarrier>
+						</GameContextBarrier>
+					</While>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

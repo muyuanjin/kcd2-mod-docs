@@ -1,0 +1,101 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Database xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="brambora">
+	<Skald>
+		<Module Name="setup">
+			<Ports>
+				<Port Name="active" Direction="In" Type="bool">
+					<DesignName StringName="setup_active_ogjp" Text="active" />
+				</Port>
+				<Port Name="zibrid_zemrel" Direction="Out" Type="trigger">
+					<DesignName StringName="setup_quest_end_7tQw" Text="Žibřid zemřel" />
+				</Port>
+				<Port Name="hrac_pobil_vlky" Direction="Out" Type="trigger">
+					<DesignName StringName="setup_hrac_pobil_vlky_uFlL" Text="Hráč pobil vlky" />
+				</Port>
+				<Port Name="hrac_vidi_vlka" Direction="Out" Type="trigger">
+					<DesignName StringName="setup_hrac_zabil_vlka_vSIJ" Text="Hráč vidí vlka" />
+				</Port>
+			</Ports>
+			<Definitions>
+				<Definition File="setup/hrac_si_pripomene_usi.xml" />
+			</Definitions>
+			<Nodes>
+				<AddFactionRelationBetweenArrays Name="addfactionrelationbetween_playerAndWolves" PositionY="1330" PositionX="0">
+					<Constant Name="RelationValue" Value="-1" />
+					<Asset Name="SoulArray0" Alias="player" />
+					<Asset Name="SoulArray1" Alias="wolves" />
+					<Edge From="active" To="IsActive" />
+				</AddFactionRelationBetweenArrays>
+				<BuffEffect Name="buff8" PositionY="1710" PositionX="0">
+					<Asset Name="Souls" Alias="wolves" />
+					<Constant Name="BuffGUID" Value="6a61a139-4ae5-49e1-9b7f-31b72ff2e1e5" />
+					<Edge From="active" To="IsActive" />
+				</BuffEffect>
+				<Function Name="deathcheck10" PositionY="1140" PositionX="450" MethodName="wh::rpgmodule::DeathCheck" DeclaringType="wh::rpgmodule">
+					<Asset Name="Souls" Alias="zibrid" />
+				</Function>
+				<SoulDeathTrigger Name="deathtrigger_wolves" PositionY="220" PositionX="0">
+					<Asset Name="Souls" Alias="wolves" />
+					<Edge From="active" To="IsActive" />
+				</SoulDeathTrigger>
+				<SoulDeathTrigger Name="deathtrigger_zibrid">
+					<Asset Name="Souls" Alias="zibrid" />
+					<Edge From="active" To="IsActive" />
+				</SoulDeathTrigger>
+				<expectedeffect Name="expectedeffect" PositionY="830" PositionX="0" Namespace="utils.crime.trespass">
+					<Asset Name="npcs" Alias="zibrid" />
+					<Constant Name="extenduntilplayerleavestrespass" Value="true" />
+					<Edge From="active" To="isactive" />
+				</expectedeffect>
+				<fightconfiguration_surrendering Name="fightconfiguration_surrendering" PositionY="1040" PositionX="0" Namespace="utils.combat">
+					<Asset Name="souls" Alias="wolves" />
+					<Constant Name="neversurrenderorflee" Value="true" />
+					<Constant Name="neveracceptsurrender" Value="true" />
+					<Constant Name="decentmercy" Value="false" />
+					<Constant Name="alwaysmercy" Value="false" />
+					<Edge From="active" To="isactive" />
+				</fightconfiguration_surrendering>
+				<hrac_si_pripomene_usi Name="hrac_si_pripomene_usi" PositionY="830" PositionX="450" />
+				<IfFunction Name="ifor12" PositionY="840" PositionX="900" MethodName="math::boolean::Or" DeclaringType="math::boolean">
+					<Edge From="timer6.OnFinished" To="Exec" />
+					<Edge From="hrac_si_pripomene_usi.hrac_si_pripomnel_usi" To="A" />
+					<Edge From="deathcheck10.IsDead" To="B" />
+				</IfFunction>
+				<Output Name="Output">
+					<Edge From="deathtrigger_zibrid.OnDeath" To="zibrid_zemrel" />
+					<Edge From="deathtrigger_wolves.OnAllDeath" To="hrac_pobil_vlky" />
+					<Edge From="skirmishtrigger3.OnEvent" To="hrac_vidi_vlka" />
+				</Output>
+				<Layer Name="profile_wolves" PositionY="1550" PositionX="0">
+					<Asset Name="Profiles" Alias="wolfProfile" />
+					<Edge From="active" To="IsActive" />
+				</Layer>
+				<Function Name="requestmonologue5" PositionY="500" PositionX="1220" MethodName="wh::xgenaimodule::RequestMonologue" DeclaringType="wh::xgenaimodule">
+					<Asset Name="Souls" Alias="player" />
+					<Constant Name="DecisionAlias" Value="pasacekZibrid_hracSiPripomeneUsi" />
+					<Edge From="ifor12.False" To="Exec" />
+				</Function>
+				<SetEntityContext Name="setentitycontext_killUnconsciousWolves" PositionY="660" PositionX="0">
+					<Constant Name="Context" Value="combat_killOnUnconsciousness" />
+					<Asset Name="Souls" Alias="wolves" />
+					<Edge From="active" To="IsActive" />
+				</SetEntityContext>
+				<SkirmishTrigger Name="skirmishtrigger3" PositionY="440" PositionX="0">
+					<Asset Name="Souls" Alias="wolves" />
+					<Constant Name="EventType" Value="SoulAdded" />
+					<Edge From="active" To="IsActive" />
+				</SkirmishTrigger>
+				<Timer Name="timer6" PositionY="500" PositionX="450">
+					<Constant Name="Duration" Value="2s" />
+					<Constant Name="TimeType" Value="GameTime" />
+					<Edge From="deathtrigger_wolves.OnAllDeath" To="SetRunning" />
+				</Timer>
+			</Nodes>
+			<Assets>
+				<SoulAsset Name="wolves" SharedSoulGuids="a19f488a-4754-4486-bddd-f4cfb94b9d05 c3aad4b1-9b26-4146-b1ca-8b1bd79f8c2c d15b1105-d9d5-47cc-82f2-7ce7c00af599" />
+				<ProfileAsset Name="wolfProfile" AssetProfiles="lov_firstpack_start" />
+			</Assets>
+			<Text StringName="setup_XB3d" Text="setup" />
+		</Module>
+	</Skald>
+</Database>

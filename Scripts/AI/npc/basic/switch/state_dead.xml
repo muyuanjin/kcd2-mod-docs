@@ -1,0 +1,448 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_state_dead" is_function="1">
+		<Variables>
+			<Variable name="corpseData" type="crime:corpseData" values="" isPersistent="0" form="single" />
+			<Variable name="corpseMissingVolume" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="corpseReactorData" type="crime:corpseReactor" values="" isPersistent="0" form="single" />
+			<Variable name="corpseResolved" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="corpseState" type="enum:corpseState" values="" isPersistent="0" form="single" />
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="distanceTraveled" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="informations" type="information" values="" isPersistent="0" form="array" />
+			<Variable name="mrkev" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="myPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="originalPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="reactor" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="reactors" type="_wuid,crime:corpseReactor" values="" isPersistent="0" form="custom_associative" />
+			<Variable name="volumePerceptibleParams" type="perceptibleParams" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="consciousness" type="enum:consciousness" values="" isPersistent="0" form="single" requirementType="Reference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<SuppressFailure>
+						<AtomicDecorator>
+							<IsLoadedGate saveVersion="2">
+								<Else canSkip="1">
+									<Sequence>
+										<Sequence>
+											<Function_crime_getMrkev mrkev="$mrkev" nodeLabel="68275652" />
+											<GetTime TimeType="WorldTime" OutVar="$currentTime" Delta="" />
+											<InstantSendMessageToNPC target="$mrkev" type="&apos;crime:dailyCheck:corpseEntry&apos;" values="corpse($this.id),timestamp($currentTime)" />
+										</Sequence>
+										<RemoveLink From="$mrkev" To="$this.id" Tag="&apos;crime_perception_playerThreshold&apos;" LinkOpHandleMode="Success" />
+										<Expression expressions="$consciousness = $enum:consciousness.dead" />
+										<EntityContextCheck context="crime_deadBody" target="" saveVersion="2">
+											<Else canSkip="1">
+												<Sequence>
+													<Function_crime_addAngriness angriness="&apos;witness_death&apos;" target="$this.id" nodeLabel="44295139" />
+													<EntityContextCheck context="crime_spawnMissingNpcVolume_behavior" target="" saveVersion="2">
+														<Then canSkip="1">
+															<Function_crime_spawnMissingNpcVolume destinationWuid="$this.id" nodeLabel="89604411" />
+														</Then>
+													</EntityContextCheck>
+												</Sequence>
+											</Else>
+										</EntityContextCheck>
+										<EntityContextCheck context="crime_resolvedCorpseOnDeath" target="" saveVersion="2">
+											<Then canSkip="1">
+												<Expression expressions="$corpseState = $enum:corpseState.watched &#10;$corpseResolved = true" />
+											</Then>
+											<Else canSkip="1">
+												<Expression expressions="$corpseState = $enum:corpseState.undiscovered &#10;$corpseResolved = false" />
+											</Else>
+										</EntityContextCheck>
+										<Function_crime_addCorpseLink corpse="$this.id" corpseState="$corpseState" mateReacting="false" resolve="$corpseResolved" storeTime="true" nodeLabel="68616104" />
+										<GetKnownInformations OutArray="$informations" Holder="$this.id" />
+										<For startIndex="0" endIndex="-1" step="1" array="$informations" iterator="" value="$information" break="">
+											<IfCondition failOnCondition="false" condition="$information.label ~= &apos;alarm&apos; |  &#10;$information.perceivedWuid ~= $this.id">
+												<Sequence>
+													<Function_crime_sendInformationDiffNotification information="$information" statusString="&apos;Deleted&apos;" nodeLabel="90149010" />
+													<DestroyInformationFromHolder Information="$information" />
+												</Sequence>
+											</IfCondition>
+										</For>
+									</Sequence>
+								</Else>
+							</IsLoadedGate>
+						</AtomicDecorator>
+					</SuppressFailure>
+					<IgnoreEmittedInformations WUID="$this.id" />
+					<Parallel successMode="Any" failureMode="Any">
+						<IsIndifferent NPC="" saveVersion="2">
+							<Then canSkip="1">
+								<EntityContext context="combat_indifference" target="">
+									<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+								</EntityContext>
+							</Then>
+							<Else canSkip="1">
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Else>
+						</IsIndifferent>
+						<EntityContextBarrier context="combat_ignoreMurderedByPlayer" target="" Negation="false" RunLogic="KeepRunning">
+							<EntityContext context="combat_ignoreMurderedByPlayer" target="">
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</EntityContext>
+						</EntityContextBarrier>
+						<While doFail="false" propagateChildFail="false" condition="true">
+							<LinkGate from="$this.id" to="$__player" tag="&apos;bodyCarrier&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="KeepRunning">
+								<While doFail="false" propagateChildFail="false" condition="$corpseData.state &lt; $enum:corpseState.cleared">
+									<LinkGate from="$this.id" to="$__player" tag="&apos;bodyCarrier&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+										<Sequence>
+											<AtomicDecorator>
+												<Sequence>
+													<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+														<LinkTagFilter tag="&apos;switch_corpse&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$corpseData" />
+													</GraphSearch>
+													<IfCondition failOnCondition="false" condition="$corpseData.state &gt;= $enum:corpseState.discovered &amp; &#10;$corpseData.state &lt;= $enum:corpseState.watched">
+														<Sequence>
+															<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																<LinkTagFilter tag="&apos;crime_corpseReactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																<LinkDataFilter tag="&apos;crime_corpseReactor&apos;" condition="( &#10;$__link_crime_corpseReactor.reactionKind == $enum:crime_reactionKind.lookAround |  &#10;$__link_crime_corpseReactor.reactionKind == $enum:crime_reactionKind.watchCorpse &#10;) &amp; &#10;$__link_crime_corpseReactor.noticableCorpseMissingVolume == $__null" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																<EvaLLyzer Expresion="$reactors[$__to] = $__link_crime_corpseReactor" Quantifiers="ForAll" saveVersion="2" />
+															</GraphSearch>
+															<IfCondition failOnCondition="false" condition="#reactors &gt; 0">
+																<Sequence>
+																	<GetSpatialInfo In="$this.id" Out="$originalPos" What="Position" />
+																	<Expression expressions="$volumePerceptibleParams.visibility = 0.005, &#10;$volumePerceptibleParams.conspicuousness = 1" />
+																	<SpawnExpiringPerceptibleVolume Expiration="&apos;5m&apos;" TimerType="GameTime" Position="$originalPos" Radius="1.000000" Height="0.500000" Label="&apos;crime_corpseMissing&apos;" OnlyVisiblePointsFromCenter="true" PerceptibleParams="$volumePerceptibleParams" OutWuid="$corpseMissingVolume" />
+																	<AddLink From="$corpseMissingVolume" To="$this.id" Tag="&apos;crime_missingCorpse&apos;" Data="" LinkOpHandleMode="Error" />
+																	<ForEach startIndex="0" step="1" array="$reactors" iterator="$reactor" value="$corpseReactorData" break="">
+																		<LinkDataExpression From="$this.id" To="$reactor" Expresssion="$__link_crime_corpseReactor.noticableCorpseMissingVolume = $corpseMissingVolume" />
+																	</ForEach>
+																</Sequence>
+															</IfCondition>
+														</Sequence>
+													</IfCondition>
+												</Sequence>
+											</AtomicDecorator>
+											<LinkGate from="$this.id" to="$__player" tag="&apos;bodyCarrier&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="KeepRunning">
+												<CheckWuidValid wuid="$corpseMissingVolume" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Sequence>
+															<GetSpatialInfo In="$this.id" Out="$myPos" What="Position" />
+															<NumericalOperation In1VariableName="originalPos" In2VariableName="myPos" In3VariableName="" OutVariableName="$distanceTraveled" Operation="distance" />
+															<IfCondition failOnCondition="false" condition="$distanceTraveled &lt; 1">
+																<DeSpawnPerceptibleVolume Wuid="$corpseMissingVolume" />
+															</IfCondition>
+														</Sequence>
+													</Then>
+													<Else canSkip="1">
+														<Success />
+													</Else>
+												</CheckWuidValid>
+											</LinkGate>
+										</Sequence>
+									</LinkGate>
+								</While>
+							</LinkGate>
+						</While>
+						<While doFail="false" propagateChildFail="false" condition="true">
+							<Switch>
+								<GameContextCheck context="player_henry" saveVersion="2">
+									<Then canSkip="1">
+										<GameContextBarrier context="player_henry" Negation="true" RunLogic="KeepRunning">
+											<Function_crime_addCorpseLink corpse="$this.id" corpseState="$enum:corpseState.watched" mateReacting="false" resolve="true" storeTime="false" nodeLabel="96502669" />
+										</GameContextBarrier>
+									</Then>
+								</GameContextCheck>
+								<GameContextCheck context="player_bohuta" saveVersion="2">
+									<Then canSkip="1">
+										<GameContextBarrier context="player_bohuta" Negation="true" RunLogic="KeepRunning">
+											<Function_crime_addCorpseLink corpse="$this.id" corpseState="$enum:corpseState.watched" mateReacting="false" resolve="true" storeTime="false" nodeLabel="92648351" />
+										</GameContextBarrier>
+									</Then>
+								</GameContextCheck>
+								<DefaultBranch>
+									<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" />
+								</DefaultBranch>
+							</Switch>
+						</While>
+					</Parallel>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="corpseData" comment="" />
+				<Variable name="corpseMissingVolume" comment="" />
+				<Variable name="corpseReactorData" comment="" />
+				<Variable name="corpseResolved" comment="" />
+				<Variable name="corpseState" comment="" />
+				<Variable name="currentTime" comment="" />
+				<Variable name="distanceTraveled" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="informations" comment="" />
+				<Variable name="mrkev" comment="" />
+				<Variable name="myPos" comment="" />
+				<Variable name="originalPos" comment="" />
+				<Variable name="reactor" comment="" />
+				<Variable name="reactors" comment="" />
+				<Variable name="volumePerceptibleParams" comment="" />
+				<Variable name="consciousness" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosY="-90" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Else>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_crime_getMrkev hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_crime_getMrkev>
+												<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetTime>
+												<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</InstantSendMessageToNPC>
+											</Sequence>
+											<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RemoveLink>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<EntityContextCheck hasInputBreakpoint="0" comment="KCD2-315569" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Else>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_crime_addAngriness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_addAngriness>
+														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Function_crime_spawnMissingNpcVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_spawnMissingNpcVolume>
+															</Then>
+														</EntityContextCheck>
+													</Sequence>
+												</Else>
+											</EntityContextCheck>
+											<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Expression hasInputBreakpoint="0" comment="KCD2-328747" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Then>
+												<Else>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Else>
+											</EntityContextCheck>
+											<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_addCorpseLink>
+											<GetKnownInformations hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetKnownInformations>
+											<For hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="KCD2-431904 destroyed elsewhere" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_crime_sendInformationDiffNotification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_sendInformationDiffNotification>
+														<DestroyInformationFromHolder hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</DestroyInformationFromHolder>
+													</Sequence>
+												</IfCondition>
+											</For>
+										</Sequence>
+									</Else>
+								</IsLoadedGate>
+							</AtomicDecorator>
+						</SuppressFailure>
+						<IgnoreEmittedInformations hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</IgnoreEmittedInformations>
+						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IsIndifferent hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Then>
+									<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</EntityContext>
+								</Then>
+								<Else>
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Else>
+							</IsIndifferent>
+							<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</EntityContext>
+							</EntityContextBarrier>
+							<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</LinkTagFilter>
+														</GraphSearch>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</LinkTagFilter>
+																	<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</LinkDataFilter>
+																	<EvaLLyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																	</EvaLLyzer>
+																</GraphSearch>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</GetSpatialInfo>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																		<SpawnExpiringPerceptibleVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</SpawnExpiringPerceptibleVolume>
+																		<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</AddLink>
+																		<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<LinkDataExpression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</LinkDataExpression>
+																		</ForEach>
+																	</Sequence>
+																</IfCondition>
+															</Sequence>
+														</IfCondition>
+													</Sequence>
+												</AtomicDecorator>
+												<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetSpatialInfo>
+																<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</NumericalOperation>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<DeSpawnPerceptibleVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</DeSpawnPerceptibleVolume>
+																</IfCondition>
+															</Sequence>
+														</Then>
+														<Else>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Success>
+														</Else>
+													</CheckWuidValid>
+												</LinkGate>
+											</Sequence>
+										</LinkGate>
+									</While>
+								</LinkGate>
+							</While>
+							<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_crime_addCorpseLink>
+											</GameContextBarrier>
+										</Then>
+									</GameContextCheck>
+									<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_crime_addCorpseLink>
+											</GameContextBarrier>
+										</Then>
+									</GameContextCheck>
+									<DefaultBranch>
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</DefaultBranch>
+								</Switch>
+							</While>
+						</Parallel>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

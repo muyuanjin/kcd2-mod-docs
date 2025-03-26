@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="interrupt_animal_eatDroppedFood" is_function="0">
+    <Variables>
+      <Variable name="amount" type="_int" values="" isPersistent="0" form="single" />
+      <Variable name="animalCooldowns" type="crime:animalCooldowns" values="" isPersistent="0" form="single" />
+      <Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+      <Variable name="foodShouldBeEaten" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="isInInventory" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="itemDestroyed" type="_bool" values="false" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="animalEatDroppedFoodData" type="switch:animal_interruptData:eatDroppedFood" values="" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+          <Child canSkip="1">
+            <EntityContext context="crime_animal_interruptEatDroppedFood" target="$this.id">
+              <AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+                <LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:animal:eatDroppedFood&apos;">
+                  <LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$animalEatDroppedFoodData.stimulusKind&apos;">
+                    <Sequence>
+                      <Function_crime_animal_confirmReactionLink reactionKind="$enum:crime_animal_reactionKind.eatDroppedFood" nodeLabel="74145067" />
+                      <CheckWuidValid wuid="$animalEatDroppedFoodData.item" FailSubtMissing="false" saveVersion="2">
+                        <Then canSkip="1">
+                          <GetItemProperty itemId="$animalEatDroppedFoodData.item" property="InInventory" result="$isInInventory" />
+                        </Then>
+                        <Else canSkip="1">
+                          <Expression expressions="$itemDestroyed = true" />
+                        </Else>
+                      </CheckWuidValid>
+                      <IsLoadedGate saveVersion="2">
+                        <Else canSkip="1">
+                          <EntityContextCheck context="switch_isDogBreed" target="" saveVersion="2">
+                            <Then canSkip="1">
+                              <AnimationAction fragment="&apos;Smelling&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+                            </Then>
+                          </EntityContextCheck>
+                        </Else>
+                      </IsLoadedGate>
+                      <IfCondition failOnCondition="false" condition="~$isInInventory &amp; ~$itemDestroyed">
+                        <Parallel successMode="Any" failureMode="Any">
+                          <IfGate atomic="false" condition="~$isInInventory &amp; ~$itemDestroyed" RunLogic="Halt">
+                            <EntityContextCheck context="switch_isDogBreed" target="" saveVersion="2">
+                              <Then canSkip="1">
+                                <AddBuffElement Buff="&apos;1b562bab-88fc-4e84-83fd-a5ac465c18a8&apos;" enabled="true">
+                                  <Move stopWithinDistance="0.500000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animalEatDroppedFoodData.item" destinationSpecification2="" destinationSpecification3="" speed="Run" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+                                </AddBuffElement>
+                              </Then>
+                              <Else canSkip="1">
+                                <Move stopWithinDistance="1.500000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animalEatDroppedFoodData.item" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+                              </Else>
+                            </EntityContextCheck>
+                          </IfGate>
+                          <Loop count="-1">
+                            <Sequence>
+                              <CheckWuidValid wuid="$animalEatDroppedFoodData.item" FailSubtMissing="false" saveVersion="2">
+                                <Then canSkip="1">
+                                  <GetItemProperty itemId="$animalEatDroppedFoodData.item" property="InInventory" result="$isInInventory" />
+                                </Then>
+                                <Else canSkip="1">
+                                  <Expression expressions="$itemDestroyed = true" />
+                                </Else>
+                              </CheckWuidValid>
+                              <Wait duration="&apos;100ms&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                            </Sequence>
+                          </Loop>
+                        </Parallel>
+                      </IfCondition>
+                      <IfCondition failOnCondition="false" condition="~$isInInventory &amp; ~$itemDestroyed">
+                        <Sequence>
+                          <Switch>
+                            <EntityContextCheck context="switch_isHorse" target="" saveVersion="2">
+                              <Then canSkip="1">
+                                <UnstanceAction unstance="horse_grazing" locationObject="$this.id" slaveObject="" />
+                              </Then>
+                            </EntityContextCheck>
+                            <EntityContextCheck context="switch_isDogBreed" target="" saveVersion="2">
+                              <Then canSkip="1">
+                                <UnstanceAction unstance="dog_eatingLaying" locationObject="$this.id" slaveObject="" />
+                              </Then>
+                            </EntityContextCheck>
+                            <DefaultBranch>
+                              <Success />
+                            </DefaultBranch>
+                          </Switch>
+                          <Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                          <IfCondition failOnCondition="false" condition="~$isInInventory &amp; ~$itemDestroyed">
+                            <AtomicDecorator>
+                              <Sequence>
+                                <ExecuteLua code="entity.inventory:AddItem(data.animalEatDroppedFoodData.item)" />
+                                <UseItem item="$animalEatDroppedFoodData.item" count="1" bodyPartId="-1" combineWithItem="" />
+                                <CheckWuidValid wuid="$animalEatDroppedFoodData.item" FailSubtMissing="false" saveVersion="2">
+                                  <Then canSkip="1">
+                                    <Sequence>
+                                      <GetItemProperty itemId="$animalEatDroppedFoodData.item" property="Amount" result="$amount" />
+                                      <IfCondition failOnCondition="false" condition="$amount &gt; 0">
+                                        <RemoveItem Item="$animalEatDroppedFoodData.item" ItemGUID="" Source="$this.id" Amount="$amount" FailOnDoesntExist="false" NotifyUI="false" />
+                                      </IfCondition>
+                                    </Sequence>
+                                  </Then>
+                                </CheckWuidValid>
+                                <EntityContextCheck context="switch_isHorse" target="" saveVersion="2">
+                                  <Then canSkip="1">
+                                    <Sequence>
+                                      <SuppressFailure>
+                                        <GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;crime_animalCooldowns&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                          <LinkTagFilter tag="&apos;crime_animalCooldowns&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$animalCooldowns" />
+                                        </GraphSearch>
+                                      </SuppressFailure>
+                                      <GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+                                      <Expression expressions="$animalCooldowns.horse_droppedFoodEatenCooldown = $currentTime + 1800000" />
+                                      <AddLink From="$this.id" To="$this.id" Tag="&apos;crime_animalCooldowns&apos;" Data="$animalCooldowns" LinkOpHandleMode="OverWrite" />
+                                    </Sequence>
+                                  </Then>
+                                </EntityContextCheck>
+                              </Sequence>
+                            </AtomicDecorator>
+                          </IfCondition>
+                          <WaitAction />
+                        </Sequence>
+                      </IfCondition>
+                      <Function_switch_animal_callFollowUpBehavior previousReaction="$enum:crime_animal_reactionKind.eatDroppedFood" nodeLabel="10240743" />
+                    </Sequence>
+                  </LogToLabel>
+                </LogToLabel>
+              </AddPerceivableState>
+            </EntityContext>
+          </Child>
+          <OnFail canSkip="1">
+            <AtomicDecorator>
+              <Sequence>
+                <IfCondition failOnCondition="false" condition="$foodShouldBeEaten">
+                  <CheckWuidValid wuid="$animalEatDroppedFoodData.item" FailSubtMissing="false" saveVersion="2">
+                    <Then canSkip="1">
+                      <Sequence>
+                        <GetItemProperty itemId="$animalEatDroppedFoodData.item" property="Amount" result="$amount" />
+                        <IfCondition failOnCondition="false" condition="$amount &gt; 0">
+                          <RemoveItem Item="$animalEatDroppedFoodData.item" ItemGUID="" Source="$this.id" Amount="$amount" FailOnDoesntExist="false" NotifyUI="false" />
+                        </IfCondition>
+                      </Sequence>
+                    </Then>
+                  </CheckWuidValid>
+                </IfCondition>
+                <Function_crime_animal_removeReactionLink reactionKind="$enum:crime_animal_reactionKind.eatDroppedFood" nodeLabel="92748504" />
+              </Sequence>
+            </AtomicDecorator>
+          </OnFail>
+        </FuseBox>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData Signature="animal_eatDroppedFood" EventSet="">
+      <Variables>
+        <Variable name="amount" comment="" />
+        <Variable name="animalCooldowns" comment="" />
+        <Variable name="currentTime" comment="" />
+        <Variable name="foodShouldBeEaten" comment="" />
+        <Variable name="isInInventory" comment="" />
+        <Variable name="itemDestroyed" comment="" />
+        <Variable name="animalEatDroppedFoodData" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+            <OutputBreakpoints />
+            <Child>
+              <EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Function_crime_animal_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Function_crime_animal_confirmReactionLink>
+                        <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                          <OutputBreakpoints />
+                          <Then>
+                            <GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </GetItemProperty>
+                          </Then>
+                          <Else>
+                            <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </Expression>
+                          </Else>
+                        </CheckWuidValid>
+                        <IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                          <OutputBreakpoints />
+                          <Else>
+                            <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                              <OutputBreakpoints />
+                              <Then>
+                                <AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </AnimationAction>
+                              </Then>
+                            </EntityContextCheck>
+                          </Else>
+                        </IsLoadedGate>
+                        <IfCondition hasInputBreakpoint="0" comment="for save&amp;load" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                <OutputBreakpoints />
+                                <Then>
+                                  <AddBuffElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </Move>
+                                  </AddBuffElement>
+                                </Then>
+                                <Else>
+                                  <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Move>
+                                </Else>
+                              </EntityContextCheck>
+                            </IfGate>
+                            <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                  <OutputBreakpoints />
+                                  <Then>
+                                    <GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </GetItemProperty>
+                                  </Then>
+                                  <Else>
+                                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </Expression>
+                                  </Else>
+                                </CheckWuidValid>
+                                <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Wait>
+                              </Sequence>
+                            </Loop>
+                          </Parallel>
+                        </IfCondition>
+                        <IfCondition hasInputBreakpoint="0" comment="If item got yoinked while moving" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                <OutputBreakpoints />
+                                <Then>
+                                  <UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </UnstanceAction>
+                                </Then>
+                              </EntityContextCheck>
+                              <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                <OutputBreakpoints />
+                                <Then>
+                                  <UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </UnstanceAction>
+                                </Then>
+                              </EntityContextCheck>
+                              <DefaultBranch>
+                                <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Success>
+                              </DefaultBranch>
+                            </Switch>
+                            <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </Wait>
+                            <IfCondition hasInputBreakpoint="0" comment="If item got yoinked while moving" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </ExecuteLua>
+                                  <UseItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </UseItem>
+                                  <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                    <OutputBreakpoints />
+                                    <Then>
+                                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </GetItemProperty>
+                                        <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <RemoveItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </RemoveItem>
+                                        </IfCondition>
+                                      </Sequence>
+                                    </Then>
+                                  </CheckWuidValid>
+                                  <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                    <OutputBreakpoints />
+                                    <Then>
+                                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                            <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </LinkTagFilter>
+                                          </GraphSearch>
+                                        </SuppressFailure>
+                                        <GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </GetTime>
+                                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </Expression>
+                                        <AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </AddLink>
+                                      </Sequence>
+                                    </Then>
+                                  </EntityContextCheck>
+                                </Sequence>
+                              </AtomicDecorator>
+                            </IfCondition>
+                            <WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </WaitAction>
+                          </Sequence>
+                        </IfCondition>
+                        <Function_switch_animal_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Function_switch_animal_callFollowUpBehavior>
+                      </Sequence>
+                    </LogToLabel>
+                  </LogToLabel>
+                </AddPerceivableState>
+              </EntityContext>
+            </Child>
+            <OnFail>
+              <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <CheckWuidValid hasInputBreakpoint="0" comment="Behavior got canceled during eating animation" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Then>
+                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </GetItemProperty>
+                          <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <RemoveItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </RemoveItem>
+                          </IfCondition>
+                        </Sequence>
+                      </Then>
+                    </CheckWuidValid>
+                  </IfCondition>
+                  <Function_crime_animal_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Function_crime_animal_removeReactionLink>
+                </Sequence>
+              </AtomicDecorator>
+            </OnFail>
+          </FuseBox>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="callInterrupt_report" is_function="1">
+		<Variables>
+			<Variable name="crimeLevel" type="enum:crime_crimeLevel" values="" isPersistent="0" form="single" />
+			<Variable name="ffCrimeIcon" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="lookAroundFollowUpData" type="crime:followUpBehavior:lookAround" values="" isPersistent="0" form="single" />
+			<Variable name="mrkev" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="priority" type="_int" values="140" isPersistent="0" form="single" />
+			<Variable name="priorityBoost" type="_int" values="0" isPersistent="0" form="single" />
+			<Variable name="reportData" type="switch:interruptData:report" values="" isPersistent="0" form="single" />
+			<Variable name="shallPass" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="assaultData" type="crime:assaultData" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+			<Variable name="corpseState" type="enum:corpseState" values="$enum:corpseState.undiscovered" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="criminalFreshness" type="enum:crime_criminalFreshness" values="$enum:crime_criminalFreshness.unknown" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="disableDetectedIcon" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="disableEmitting" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="freshlyAttributedCrime" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="ignorePriority" type="_bool" values="false" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+			<Variable name="initiator" type="enum:switch_interruptInitiator" values="$enum:switch_interruptInitiator.unknown" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="movementSpeed" type="enum:movementSpeed" values="$enum:movementSpeed.sprint" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="previousReaction" type="enum:crime_reactionKind" values="$enum:crime_reactionKind.unknown" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="reportDestination" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="reportDestinationType" type="enum:crime_reportDestinationType" values="$enum:crime_reportDestinationType.authority" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="source" type="enum:crime_source" values="$enum:crime_source.direct" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="stimulusKind" type="enum:crime_stimulusKind" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<AtomicDecorator>
+					<GameContextCheck context="crime_global_suppressBehavioralReaction" saveVersion="2">
+						<Else canSkip="1">
+							<EntityContextCheck context="crime_suppressBehavioralReaction" target="" saveVersion="2">
+								<Else canSkip="1">
+									<Sequence>
+										<GetCrimeLevelByStimulusKind StimulusKind="$stimulusKind" CrimeLevel="$crimeLevel" />
+										<Switch>
+											<IfCondition failOnCondition="false" condition="$crimeLevel &gt;= $enum:crime_crimeLevel.murder">
+												<Expression expressions="$priorityBoost = 3" />
+											</IfCondition>
+											<IfCondition failOnCondition="false" condition="$crimeLevel == $enum:crime_crimeLevel.violent">
+												<Expression expressions="$priorityBoost = 2" />
+											</IfCondition>
+											<IfCondition failOnCondition="false" condition="$crimeLevel &gt;= $enum:crime_crimeLevel.trespass | &#10;$crimeLevel &gt;= $enum:crime_crimeLevel.property | &#10;$stimulusKind == $enum:crime_stimulusKind.missingNpc">
+												<Expression expressions="$priorityBoost = 1" />
+											</IfCondition>
+											<DefaultBranch>
+												<Success />
+											</DefaultBranch>
+										</Switch>
+										<Expression expressions="$priority += $priorityBoost" />
+										<Function_crime_checkReactionPriority priority="$priority" shallPass="$shallPass" nodeLabel="21565189" />
+										<IfCondition failOnCondition="false" condition="$shallPass | $ignorePriority">
+											<Sequence>
+												<Function_crime_getMrkev mrkev="$mrkev" nodeLabel="49558291" />
+												<EntityContextCheck context="crime_spawnMissingNpcVolume_behavior" target="$this.id" saveVersion="2">
+													<Then canSkip="1">
+														<Function_crime_spawnMissingNpcVolume destinationWuid="$reportDestination" nodeLabel="16485304" />
+													</Then>
+												</EntityContextCheck>
+												<IfCondition failOnCondition="false" condition="$initiator == $enum:switch_interruptInitiator.switch | &#10;$previousReaction == $enum:crime_reactionKind.unknown">
+													<GetReactionKindByContext Target="$this.id" ReactionKind="$previousReaction" />
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$reportDestinationType == $enum:crime_reportDestinationType.mate">
+													<Sequence>
+														<Expression expressions="$lookAroundFollowUpData.information = $information &#10;$lookAroundFollowUpData.source = $source &#10;$lookAroundFollowUpData.stimulusKind = $stimulusKind" />
+														<AddLink From="$this.id" To="$this.id" Tag="&apos;crime_followUpBehavior_lookAround&apos;" Data="$lookAroundFollowUpData" LinkOpHandleMode="OverWrite" />
+													</Sequence>
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$information.label == &apos;&apos;">
+													<Sequence>
+														<CreateInformationWrapper Label="&apos;motivation&apos;" PerceivedWuid="$this.id" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$information" />
+														<LockDynamicInformationValues Information="$information">
+															<SetDynamicInformationValue Information="$information" Tag="&apos;stimulusKind&apos;" Variable="$stimulusKind" Type="" Value="" />
+														</LockDynamicInformationValues>
+													</Sequence>
+												</IfCondition>
+												<Expression expressions="$reportData.initiatedBy = $initiator &#10;$reportData.previousReaction = $previousReaction &#10;$reportData.stimulusKind = $stimulusKind &#10; &#10;$reportData.assaultData = $assaultData &#10;$reportData.destination = $reportDestination &#10;$reportData.destinationType = $reportDestinationType &#10;$reportData.information = $information &#10;$reportData.movementSpeed = $movementSpeed &#10;$reportData.source = $source &#10;$reportData.corpseState = $corpseState &#10;$reportData.freshlyAttributedCrime = $freshlyAttributedCrime &#10;$reportData.criminalFreshness = $criminalFreshness &#10;$reportData.disableDetected = $disableDetectedIcon &#10; &#10;$ffCrimeIcon =  &#10;~$disableDetectedIcon &amp;  &#10;($data:crime[$information.label].isCrime | &#10;$information.label == &apos;alarm&apos;)" />
+												<IsPublicEnemy Soul="$this.id" FailOnSubtreeMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$reportData.emittingDisabled = true" />
+													</Then>
+													<Else canSkip="1">
+														<Expression expressions="$reportData.emittingDisabled = $disableEmitting" />
+													</Else>
+												</IsPublicEnemy>
+												<Function_crime_limits_reserveReactionLink ffCrimeIcon="$ffCrimeIcon" information="$information" priority="$priority" reactionKind="$enum:crime_reactionKind.report" nodeLabel="13556675" />
+												<AddInterrupt_report reportData="$reportData" Target="$this.id" Host="$mrkev" Behavior="&apos;interrupt_report&apos;" Priority="$priority" IgnorePriorityOnPreviousInterrupt="$ignorePriority" urgency="Fast" Aliveness="Alive" Privileged="false" FastForward="false" />
+											</Sequence>
+										</IfCondition>
+									</Sequence>
+								</Else>
+							</EntityContextCheck>
+						</Else>
+					</GameContextCheck>
+				</AtomicDecorator>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="crimeLevel" comment="" />
+				<Variable name="ffCrimeIcon" comment="" />
+				<Variable name="lookAroundFollowUpData" comment="" />
+				<Variable name="mrkev" comment="" />
+				<Variable name="priority" comment="" />
+				<Variable name="priorityBoost" comment="" />
+				<Variable name="reportData" comment="" />
+				<Variable name="shallPass" comment="" />
+				<Variable name="assaultData" comment="" />
+				<Variable name="corpseState" comment="" />
+				<Variable name="criminalFreshness" comment="" />
+				<Variable name="disableDetectedIcon" comment="" />
+				<Variable name="disableEmitting" comment="" />
+				<Variable name="freshlyAttributedCrime" comment="" />
+				<Variable name="ignorePriority" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="initiator" comment="" />
+				<Variable name="movementSpeed" comment="" />
+				<Variable name="previousReaction" comment="" />
+				<Variable name="reportDestination" comment="" />
+				<Variable name="reportDestinationType" comment="" />
+				<Variable name="source" comment="" />
+				<Variable name="stimulusKind" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-200" editorPosY="-10" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Else>
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Else>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetCrimeLevelByStimulusKind hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetCrimeLevelByStimulusKind>
+											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</IfCondition>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</IfCondition>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</IfCondition>
+												<DefaultBranch>
+													<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Success>
+												</DefaultBranch>
+											</Switch>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<Function_crime_checkReactionPriority hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_checkReactionPriority>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_crime_getMrkev hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_getMrkev>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_crime_spawnMissingNpcVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_spawnMissingNpcVolume>
+														</Then>
+													</EntityContextCheck>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<GetReactionKindByContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetReactionKindByContext>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment=" TODO: maybe returnWithHelp is sufficient?" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</AddLink>
+														</Sequence>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</CreateInformationWrapper>
+															<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</SetDynamicInformationValue>
+															</LockDynamicInformationValues>
+														</Sequence>
+													</IfCondition>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<IsPublicEnemy hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+														<Else>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Else>
+													</IsPublicEnemy>
+													<Function_crime_limits_reserveReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_limits_reserveReactionLink>
+													<AddInterrupt_report hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</AddInterrupt_report>
+												</Sequence>
+											</IfCondition>
+										</Sequence>
+									</Else>
+								</EntityContextCheck>
+							</Else>
+						</GameContextCheck>
+					</AtomicDecorator>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

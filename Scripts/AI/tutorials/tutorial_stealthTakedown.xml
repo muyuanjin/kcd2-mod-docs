@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="tutorial_stealthTakedown" is_function="0">
+		<Variables>
+			<Variable name="areaBehindMe" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="chatAlias" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="chatFinished" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="dialogContext" type="_float" values="" isPersistent="0" form="associative" />
+			<Variable name="perceptionInfo" type="perceptionInfo" values="" isPersistent="0" form="single" />
+			<Variable name="playerInRangeForChat" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="shouldCommentAreaBehindMe" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="shouldCommentPerception" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="takedownResult" type="combat:stealthKillResult" values="" isPersistent="0" form="single" />
+			<Variable name="treeState" type="enum:stealthTakedown_treeState" values="$enum:stealthTakedown_treeState.MoveToPoint" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="stealthTakedown_state" type="enum:stealthTakedown_stage" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="tagpoint" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="takedownArea" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Selector>
+					<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;tutorial_areaBehindMe&apos;" prune="true" negprune="unknown" Parent="" Child="$areaBehindMe" Data="" />
+					</GraphSearch>
+					<ErrorNode Message="&apos;[$this.name;] StealthTakedownTutorial - tutorial_areaBehindMe missing&apos;" />
+				</Selector>
+			</OnInit>
+			<Behavior canSkip="1">
+				<LogToLabel Name="&apos;interrupt&apos;" Wuid="" Message="&apos;tutorial_stealthTakedown&apos;">
+					<EntityContextElement context="tutorial_stealthTakedownBehaviour" enabled="true">
+						<IsUnconsciousCheck SoulWUID="$this.id" FailSubtMissing="false" saveVersion="2">
+							<Then canSkip="1">
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Then>
+							<Else canSkip="1">
+								<Parallel successMode="Any" failureMode="Any">
+									<Loop count="-1">
+										<Sequence>
+											<Expression expressions="$playerInRangeForChat = false" />
+											<AreaPresenceGate aiObjects="$__player" area="$takedownArea" amount="AtLeastOne" presence="Present" RunLogic="Halt">
+												<Sequence>
+													<Expression expressions="$playerInRangeForChat = true" />
+													<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+												</Sequence>
+											</AreaPresenceGate>
+										</Sequence>
+									</Loop>
+									<Switch>
+										<IfCondition failOnCondition="false" condition="$stealthTakedown_state == $enum:stealthTakedown_stage.firstTakedown">
+											<AddBuffElement Buff="&apos;0a00cd37-3769-4d0f-8f82-088d5a3f9b1b&apos;" enabled="true">
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</AddBuffElement>
+										</IfCondition>
+										<IfCondition failOnCondition="false" condition="$stealthTakedown_state == $enum:stealthTakedown_stage.secondTakedown">
+											<AddBuffElement Buff="&apos;c795a2ad-b1c0-44c8-93d8-bb1a9d39993d&apos;" enabled="true">
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</AddBuffElement>
+										</IfCondition>
+										<DefaultBranch>
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</DefaultBranch>
+									</Switch>
+									<ContinuousSwitch>
+										<IfCondition failOnCondition="false" condition="$treeState == $enum:stealthTakedown_treeState.MoveToPoint">
+											<LogToLabel Name="&apos;state&apos;" Wuid="" Message="&apos;MoveToPoint&apos;">
+												<Sequence>
+													<IsInsideArea Origin="$this.id" Area="$takedownArea" FailSubtMissing="false" saveVersion="2">
+														<Then canSkip="1">
+															<MoveParamsDecorator speed="Walk" pathFindingParams="" doorClosingPolicy="LeaveOpened">
+																<ExactMove directionType="AlignWithEntity" directionSpecification="$tagpoint" animationTriggerDist="0.150000" precise="false" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$tagpoint" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+															</MoveParamsDecorator>
+														</Then>
+														<Else canSkip="1">
+															<EntityContext context="FollowableNPCCenter" target="">
+																<MoveParamsDecorator speed="Walk" pathFindingParams="" doorClosingPolicy="LeaveOpened">
+																	<ExactMove directionType="AlignWithEntity" directionSpecification="$tagpoint" animationTriggerDist="0.150000" precise="false" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$tagpoint" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																</MoveParamsDecorator>
+															</EntityContext>
+														</Else>
+													</IsInsideArea>
+													<ClearInbox inbox="&apos;combat_stealthKillResult&apos;" type="" condition="" />
+													<IfElseCondition failOnCondition="false" condition="$chatFinished" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$treeState = $enum:stealthTakedown_treeState.ReadyForTakedown" />
+														</Then>
+														<Else canSkip="1">
+															<Expression expressions="$treeState = $enum:stealthTakedown_treeState.ChatAndTurn" />
+														</Else>
+													</IfElseCondition>
+												</Sequence>
+											</LogToLabel>
+										</IfCondition>
+										<IfCondition failOnCondition="false" condition="$treeState == $enum:stealthTakedown_treeState.ChatAndTurn">
+											<LogToLabel Name="&apos;state&apos;" Wuid="" Message="&apos;ChatAndTurn&apos;">
+												<LogToLabel Name="&apos;stage&apos;" Wuid="" Message="&apos;$stealthTakedown_state&apos;">
+													<Sequence>
+														<Switch>
+															<IfCondition failOnCondition="false" condition="$stealthTakedown_state == $enum:stealthTakedown_stage.firstTakedown">
+																<Expression expressions="$chatAlias = &apos;&apos;" />
+															</IfCondition>
+															<IfCondition failOnCondition="false" condition="$stealthTakedown_state == $enum:stealthTakedown_stage.secondTakedown">
+																<Expression expressions="$chatAlias = &apos;mlynaruvUcen_predDruhymTakedownom&apos;" />
+															</IfCondition>
+															<IfCondition failOnCondition="false" condition="$stealthTakedown_state == $enum:stealthTakedown_stage.repeatTakedown">
+																<Expression expressions="$chatAlias = &apos;mlynaruvUcen_predOpakovanymTakedownom&apos;" />
+															</IfCondition>
+															<DefaultBranch>
+																<ErrorNode Message="&apos;[StealthTakedown tutorial] unknown stage&apos;" />
+															</DefaultBranch>
+														</Switch>
+														<ContinuousSwitch>
+															<IfCondition failOnCondition="false" condition="~$playerInRangeForChat">
+																<Sequence>
+																	<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" />
+																	<Function_speech_monolog alias="&apos;mlynaruvUcen_jenikVolaJindruKSobe&apos;" canBeDelayed="false" context="" dramaticBark="false" lookAtId="$__player" metarole="" target="$this.id" wait="false" nodeLabel="33376791" />
+																</Sequence>
+															</IfCondition>
+															<IfCondition failOnCondition="false" condition="$playerInRangeForChat">
+																<Parallel successMode="Any" failureMode="Any">
+																	<IfElseCondition failOnCondition="false" condition="$chatAlias ~= &apos;&apos;" saveVersion="2">
+																		<Then canSkip="1">
+																			<Sequence>
+																				<Function_speech_dialogInitiator alias="$chatAlias" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="$dialogContext" customParameters="" metarole="" preset="$enum:dialogPreset.chat" recipient="$__player" recipientMetaroles="" nodeLabel="87448480" />
+																				<Expression expressions="$chatFinished = true &#10;$treeState = $enum:stealthTakedown_treeState.MoveToPoint // reposition back" />
+																			</Sequence>
+																		</Then>
+																		<Else canSkip="1">
+																			<Expression expressions="$chatFinished = true &#10;$treeState = $enum:stealthTakedown_treeState.MoveToPoint // reposition back" />
+																		</Else>
+																	</IfElseCondition>
+																	<CrimeFollower Target="$__player" Mode="NoMoveOnlyTurn" Role="Main" RelativeSpeedLimit="Dash" DisableGhosting="false" />
+																</Parallel>
+															</IfCondition>
+														</ContinuousSwitch>
+													</Sequence>
+												</LogToLabel>
+											</LogToLabel>
+										</IfCondition>
+										<IfCondition failOnCondition="false" condition="$treeState == $enum:stealthTakedown_treeState.ReadyForTakedown">
+											<LogToLabel Name="&apos;state&apos;" Wuid="" Message="&apos;ReadyForTakedown&apos;">
+												<Loop count="-1">
+													<AreaPresenceGate aiObjects="$__player" area="$areaBehindMe" amount="AtLeastOne" presence="Present" RunLogic="Halt">
+														<Loop count="-1">
+															<Sequence>
+																<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" />
+																<Function_speech_monolog alias="&apos;mlynaruvUcen_hracStojiDlhoZaGiverom&apos;" canBeDelayed="true" context="" dramaticBark="false" lookAtId="$__player" metarole="" target="$this.id" wait="true" nodeLabel="47852379" />
+															</Sequence>
+														</Loop>
+													</AreaPresenceGate>
+												</Loop>
+											</LogToLabel>
+										</IfCondition>
+									</ContinuousSwitch>
+								</Parallel>
+							</Else>
+						</IsUnconsciousCheck>
+					</EntityContextElement>
+				</LogToLabel>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<ActorStateBarrier Who="$this.id" ToState="ragdoll" NegateTo="false" RunLogic="Halt">
+				<Sequence>
+					<SuppressFailure>
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$takedownResult" senderInfo="" inbox="&apos;combat_stealthKillResult&apos;" condition="" answerVar="">
+							<Sequence>
+								<Switch>
+									<IfCondition failOnCondition="false" condition="$takedownResult.result == &apos;successWithPerfectBlock&apos;">
+										<Expression expressions="$dialogContext[&apos;successWithPerfectBlock&apos;] = 1" />
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="$takedownResult.result == &apos;success&apos;">
+										<Expression expressions="$dialogContext[&apos;successWithPerfectBlock&apos;] = 0" />
+									</IfCondition>
+									<DefaultBranch>
+										<Expression expressions="$dialogContext[&apos;successWithPerfectBlock&apos;] = 0" />
+									</DefaultBranch>
+								</Switch>
+								<HasSeenPlayer NPC="" FullyAwareOnly="false" saveVersion="2">
+									<Then canSkip="1">
+										<Expression expressions="$dialogContext[&apos;hasSeenPlayer&apos;] = 1" />
+									</Then>
+									<Else canSkip="1">
+										<Expression expressions="$dialogContext[&apos;hasSeenPlayer&apos;] = 0" />
+									</Else>
+								</HasSeenPlayer>
+							</Sequence>
+						</ProcessMessage>
+					</SuppressFailure>
+					<AtomicDecorator>
+						<Sequence>
+							<AddBuff SoulWUID="$this.id" BuffGUID="&apos;bd22f98a-e61f-4d83-b39c-79d1d85b6b91&apos;" />
+							<Function_speech_monolog alias="&apos;mlynaruvUcen_giverSeZvedaZeZeme&apos;" canBeDelayed="false" context="$dialogContext" dramaticBark="false" lookAtId="$__player" metarole="" target="$this.id" wait="false" nodeLabel="81647383" />
+							<Switch>
+								<IfCondition failOnCondition="false" condition="$stealthTakedown_state == $enum:stealthTakedown_stage.firstTakedown">
+									<InstantCallback_empty EventName="&apos;FirstTakedownDone&apos;" />
+								</IfCondition>
+								<IfCondition failOnCondition="false" condition="$stealthTakedown_state == $enum:stealthTakedown_stage.secondTakedown">
+									<InstantCallback_empty EventName="&apos;SecondTakedownDone&apos;" />
+								</IfCondition>
+								<IfCondition failOnCondition="false" condition="$stealthTakedown_state == $enum:stealthTakedown_stage.repeatTakedown">
+									<InstantCallback_empty EventName="&apos;RepeatTakedownDone&apos;" />
+								</IfCondition>
+								<DefaultBranch>
+									<Success />
+								</DefaultBranch>
+							</Switch>
+						</Sequence>
+					</AtomicDecorator>
+					<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+				</Sequence>
+			</ActorStateBarrier>
+		</ForestContainer>
+		<EditorData Signature="tutorial_stealthTakedown" EventSet="">
+			<Variables>
+				<Variable name="areaBehindMe" comment="" />
+				<Variable name="chatAlias" comment="" />
+				<Variable name="chatFinished" comment="" />
+				<Variable name="dialogContext" comment="" />
+				<Variable name="perceptionInfo" comment="" />
+				<Variable name="playerInRangeForChat" comment="" />
+				<Variable name="shouldCommentAreaBehindMe" comment="" />
+				<Variable name="shouldCommentPerception" comment="" />
+				<Variable name="takedownResult" comment="" />
+				<Variable name="treeState" comment="" />
+				<Variable name="stealthTakedown_state" comment="" />
+				<Variable name="tagpoint" comment="" />
+				<Variable name="takedownArea" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+						</GraphSearch>
+						<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</ErrorNode>
+					</Selector>
+				</OnInit>
+				<Behavior>
+					<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Then>
+									<Wait hasInputBreakpoint="0" comment="Whole thing handled in CustomSwitchTree" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Then>
+								<Else>
+									<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Loop hasInputBreakpoint="0" comment="Can I chat?" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Wait>
+													</Sequence>
+												</AreaPresenceGate>
+											</Sequence>
+										</Loop>
+										<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<AddBuffElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</AddBuffElement>
+											</IfCondition>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<AddBuffElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</AddBuffElement>
+											</IfCondition>
+											<DefaultBranch>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</DefaultBranch>
+										</Switch>
+										<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IsInsideArea hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</ExactMove>
+																</MoveParamsDecorator>
+															</Then>
+															<Else>
+																<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</ExactMove>
+																	</MoveParamsDecorator>
+																</EntityContext>
+															</Else>
+														</IsInsideArea>
+														<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ClearInbox>
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+															<Else>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Else>
+														</IfElseCondition>
+													</Sequence>
+												</LogToLabel>
+											</IfCondition>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</IfCondition>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</IfCondition>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</IfCondition>
+																<DefaultBranch>
+																	<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</ErrorNode>
+																</DefaultBranch>
+															</Switch>
+															<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Wait>
+																		<Function_speech_monolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_speech_monolog>
+																	</Sequence>
+																</IfCondition>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_speech_dialogInitiator>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Sequence>
+																			</Then>
+																			<Else>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Else>
+																		</IfElseCondition>
+																		<CrimeFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</CrimeFollower>
+																	</Parallel>
+																</IfCondition>
+															</ContinuousSwitch>
+														</Sequence>
+													</LogToLabel>
+												</LogToLabel>
+											</IfCondition>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Wait>
+																	<Function_speech_monolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_speech_monolog>
+																</Sequence>
+															</Loop>
+														</AreaPresenceGate>
+													</Loop>
+												</LogToLabel>
+											</IfCondition>
+										</ContinuousSwitch>
+									</Parallel>
+								</Else>
+							</IsUnconsciousCheck>
+						</EntityContextElement>
+					</LogToLabel>
+				</Behavior>
+			</Root>
+			<Forest>
+				<ActorStateBarrier editorPosX="1890" editorPosY="-1440" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</IfCondition>
+										<DefaultBranch>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</DefaultBranch>
+									</Switch>
+									<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Then>
+										<Else>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Else>
+									</HasSeenPlayer>
+								</Sequence>
+							</ProcessMessage>
+						</SuppressFailure>
+						<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AddBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</AddBuff>
+								<Function_speech_monolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_speech_monolog>
+								<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</InstantCallback_empty>
+									</IfCondition>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</InstantCallback_empty>
+									</IfCondition>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</InstantCallback_empty>
+									</IfCondition>
+									<DefaultBranch>
+										<Success hasInputBreakpoint="0" comment="uhm" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Success>
+									</DefaultBranch>
+								</Switch>
+							</Sequence>
+						</AtomicDecorator>
+						<Wait hasInputBreakpoint="0" comment="should be closed from above" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Wait>
+					</Sequence>
+				</ActorStateBarrier>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

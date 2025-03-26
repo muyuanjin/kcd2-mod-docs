@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_animal_check" is_function="0">
+		<Variables>
+			<Variable name="additionalMoveParams" type="additionalMoveParams" values="destChangedThreshold(&apos;250ms&apos;)" isPersistent="0" form="single" />
+			<Variable name="canSeePlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="isPlayerInsideInterior" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="lastKnownPlayerPosition" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="movementSpeed" type="enum:movementSpeed" values="" isPersistent="0" form="single" />
+			<Variable name="shouldFollowPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="stopChecking" type="_bool" values="false" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="animalCheckData" type="switch:animal_interruptData:check" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<EntityContext context="crime_animal_interruptCheck" target="$this.id">
+							<EntityContext context="switch_disabledHearingReaction" target="">
+								<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+									<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:animal:check&apos;">
+										<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$animalCheckData.stimulusKind&apos;">
+											<Sequence>
+												<Function_crime_animal_confirmReactionLink reactionKind="$enum:crime_animal_reactionKind.check" target="$animalCheckData.target" nodeLabel="83924848" />
+												<IfGate atomic="false" condition="~$stopChecking" RunLogic="Halt">
+													<Parallel successMode="Any" failureMode="Any">
+														<Function_switch_animal_continuouslyCheckNervousnessForSpeed movementSpeed="$movementSpeed" nodeLabel="12729913" />
+														<Parallel successMode="Any" failureMode="Any">
+															<Switch>
+																<IfCondition failOnCondition="false" condition="$animalCheckData.stimulusKind == $enum:crime_animal_stimulusKind.trespass">
+																	<Function_switch_animal_continuouslyCheckTrespass isPlayerInsideInterior="$isPlayerInsideInterior" shouldBark="" shouldFollowPlayer="$shouldFollowPlayer" nodeLabel="54067453" />
+																</IfCondition>
+																<DefaultBranch>
+																	<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																</DefaultBranch>
+															</Switch>
+															<Function_switch_animal_continuouslyDoPerceptionSearchForTarget target="$animalCheckData.target" canSeeTarget="$canSeePlayer" nodeLabel="33056945" />
+															<ContinuousSwitch>
+																<IfCondition failOnCondition="false" condition="$shouldFollowPlayer &amp; $canSeePlayer">
+																	<ForceLook LookTarget="$animalCheckData.target" DisableVariations="false">
+																		<Sequence>
+																			<Move stopWithinDistance="1.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animalCheckData.target" destinationSpecification2="" destinationSpecification3="" speed="$movementSpeed" additionalParams="$additionalMoveParams" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																			<Expression expressions="$stopChecking = true" />
+																		</Sequence>
+																	</ForceLook>
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="true">
+																	<Sequence>
+																		<GetLastNavmeshPosition Target="$animalCheckData.target" OutPos="$lastKnownPlayerPosition" TrackingMode="NPCPos" />
+																		<Move stopWithinDistance="3.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$lastKnownPlayerPosition" destinationSpecification2="" destinationSpecification3="" speed="$movementSpeed" additionalParams="$additionalMoveParams" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																		<Expression expressions="$stopChecking = true" />
+																	</Sequence>
+																</IfCondition>
+															</ContinuousSwitch>
+														</Parallel>
+													</Parallel>
+												</IfGate>
+												<Function_switch_animal_callFollowUpBehavior previousReaction="$enum:crime_animal_reactionKind.check" nodeLabel="29431026" />
+											</Sequence>
+										</LogToLabel>
+									</LogToLabel>
+								</AddPerceivableState>
+							</EntityContext>
+						</EntityContext>
+					</Child>
+					<OnFail canSkip="1">
+						<Function_crime_animal_removeReactionLink reactionKind="$enum:crime_animal_reactionKind.check" target="$animalCheckData.target" nodeLabel="84493204" />
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Sequence>
+				<IfGate atomic="false" condition="$canSeePlayer" RunLogic="Halt">
+					<Parallel successMode="Any" failureMode="Any">
+						<Loop count="-1">
+							<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$perceptionInfo" senderInfo="" inbox="&apos;perceptionInfo&apos;" condition="" answerVar="">
+								<IfCondition failOnCondition="false" condition="$perceptionInfo.perceptible == $__player &amp; &#10;$perceptionInfo.threshold == 0">
+									<Expression expressions="$canSeePlayer = false" />
+								</IfCondition>
+							</ProcessMessage>
+						</Loop>
+						<ForceLook LookTarget="$__player" DisableVariations="false">
+							<Sequence>
+								<IfGate atomic="false" condition="~$stopChecking" RunLogic="Halt">
+									<Parallel successMode="Any" failureMode="Any">
+										<Switch>
+											<IfCondition failOnCondition="false" condition="$animalCheckData.stimulusKind == $enum:crime_animal_stimulusKind.trespass">
+												<Sequence>
+													<Function_switch_animal_determineTrespassReaction observer="$this.id" positionVec3="" positionWuid="$__player" shouldUseVec3="false" reaction="$isInMyTrespass" trespassArea="$dummyWuid" trespassLevel="$dummyTrespassLevel" nodeLabel="53874665" />
+													<IfElseCondition failOnCondition="false" condition="$isInMyTrespass" saveVersion="2">
+														<Then canSkip="1">
+															<Parallel successMode="Any" failureMode="Any">
+																<Loop count="-1">
+																	<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;private&apos;" Negation="false" RunLogic="KeepRunning">
+																		<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;private&apos;" Negation="true" RunLogic="Halt">
+																			<Sequence>
+																				<Expression expressions="$stopChecking = true" />
+																				<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																			</Sequence>
+																		</IsInsideAreaWithLabelBarrier>
+																	</IsInsideAreaWithLabelBarrier>
+																</Loop>
+																<Loop count="-1">
+																	<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;interior&apos;" Negation="false" RunLogic="KeepRunning">
+																		<Sequence>
+																			<Expression expressions="$stopChecking = true" />
+																			<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																		</Sequence>
+																	</IsInsideAreaWithLabelBarrier>
+																</Loop>
+															</Parallel>
+														</Then>
+														<Else canSkip="1">
+															<Expression expressions="$stopChecking = true" />
+														</Else>
+													</IfElseCondition>
+												</Sequence>
+											</IfCondition>
+											<DefaultBranch>
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</DefaultBranch>
+										</Switch>
+										<Sequence>
+											<Move stopWithinDistance="1.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$__player" destinationSpecification2="" destinationSpecification3="" speed="$movementSpeed" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+									</Parallel>
+								</IfGate>
+								<GetLastNavmeshPosition Target="$__player" OutPos="$lastKnownPlayerPosition" TrackingMode="NPCPos" />
+								<Move stopWithinDistance="2.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$lastKnownPlayerPosition" destinationSpecification2="" destinationSpecification3="" speed="$movementSpeed" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+							</Sequence>
+						</ForceLook>
+					</Parallel>
+				</IfGate>
+				<GetLastNavmeshPosition Target="$__player" OutPos="$lastKnownPlayerPosition" TrackingMode="NPCPos" />
+				<Move stopWithinDistance="2.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$lastKnownPlayerPosition" destinationSpecification2="" destinationSpecification3="" speed="$movementSpeed" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+			</Sequence>
+		</ForestContainer>
+		<EditorData Signature="animal_check" EventSet="">
+			<Variables>
+				<Variable name="additionalMoveParams" comment="" />
+				<Variable name="canSeePlayer" comment="" />
+				<Variable name="isPlayerInsideInterior" comment="" />
+				<Variable name="lastKnownPlayerPosition" comment="" />
+				<Variable name="movementSpeed" comment="" />
+				<Variable name="shouldFollowPlayer" comment="" />
+				<Variable name="stopChecking" comment="" />
+				<Variable name="animalCheckData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContext hasInputBreakpoint="0" comment="Ignore sounds while in watchTrespass" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_crime_animal_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_animal_confirmReactionLink>
+													<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_switch_animal_continuouslyCheckNervousnessForSpeed hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_animal_continuouslyCheckNervousnessForSpeed>
+															<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Function_switch_animal_continuouslyCheckTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_switch_animal_continuouslyCheckTrespass>
+																	</IfCondition>
+																	<DefaultBranch>
+																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Wait>
+																	</DefaultBranch>
+																</Switch>
+																<Function_switch_animal_continuouslyDoPerceptionSearchForTarget hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_switch_animal_continuouslyDoPerceptionSearchForTarget>
+																<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Move>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Sequence>
+																		</ForceLook>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<GetLastNavmeshPosition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</GetLastNavmeshPosition>
+																			<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Move>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Sequence>
+																	</IfCondition>
+																</ContinuousSwitch>
+															</Parallel>
+														</Parallel>
+													</IfGate>
+													<Function_switch_animal_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_switch_animal_callFollowUpBehavior>
+												</Sequence>
+											</LogToLabel>
+										</LogToLabel>
+									</AddPerceivableState>
+								</EntityContext>
+							</EntityContext>
+						</Child>
+						<OnFail>
+							<Function_crime_animal_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_animal_removeReactionLink>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Sequence editorPosX="3410" editorPosY="1960" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</IfCondition>
+								</ProcessMessage>
+							</Loop>
+							<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_switch_animal_determineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_switch_animal_determineTrespassReaction>
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																				</Sequence>
+																			</IsInsideAreaWithLabelBarrier>
+																		</IsInsideAreaWithLabelBarrier>
+																	</Loop>
+																	<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Wait>
+																			</Sequence>
+																		</IsInsideAreaWithLabelBarrier>
+																	</Loop>
+																</Parallel>
+															</Then>
+															<Else>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Else>
+														</IfElseCondition>
+													</Sequence>
+												</IfCondition>
+												<DefaultBranch>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</DefaultBranch>
+											</Switch>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Move hasInputBreakpoint="0" comment="Some other impuls should exit this behavior" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Move>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+										</Parallel>
+									</IfGate>
+									<GetLastNavmeshPosition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetLastNavmeshPosition>
+									<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Move>
+								</Sequence>
+							</ForceLook>
+						</Parallel>
+					</IfGate>
+					<GetLastNavmeshPosition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</GetLastNavmeshPosition>
+					<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Move>
+				</Sequence>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

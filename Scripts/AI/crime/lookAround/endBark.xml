@@ -1,0 +1,747 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_lookAround_endBark" is_function="1">
+		<Variables>
+			<Variable name="homeCooldowns" type="crime:homeCooldowns" values="" isPersistent="0" form="single" />
+			<Variable name="lookAroundReason" type="enum:crime_stimulusKind" values="" isPersistent="0" form="single" />
+			<Variable name="playerIsEnemy" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="shooter_distanceFromOrigin" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="shooter_pos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus_disturbance" type="switch:stimulus:disturbance" values="" isPersistent="0" form="single" />
+			<Variable name="stopBarkingRequest" type="animal:dog:stopBarkingRequest" values="" isPersistent="0" form="single" />
+			<Variable name="trespass_area" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="trespass_reactionSuppressed" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="trespass_severeness" type="enum:trespassLevel" values="" isPersistent="0" form="single" />
+			<Variable name="trespass_shouldReact" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="hotEntityTarget" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="lookAroundData" type="switch:interruptData:lookAround" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="targetFound" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<CheckRelationshipInterval_SoulToSoul TargetSoul="$__player" Soul="$this.id" Flag="enemy" saveVersion="2">
+						<Then canSkip="1">
+							<Expression expressions="$playerIsEnemy = true" />
+						</Then>
+						<Else canSkip="1">
+							<Success />
+						</Else>
+					</CheckRelationshipInterval_SoulToSoul>
+					<Expression expressions="$lookAroundReason = $lookAroundData.stimulusKind" />
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<IfElseCondition failOnCondition="false" condition="$targetFound" saveVersion="2">
+					<Then canSkip="1">
+						<Switch>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.missingNpc &amp; &#10;$lookAroundData.missingNpc ~= $__null">
+								<Sequence>
+									<RemoveLink From="$this.id" To="$lookAroundData.missingNpc" Tag="&apos;crime_followUpBehavior_kickMissingNpc&apos;" LinkOpHandleMode="Success" />
+									<IsDeadCheck SoulWUID="$lookAroundData.missingNpc" FailSubtMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Function_callInterrupt_lookAround alarmReactionType="$enum:crime_alarmReactionType.none" amIBuddy="$lookAroundData.amIBuddy" corpseState="$enum:corpseState.undiscovered" directHit="false" forceSubscribedSoundReaction="false" ignorePriority="true" information_look="$lookAroundData.information" initiator="$enum:switch_interruptInitiator.scheduler" missingNpc="$lookAroundData.missingNpc" position="$lookAroundData.position" previousReaction="$enum:crime_reactionKind.lookAround" reactingToSoundBecauseAlone="false" reportedBy="$__null" searchDirection="" searchPointsFromDirection="false" shooter="$__player" soundType="$enum:sound.movement" source="$enum:crime_source.direct" stimulusAnimalAbuse="" stimulusKind="$enum:crime_stimulusKind.corpse" nodeLabel="53950884" />
+										</Then>
+										<Else canSkip="1">
+											<IsUnconsciousCheck SoulWUID="$lookAroundData.missingNpc" FailSubtMissing="false" saveVersion="2">
+												<Then canSkip="1">
+													<AddLink From="$this.id" To="$lookAroundData.missingNpc" Tag="&apos;crime_followUpBehavior_wakeUp&apos;" Data="" LinkOpHandleMode="Success" />
+												</Then>
+												<Else canSkip="1">
+													<Function_callInterrupt_missingNpcFound ignorePriority="true" initiator="$enum:switch_interruptInitiator.scheduler" missingNPC="$lookAroundData.missingNpc" previousReaction="$enum:crime_reactionKind.lookAround" searchingNPC="$this.id" stimulusKind="$enum:crime_stimulusKind.missingNpc" nodeLabel="67157822" />
+												</Else>
+											</IsUnconsciousCheck>
+										</Else>
+									</IsDeadCheck>
+								</Sequence>
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.disturbance | &#10;( &#10; $lookAroundReason == $enum:crime_stimulusKind.sound &amp; &#10; ($lookAroundData.soundType == $enum:sound.decoy_distract | $lookAroundData.soundType == $enum:sound.lure_distract) &#10;)">
+								<Switch>
+									<CheckNervousnessInterval Soul="$this.id" Flag="highToInf" saveVersion="2">
+										<Then canSkip="1">
+											<AtomicDecorator>
+												<EntityContext context="crime_stimulusInitiatedByScheduler" target="">
+													<Function_switch_handleStimulusDisturbance stimulus="$stimulus_disturbance" nodeLabel="13969704" />
+												</EntityContext>
+											</AtomicDecorator>
+										</Then>
+									</CheckNervousnessInterval>
+									<CheckNervousnessInterval Soul="$this.id" Flag="midToInf" saveVersion="2">
+										<Then canSkip="1">
+											<Function_callInterrupt_mindPlayer ignorePriority="true" initiator="$enum:switch_interruptInitiator.scheduler" previousReaction="$enum:crime_reactionKind.lookAround" soundType="$lookAroundData.soundType" stimulusKind="$lookAroundReason" nodeLabel="85725318" />
+										</Then>
+									</CheckNervousnessInterval>
+									<DefaultBranch>
+										<IfElseCondition failOnCondition="false" condition="$lookAroundData.soundType == $enum:sound.lure_distract" saveVersion="2">
+											<Then canSkip="1">
+												<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;OSAMOCENE_NPC_NASLO_HRACE_U_ZDROJE_ZVUKU&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="39037216" />
+											</Then>
+											<Else canSkip="1">
+												<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_ROZPOZNALO_VYTRZNIKA_(KAMINEK)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="76471514" />
+											</Else>
+										</IfElseCondition>
+									</DefaultBranch>
+								</Switch>
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.shooter">
+								<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_PATRA_NA_MISTE_CINU_(ZVUK__VIDI_NPC)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="68230379" />
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.animalAbuse &amp; &#10;$lookAroundData.stimulusAnimalAbuse.isPoaching">
+								<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;HAJNY_PATRAL_PO_PYTLAKOVI_A_NASEL_HRACE&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="49215500" />
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.sound">
+								<Switch>
+									<IfCondition failOnCondition="false" condition="$lookAroundData.soundType == $enum:sound.dog_bark">
+										<Sequence>
+											<HasSeenPlayer NPC="" FullyAwareOnly="false" saveVersion="2">
+												<Then canSkip="1">
+													<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_NASLO_ZVUK_PES&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="88056248" />
+												</Then>
+												<Else canSkip="1">
+													<Sequence>
+														<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_NENASLO_ZVUK_PES&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="10712807" />
+														<Sequence>
+															<Function_crime_getHomeCooldowns home="$__null" useHomeWuid="false" cooldownData="$homeCooldowns" nodeLabel="80499204" />
+															<GetTime TimeType="GameTime" OutVar="$homeCooldowns.dogBarkReaction" Delta="" />
+															<Expression expressions="$homeCooldowns.dogBarkReaction += $data:script_param[&apos;crime_homeCooldowns_dogBarkReaction&apos;].value" />
+															<Function_crime_updateHomeCooldowns cooldownData="$homeCooldowns" home="$__null" useHomeWuid="false" nodeLabel="71757979" />
+														</Sequence>
+													</Sequence>
+												</Else>
+											</HasSeenPlayer>
+											<Expression expressions="$stopBarkingRequest.source = $this.id" />
+											<SuppressFailure>
+												<InstantSendMessageToNPC target="$hotEntityTarget" variable="$stopBarkingRequest" />
+											</SuppressFailure>
+										</Sequence>
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="$lookAroundData.soundType == $enum:sound.bow_fired | &#10;$lookAroundData.soundType == $enum:sound.gun_fired | &#10;$lookAroundData.soundType == $enum:sound.thrash">
+										<Sequence>
+											<DetermineTrespassReaction Observer="$this.id" Target="$__player" Position="" ForceSemipublicReaction="false" ShouldUseVec3Position="false" TrespassAreaSevereness="$trespass_severeness" TrespassArea="$trespass_area" Reaction="$trespass_shouldReact" ReactionSuppressed="$trespass_reactionSuppressed" />
+											<IfElseCondition failOnCondition="false" condition="$trespass_shouldReact |  &#10;$playerIsEnemy" saveVersion="2">
+												<Then canSkip="1">
+													<Success />
+												</Then>
+												<Else canSkip="1">
+													<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_PATRA_NA_MISTE_CINU_(ZVUK__VIDI_NPC)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="31600335" />
+												</Else>
+											</IfElseCondition>
+										</Sequence>
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="$lookAroundData.soundType == $enum:sound.whistle">
+										<Sequence>
+											<GetSpatialInfo In="$__player" Out="$shooter_pos" What="Position" />
+											<MeasureDistance position1="$__player" position2="$lookAroundData.position" mode="ThreeDimensions" result="$shooter_distanceFromOrigin" />
+											<IfElseCondition failOnCondition="false" condition="$shooter_distanceFromOrigin &lt; 10" saveVersion="2">
+												<Then canSkip="1">
+													<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_NASLO_ZDROJ_ZVUKU_(PISKANI_BLIZKO)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="15072406" />
+												</Then>
+												<Else canSkip="1">
+													<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_NASLO_ZDROJ_ZVUKU_(PISKANI_DALEKO)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="94956697" />
+												</Else>
+											</IfElseCondition>
+										</Sequence>
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="$lookAroundData.soundType == $enum:sound.dog_attack_command">
+										<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_REAGUJE_NA_ZVUK_PISKANI_NA_PSA&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="32161730" />
+									</IfCondition>
+									<DefaultBranch>
+										<IfElseCondition failOnCondition="false" condition="$lookAroundData.reactingBecauseAlone" saveVersion="2">
+											<Then canSkip="1">
+												<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;OSAMOCENE_NPC_NASLO_HRACE_U_ZDROJE_ZVUKU&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="33332313" />
+											</Then>
+											<Else canSkip="1">
+												<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_PATRA_NA_MISTE_CINU_(ZVUK__VIDI_NPC)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="38981049" />
+											</Else>
+										</IfElseCondition>
+									</DefaultBranch>
+								</Switch>
+							</IfCondition>
+							<DefaultBranch>
+								<Success />
+							</DefaultBranch>
+						</Switch>
+					</Then>
+					<Else canSkip="1">
+						<Switch>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.corpse | &#10;$lookAroundReason == $enum:crime_stimulusKind.murder">
+								<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VZDAVA_PATRANI_NA_MISTE_CINU_(MRTVOLA)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="64161351" />
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.sound">
+								<Switch>
+									<IfCondition failOnCondition="false" condition="$lookAroundData.soundType == $enum:sound.smell | &#10;$lookAroundData.soundType == $enum:sound.perfume">
+										<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VZDAVA_PATRANI_PO_ZDROJI_SMRADU&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="99089957" />
+									</IfCondition>
+									<IfElseCondition failOnCondition="false" condition="$lookAroundData.soundType == $enum:sound.dog_bark" saveVersion="2">
+										<Then canSkip="1">
+											<Sequence>
+												<HasSeenPlayer NPC="" FullyAwareOnly="false" saveVersion="2">
+													<Then canSkip="1">
+														<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_NASLO_ZVUK_PES&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="45333849" />
+													</Then>
+													<Else canSkip="1">
+														<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_NENASLO_ZVUK_PES&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="15077413" />
+													</Else>
+												</HasSeenPlayer>
+												<Expression expressions="$stopBarkingRequest.source = $this.id" />
+												<SuppressFailure>
+													<InstantSendMessageToNPC target="$hotEntityTarget" variable="$stopBarkingRequest" />
+												</SuppressFailure>
+												<Sequence>
+													<Function_crime_getHomeCooldowns home="$__null" useHomeWuid="false" cooldownData="$homeCooldowns" nodeLabel="66414561" />
+													<GetTime TimeType="GameTime" OutVar="$homeCooldowns.dogBarkReaction" Delta="" />
+													<Expression expressions="$homeCooldowns.dogBarkReaction += $data:script_param[&apos;crime_homeCooldowns_dogBarkReaction&apos;].value" />
+													<Function_crime_updateHomeCooldowns cooldownData="$homeCooldowns" home="$__null" useHomeWuid="false" nodeLabel="64310002" />
+												</Sequence>
+											</Sequence>
+										</Then>
+									</IfElseCondition>
+									<DefaultBranch>
+										<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VZDAVA_PATRANI_NA_MISTE_CINU_(ZVUK)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="49755728" />
+									</DefaultBranch>
+								</Switch>
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.corpseMissing">
+								<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;STRAZ_VZDAVA_PATRANI_NA_MISTE_CINU_(ZMIZELA_MRTVOLA)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="88906782" />
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.missingNpc">
+								<Sequence>
+									<Function_crime_addAngriness angriness="&apos;missingNpcNotFound&apos;" target="$this.id" nodeLabel="73872030" />
+									<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VZDAVA_PATRANI_NA_MISTE_CINU_(ZMIZELE_NPC)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="17105242" />
+								</Sequence>
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.disturbance">
+								<IfElseCondition failOnCondition="false" condition="$lookAroundData.reactingToReportFrom == $__null" saveVersion="2">
+									<Then canSkip="1">
+										<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VZDAVA_PATRANI_NA_MISTE_CINU_(VYTRZNOST)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="84203808" />
+									</Then>
+									<Else canSkip="1">
+										<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VZDAVA_PATRANI_NA_MISTE_CINU_(VYTRZNOST__STRAZ)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="65728824" />
+									</Else>
+								</IfElseCondition>
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.corpseViolation">
+								<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VZDAVA_PATRANI_NA_MISTE_CINU_(HANOBENI_MRTVOLY)&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="28371583" />
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$lookAroundData.information.label == &apos;nonAttributedCrime&apos;">
+								<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VZDAVA_PATRANI_NA_MISTE_CINU_(NEVI_O_HRACI)&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="52410736" />
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$lookAroundReason == $enum:crime_stimulusKind.animalAbuse">
+								<IfElseCondition failOnCondition="false" condition="$lookAroundData.stimulusAnimalAbuse.isPoaching" saveVersion="2">
+									<Then canSkip="1">
+										<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;HAJNY_HLEDAL_PYTLAKA_A_NENASEL&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="98937740" />
+									</Then>
+									<Else canSkip="1">
+										<Switch>
+											<IfCondition failOnCondition="false" condition="$lookAroundData.stimulusAnimalAbuse.animalAbuseKind == $enum:crime_animalAbuseKind.assault">
+												<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+													<Then canSkip="1">
+														<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;STRAZ_VZDAVA_LOOKAROUND_PO_NAPADENI_ZVIRETE&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="86372259" />
+													</Then>
+													<Else canSkip="1">
+														<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VZDAVA_PATRANI_PO_UTOCNIKOVI_NA_ZVIRE&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="68828206" />
+													</Else>
+												</EntityContextCheck>
+											</IfCondition>
+											<IfCondition failOnCondition="false" condition="$lookAroundData.stimulusAnimalAbuse.animalAbuseKind == $enum:crime_animalAbuseKind.murder">
+												<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+													<Then canSkip="1">
+														<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;STRAZ_VZDAVA_PATRANI_PO_VRAHOVI_ZVIRAT&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="91081991" />
+													</Then>
+													<Else canSkip="1">
+														<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VZDAVA_PATRANI_PO_VRAHOVI_ZVIRETE&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="54255569" />
+													</Else>
+												</EntityContextCheck>
+											</IfCondition>
+										</Switch>
+									</Else>
+								</IfElseCondition>
+							</IfCondition>
+							<DefaultBranch>
+								<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_VZDAVA_PATRANI_NA_MISTE_CINU&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="56635392" />
+							</DefaultBranch>
+						</Switch>
+					</Else>
+				</IfElseCondition>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Sequence>
+				<GetSpatialInfo In="$lookAroundData.shooter" Out="$shooter_pos" What="Position" />
+				<MeasureDistance position1="$shooter_pos" position2="$lookAroundData.position" mode="ThreeDimensions" result="$shooter_distanceFromOrigin" />
+				<IfElseCondition failOnCondition="false" condition="$shooter_distanceFromOrigin &lt; 10" saveVersion="2">
+					<Then canSkip="1">
+						<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$lookAroundData.shooter" metarole="&apos;NPC_NASLO_ZDROJ_ZVUKU_(BLIZKO)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="48119953" />
+					</Then>
+					<Else canSkip="1">
+						<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$lookAroundData.shooter" metarole="&apos;NPC_NASLO_ZDROJ_ZVUKU_(DALEKO)&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="78859650" />
+					</Else>
+				</IfElseCondition>
+			</Sequence>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="homeCooldowns" comment="" />
+				<Variable name="lookAroundReason" comment="" />
+				<Variable name="playerIsEnemy" comment="" />
+				<Variable name="shooter_distanceFromOrigin" comment="" />
+				<Variable name="shooter_pos" comment="" />
+				<Variable name="stimulus_disturbance" comment="" />
+				<Variable name="stopBarkingRequest" comment="" />
+				<Variable name="trespass_area" comment="" />
+				<Variable name="trespass_reactionSuppressed" comment="" />
+				<Variable name="trespass_severeness" comment="" />
+				<Variable name="trespass_shouldReact" comment="" />
+				<Variable name="hotEntityTarget" comment="" />
+				<Variable name="lookAroundData" comment="" />
+				<Variable name="targetFound" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Then>
+							<Else>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Else>
+						</CheckRelationshipInterval_SoulToSoul>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Then>
+							<Switch hasInputBreakpoint="0" comment="TARGET FOUND" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="TODO: isnt the null check redundant?" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</RemoveLink>
+										<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_callInterrupt_lookAround hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_callInterrupt_lookAround>
+											</Then>
+											<Else>
+												<IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</AddLink>
+													</Then>
+													<Else>
+														<Function_callInterrupt_missingNpcFound hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_callInterrupt_missingNpcFound>
+													</Else>
+												</IsUnconsciousCheck>
+											</Else>
+										</IsDeadCheck>
+									</Sequence>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<CheckNervousnessInterval hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_switch_handleStimulusDisturbance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_switch_handleStimulusDisturbance>
+													</EntityContext>
+												</AtomicDecorator>
+											</Then>
+										</CheckNervousnessInterval>
+										<CheckNervousnessInterval hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_callInterrupt_mindPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_callInterrupt_mindPlayer>
+											</Then>
+										</CheckNervousnessInterval>
+										<DefaultBranch>
+											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_crimeBark>
+												</Then>
+												<Else>
+													<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_crimeBark>
+												</Else>
+											</IfElseCondition>
+										</DefaultBranch>
+									</Switch>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_crimeBark>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_crimeBark>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_crimeBark>
+													</Then>
+													<Else>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_crimeBark>
+															<Sequence hasInputBreakpoint="0" comment="Update home cooldown for dog_bark" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_crime_getHomeCooldowns hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_getHomeCooldowns>
+																<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetTime>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<Function_crime_updateHomeCooldowns hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_updateHomeCooldowns>
+															</Sequence>
+														</Sequence>
+													</Else>
+												</HasSeenPlayer>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</InstantSendMessageToNPC>
+												</SuppressFailure>
+											</Sequence>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</DetermineTrespassReaction>
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Success hasInputBreakpoint="0" comment="Go into watchTrespass" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Success>
+													</Then>
+													<Else>
+														<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_crimeBark>
+													</Else>
+												</IfElseCondition>
+											</Sequence>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetSpatialInfo>
+												<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</MeasureDistance>
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_crimeBark>
+													</Then>
+													<Else>
+														<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_crimeBark>
+													</Else>
+												</IfElseCondition>
+											</Sequence>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_crimeBark>
+										</IfCondition>
+										<DefaultBranch>
+											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_crimeBark>
+												</Then>
+												<Else>
+													<Function_crime_crimeBark hasInputBreakpoint="0" comment="this is in fact the correct metarole here" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_crimeBark>
+												</Else>
+											</IfElseCondition>
+										</DefaultBranch>
+									</Switch>
+								</IfCondition>
+								<DefaultBranch>
+									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Success>
+								</DefaultBranch>
+							</Switch>
+						</Then>
+						<Else>
+							<Switch hasInputBreakpoint="0" comment="TARGET NOT FOUND" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_crimeBark>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_crimeBark>
+										</IfCondition>
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_crimeBark>
+														</Then>
+														<Else>
+															<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_crimeBark>
+														</Else>
+													</HasSeenPlayer>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</InstantSendMessageToNPC>
+													</SuppressFailure>
+													<Sequence hasInputBreakpoint="0" comment="Update home cooldown for dog_bark" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_crime_getHomeCooldowns hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_getHomeCooldowns>
+														<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetTime>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<Function_crime_updateHomeCooldowns hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_updateHomeCooldowns>
+													</Sequence>
+												</Sequence>
+											</Then>
+										</IfElseCondition>
+										<DefaultBranch>
+											<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_crimeBark>
+										</DefaultBranch>
+									</Switch>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_crimeBark>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Function_crime_addAngriness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_addAngriness>
+										<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_crimeBark>
+									</Sequence>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_crimeBark>
+										</Then>
+										<Else>
+											<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_crimeBark>
+										</Else>
+									</IfElseCondition>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_crimeBark>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_crimeBark>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_crimeBark>
+										</Then>
+										<Else>
+											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_crimeBark>
+														</Then>
+														<Else>
+															<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_crimeBark>
+														</Else>
+													</EntityContextCheck>
+												</IfCondition>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_crimeBark>
+														</Then>
+														<Else>
+															<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_crimeBark>
+														</Else>
+													</EntityContextCheck>
+												</IfCondition>
+											</Switch>
+										</Else>
+									</IfElseCondition>
+								</IfCondition>
+								<DefaultBranch>
+									<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_crimeBark>
+								</DefaultBranch>
+							</Switch>
+						</Else>
+					</IfElseCondition>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Sequence editorPosX="2640" editorPosY="-700" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</GetSpatialInfo>
+					<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</MeasureDistance>
+					<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Then>
+							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_crimeBark>
+						</Then>
+						<Else>
+							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_crimeBark>
+						</Else>
+					</IfElseCondition>
+				</Sequence>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

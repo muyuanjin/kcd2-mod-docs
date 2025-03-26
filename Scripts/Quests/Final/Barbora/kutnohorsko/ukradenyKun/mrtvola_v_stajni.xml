@@ -1,0 +1,167 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Database xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="brambora">
+	<Skald>
+		<Module Name="mrtvola_v_stajni">
+			<Ports>
+				<Port Name="quest_nastartovany" Direction="In" Type="bool">
+					<DesignName StringName="mrtvola_v_quest_nastartov_eivC" Text="Quest nastartovaný" />
+				</Port>
+				<Port Name="nastreamuj_mrtvoly_a_aktivuj_focuscamera" Direction="In" Type="trigger">
+					<DesignName StringName="streamova_nastreamuj_mrtv_J6rC" Text="Nastreamuj mrtvoly a aktivuj FocusCamera" />
+				</Port>
+				<Port Name="spusti_timer_na_prestreamovanie_mrtvoly_hrobom" Direction="In" Type="trigger">
+					<DesignName StringName="mrtvola_v_nastreamuj_mies_kDXt" Text="Spusti timer na prestreamovanie mrtvoly hrobom" />
+				</Port>
+				<Port Name="hrac_nasiel_mrtvolu" Direction="Out" Type="bool">
+					<DesignName StringName="mrtvola_v_hrac_nasiel_mrt_lPtn" Text="Hráč našiel mrtvolu" />
+				</Port>
+			</Ports>
+			<Definitions>
+				<Definition File="mrtvola_v_stajni/kontrola_pred_streamovanim_hrobu.xml" />
+				<Definition File="mrtvola_v_stajni/hrac_nasel_mrtvolu_bandity.xml" />
+			</Definitions>
+			<Nodes>
+				<ActorCarryCorpseTrigger Name="actorcarrycorpsetrigger8" PositionY="160" PositionX="170">
+					<Asset Name="Soul" Alias="player" />
+					<Edge From="streamovanieBandity.CorpseStreamed" To="IsActive">
+						<Vertex>vertex25</Vertex>
+					</Edge>
+				</ActorCarryCorpseTrigger>
+				<FocusCamWithinArea Name="FocusCamWithinArea" PositionY="-30" PositionX="980" Namespace="utils.general">
+					<Asset Name="target" Alias="corpse" />
+					<Asset Name="area" Alias="stableCorpseArea" />
+					<Constant Name="actionprompt" Value="mrtvola_v_prohlednout_mrt_fyzK" />
+					<Constant Name="focuscam_horizontallimits" Value="0.5,0.5" />
+					<Constant Name="focuscam_verticallimits" Value="0.5,0.5" />
+					<Constant Name="focuscam_dampingfactor" Value="12" />
+					<Edge From="ifcompare9.True" To="disable">
+						<Vertex>vertex10</Vertex>
+					</Edge>
+					<Edge From="profilestatetrigger17.OnLoaded" To="enable" />
+					<Edge From="kontrola_pred_streamovanim_hrobu.mrtvola_moze_byt_odstreamovana_a_hrob_nastreamovany" To="disable">
+						<Vertex>vertex41</Vertex>
+						<Vertex>vertex40</Vertex>
+						<Vertex>vertex10</Vertex>
+					</Edge>
+				</FocusCamWithinArea>
+				<hrac_nasel_mrtvolu_bandity Name="hrac_nasel_mrtvolu_bandity" PositionY="-250" PositionX="1400">
+					<Edge From="quest_nastartovany" To="quest_nastartovany">
+						<Vertex>vertex51</Vertex>
+					</Edge>
+				</hrac_nasel_mrtvolu_bandity>
+				<State Name="hracNaselMrtvolu" PositionY="310" PositionX="1530" TypeT="bool">
+					<Edge From="FocusCamWithinArea.onfocuscamentered" To="SetTrue" />
+					<Edge From="ifcompare9.True" To="SetTrue">
+						<Vertex>vertex10</Vertex>
+						<Vertex>vertex50</Vertex>
+					</Edge>
+					<Edge From="kontrola_pred_streamovanim_hrobu.mrtvola_moze_byt_odstreamovana_a_hrob_nastreamovany" To="SetTrue">
+						<Vertex>vertex41</Vertex>
+						<Vertex>vertex40</Vertex>
+						<Vertex>vertex10</Vertex>
+						<Vertex>vertex50</Vertex>
+					</Edge>
+				</State>
+				<If Name="if24" PositionY="-50" PositionX="-1220">
+					<Edge From="nastreamuj_mrtvoly_a_aktivuj_focuscamera" To="Exec" />
+					<Edge From="streamovanieBandity.None" To="Condition">
+						<Vertex>vertex48</Vertex>
+						<Vertex>vertex49</Vertex>
+					</Edge>
+				</If>
+				<IfFunction Name="ifcompare9" PositionY="160" PositionX="430" TypeT="wh::rpgmodule::I_Soul*" MethodName="Control::Compare" DeclaringType="Control">
+					<Asset Name="ValueA" Alias="corpse" />
+					<Constant Name="Op" Value="Equals" />
+					<Edge From="actorcarrycorpsetrigger8.Corpse" To="ValueB" />
+					<Edge From="actorcarrycorpsetrigger8.OnCarry" To="Exec" />
+				</IfFunction>
+				<kontrola_pred_streamovanim_hrobu Name="kontrola_pred_streamovanim_hrobu" PositionY="460" PositionX="-1330">
+					<Edge From="spusti_timer_na_prestreamovanie_mrtvoly_hrobom" To="spusti_timer_na_prestreamovanie" />
+					<Edge From="ifcompare9.True" To="spusti_timer_na_prestreamovanie">
+						<Vertex>vertex42</Vertex>
+						<Vertex>vertex43</Vertex>
+					</Edge>
+					<Edge From="FocusCamWithinArea.onfocuscamentered" To="spusti_timer_na_prestreamovanie">
+						<Vertex>vertex44</Vertex>
+						<Vertex>vertex42</Vertex>
+						<Vertex>vertex43</Vertex>
+					</Edge>
+					<Edge From="streamovanieBandity.CorpseStreamed" To="mrtvola_nastreamovana">
+						<Vertex>vertex45</Vertex>
+						<Vertex>vertex46</Vertex>
+					</Edge>
+				</kontrola_pred_streamovanim_hrobu>
+				<Function Name="or16" PositionY="280" PositionX="-480" MethodName="math::boolean::Or" DeclaringType="math::boolean">
+					<Edge From="streamovanieBandity.WaitingForCorpse" To="A" />
+					<Edge From="streamovanieBandity.CorpseStreamed" To="B" />
+				</Function>
+				<Output Name="Output">
+					<Edge From="hracNaselMrtvolu.State" To="hrac_nasiel_mrtvolu" />
+				</Output>
+				<Layer Name="profile15" PositionY="280" PositionX="-240">
+					<Asset Name="Profiles" Alias="profileCorpse" />
+					<Edge From="or16.bool" To="IsActive" />
+				</Layer>
+				<Layer Name="profile23" PositionY="450" PositionX="-480">
+					<Asset Name="Profiles" Alias="profileGrave" />
+					<Edge From="streamovanieBandity.GraveStreamed" To="IsActive" />
+				</Layer>
+				<ProfileStateTrigger Name="profilestatetrigger17" PositionY="-70" PositionX="-460">
+					<Asset Name="Profiles" Alias="profileCorpse" />
+					<Edge From="streamovanieBandity.WaitingForCorpse" To="IsActive" />
+				</ProfileStateTrigger>
+				<Function Name="requestmonologue1" PositionY="0" PositionX="1350" MethodName="wh::xgenaimodule::RequestMonologue" DeclaringType="wh::xgenaimodule">
+					<Asset Name="Souls" Alias="player" />
+					<Constant Name="DecisionAlias" Value="ukradenyKun_hracNaselMrtvoluBandity" />
+					<Edge From="FocusCamWithinArea.onfocuscamentered" To="Exec" />
+				</Function>
+				<SetRelationContext Name="setrelationcontext4" PositionY="400" PositionX="170">
+					<Constant Name="Context" Value="crime_ignoreCorpse" />
+					<Asset Name="From" Alias="hastal" />
+					<Asset Name="To" Alias="corpse" />
+					<Edge From="streamovanieBandity.CorpseStreamed" To="IsActive">
+						<Vertex>vertex25</Vertex>
+					</Edge>
+				</SetRelationContext>
+				<HasteTrigger Name="streamGrave" PositionY="130" PositionX="-1300" />
+				<State Name="streamovanieBandity" PositionY="-70" PositionX="-920" TypeT="DeadBanditStreaming">
+					<Edge From="profilestatetrigger17.OnLoaded" To="SetCorpseStreamed">
+						<Vertex>vertex27</Vertex>
+						<Vertex>vertex28</Vertex>
+					</Edge>
+					<Edge From="if24.True" To="SetWaitingForCorpse" />
+					<Edge From="kontrola_pred_streamovanim_hrobu.mrtvola_moze_byt_odstreamovana_a_hrob_nastreamovany" To="SetGraveStreamed" />
+					<Edge From="streamGrave.OnTrigger" To="SetGraveStreamed" />
+				</State>
+			</Nodes>
+			<EdgeVertices>
+				<EdgeVertex Name="vertex10" PositionY="250" PositionX="870" />
+				<EdgeVertex Name="vertex25" PositionY="250" PositionX="-20" />
+				<EdgeVertex Name="vertex27" PositionY="-120" PositionX="-230" />
+				<EdgeVertex Name="vertex28" PositionY="-120" PositionX="-890" />
+				<EdgeVertex Name="vertex40" PositionY="958" PositionX="686" />
+				<EdgeVertex Name="vertex41" PositionY="958" PositionX="-901" />
+				<EdgeVertex Name="vertex42" PositionY="980" PositionX="580" />
+				<EdgeVertex Name="vertex43" PositionY="1000" PositionX="-1320" />
+				<EdgeVertex Name="vertex44" PositionY="980" PositionX="1240" />
+				<EdgeVertex Name="vertex45" PositionY="380" PositionX="-640" />
+				<EdgeVertex Name="vertex46" PositionY="380" PositionX="-1300" />
+				<EdgeVertex Name="vertex48" PositionY="-90" PositionX="-610" />
+				<EdgeVertex Name="vertex49" PositionY="-90" PositionX="-1200" />
+				<EdgeVertex Name="vertex50" PositionY="470" PositionX="980" />
+				<EdgeVertex Name="vertex51" PositionY="-201" PositionX="-1298" />
+			</EdgeVertices>
+			<Notes>
+				<Note Name="note25" PositionY="220" PositionX="1470">
+					<Text StringName="mrtvola_v_note25_UYQa" Text="pouzit foc cam finished ak to pojde&#xD;&#xA;&#xD;&#xA;skusit foc cameru spravit sama. Aby bol len jeden stav" />
+				</Note>
+			</Notes>
+			<Text StringName="streamovanie_HJqt" Text="Mŕtvola v stajni" />
+			<Elements>
+				<ActionPromptElement>
+					<Text StringName="mrtvola_v_prohlednout_mrt_fyzK" Text="Prohlédnout mrtvolu." />
+				</ActionPromptElement>
+			</Elements>
+		</Module>
+	</Skald>
+</Database>

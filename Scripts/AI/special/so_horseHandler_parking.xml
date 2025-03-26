@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="onUpdate" is_function="0">
+    <Variables>
+      <Variable name="break" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="horse" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="horseHandler_cleanupAssets" type="horseHandler:cleanupAssets" values="" isPersistent="0" form="single" />
+      <Variable name="horse_soul" type="cast:wuid_soul" values="" isPersistent="0" form="single" />
+      <Variable name="parking_area" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="playerHorse" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="qsoAssets" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="qsoAssets_val" type="_wuid" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <OnInit canSkip="1">
+        <AtomicDecorator>
+          <Sequence>
+            <Selector>
+              <GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                <LinkTagFilter tag="&apos;parking_area&apos;" prune="true" negprune="unknown" Parent="" Child="$parking_area" Data="" />
+              </GraphSearch>
+              <ErrorNode Message="&apos;[$this.name;] parking_area not linked&apos;" />
+            </Selector>
+            <SendAIConceptSignal_horseHandler_horseEvent horse="$horse_soul" operation="$enum:horseHandler_operation.ResetValidHorsesCount" />
+          </Sequence>
+        </AtomicDecorator>
+      </OnInit>
+      <Behavior canSkip="1">
+        <Parallel successMode="Any" failureMode="Any">
+          <Loop count="-1">
+            <AreaPresenceListener aiObjects="" area="$parking_area" trackIn="true" trackOut="true" reportInitialState="true">
+              <AtomicDecorator>
+                <EntityContextCheck context="switch_isHorse" target="$__presenceObject" saveVersion="2">
+                  <Then canSkip="1">
+                    <Sequence>
+                      <GetPlayerHorse HorseWuid="$playerHorse" />
+                      <Expression expressions="$horse = $__presenceObject" />
+                      <IsDeadCheck SoulWUID="$horse" FailSubtMissing="false" saveVersion="2">
+                        <Then canSkip="1">
+                          <Success />
+                        </Then>
+                        <Else canSkip="1">
+                          <Sequence>
+                            <Expression expressions="$horse_soul.value = $horse" />
+                            <IfElseCondition failOnCondition="false" condition="$horse == $playerHorse" saveVersion="2">
+                              <Then canSkip="1">
+                                <IfElseCondition failOnCondition="false" condition="$__presence" saveVersion="2">
+                                  <Then canSkip="1">
+                                    <SendAIConceptSignal_horseHandler_horseEvent horse="$horse_soul" operation="$enum:horseHandler_operation.PlayerHorseAdded" />
+                                  </Then>
+                                  <Else canSkip="1">
+                                    <SendAIConceptSignal_horseHandler_horseEvent horse="$horse_soul" operation="$enum:horseHandler_operation.PlayerHorseRemoved" />
+                                  </Else>
+                                </IfElseCondition>
+                              </Then>
+                              <Else canSkip="1">
+                                <EntityContextCheck context="crime_disableHorseRespraying" target="$horse" saveVersion="2">
+                                  <Else canSkip="1">
+                                    <LuaGate code="return XGenAIModule.GetEntityByWUID(data.horse):GetMountableByPlayer()" saveVersion="2">
+                                      <Then canSkip="1">
+                                        <IfElseCondition failOnCondition="false" condition="$__presence" saveVersion="2">
+                                          <Then canSkip="1">
+                                            <Sequence>
+                                              <AddLink From="$this.id" To="$horse" Tag="&apos;asset&apos;" Data="&apos;horseHandler_horses&apos;" LinkOpHandleMode="OverWrite" />
+                                              <SendAIConceptSignal_horseHandler_horseEvent horse="$horse_soul" operation="$enum:horseHandler_operation.ValidHorseAdded" />
+                                            </Sequence>
+                                          </Then>
+                                          <Else canSkip="1">
+                                            <Sequence>
+                                              <SendAIConceptSignal_horseHandler_horseEvent horse="$horse_soul" operation="$enum:horseHandler_operation.ValidHorseRemoved" />
+                                              <RemoveLink From="$this.id" To="$horse" Tag="&apos;asset&apos;" LinkOpHandleMode="OverWrite" />
+                                            </Sequence>
+                                          </Else>
+                                        </IfElseCondition>
+                                      </Then>
+                                      <Else canSkip="1">
+                                        <Success />
+                                      </Else>
+                                    </LuaGate>
+                                  </Else>
+                                </EntityContextCheck>
+                              </Else>
+                            </IfElseCondition>
+                          </Sequence>
+                        </Else>
+                      </IsDeadCheck>
+                    </Sequence>
+                  </Then>
+                  <Else canSkip="1">
+                    <Success />
+                  </Else>
+                </EntityContextCheck>
+              </AtomicDecorator>
+            </AreaPresenceListener>
+          </Loop>
+          <Loop count="-1">
+            <ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$horseHandler_cleanupAssets" senderInfo="" inbox="&apos;horseHandler_cleanupAssets&apos;" condition="" answerVar="">
+              <Sequence>
+                <GetPlayerHorse HorseWuid="$playerHorse" />
+                <SuppressFailure>
+                  <Sequence>
+                    <VarOperation varName="$qsoAssets" targetVarName="" operation="Reinit" argument="" />
+                    <GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                      <LinkTagFilter tag="&apos;asset&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                      <Nodalyzer Quantifiers="ForAll" Parent="" Child="$qsoAssets" saveVersion="2" />
+                    </GraphSearch>
+                    <Expression expressions="$break = false" />
+                    <ForEach startIndex="0" step="1" array="$qsoAssets" iterator="" value="$qsoAssets_val" break="$break">
+                      <EntityContextCheck context="switch_isHorse" target="$qsoAssets_val" saveVersion="2">
+                        <Then canSkip="1">
+                          <IfElseCondition failOnCondition="false" condition="$qsoAssets_val == $playerHorse" saveVersion="2">
+                            <Then canSkip="1">
+                              <RemoveLink From="$this.id" To="$qsoAssets_val" Tag="&apos;asset&apos;" LinkOpHandleMode="OverWrite" />
+                            </Then>
+                            <Else canSkip="1">
+                              <IsDeadCheck SoulWUID="$qsoAssets_val" FailSubtMissing="false" saveVersion="2">
+                                <Then canSkip="1">
+                                  <Sequence>
+                                    <Expression expressions="$horse_soul.value = $horse" />
+                                    <SendAIConceptSignal_horseHandler_horseEvent horse="$horse_soul" operation="$enum:horseHandler_operation.ValidHorseRemoved" />
+                                    <RemoveLink From="$this.id" To="$qsoAssets_val" Tag="&apos;asset&apos;" LinkOpHandleMode="OverWrite" />
+                                  </Sequence>
+                                </Then>
+                              </IsDeadCheck>
+                            </Else>
+                          </IfElseCondition>
+                        </Then>
+                      </EntityContextCheck>
+                    </ForEach>
+                  </Sequence>
+                </SuppressFailure>
+              </Sequence>
+            </ProcessMessage>
+          </Loop>
+        </Parallel>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="break" comment="" />
+        <Variable name="horse" comment="" />
+        <Variable name="horseHandler_cleanupAssets" comment="" />
+        <Variable name="horse_soul" comment="" />
+        <Variable name="parking_area" comment="" />
+        <Variable name="playerHorse" comment="" />
+        <Variable name="qsoAssets" comment="" />
+        <Variable name="qsoAssets_val" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <OnInit>
+          <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </LinkTagFilter>
+                </GraphSearch>
+                <ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </ErrorNode>
+              </Selector>
+              <SendAIConceptSignal_horseHandler_horseEvent hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+              </SendAIConceptSignal_horseHandler_horseEvent>
+            </Sequence>
+          </AtomicDecorator>
+        </OnInit>
+        <Behavior>
+          <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <Loop hasInputBreakpoint="0" comment="OnEnter &amp; OnExit" breakpointFlags="0">
+              <OutputBreakpoints />
+              <AreaPresenceListener hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <GetPlayerHorse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </GetPlayerHorse>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                        <IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                          <OutputBreakpoints />
+                          <Then>
+                            <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </Success>
+                          </Then>
+                          <Else>
+                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Expression>
+                              <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                <OutputBreakpoints />
+                                <Then>
+                                  <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                    <OutputBreakpoints />
+                                    <Then>
+                                      <SendAIConceptSignal_horseHandler_horseEvent hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </SendAIConceptSignal_horseHandler_horseEvent>
+                                    </Then>
+                                    <Else>
+                                      <SendAIConceptSignal_horseHandler_horseEvent hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </SendAIConceptSignal_horseHandler_horseEvent>
+                                    </Else>
+                                  </IfElseCondition>
+                                </Then>
+                                <Else>
+                                  <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                    <OutputBreakpoints />
+                                    <Else>
+                                      <LuaGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                        <OutputBreakpoints />
+                                        <Then>
+                                          <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                            <OutputBreakpoints />
+                                            <Then>
+                                              <Sequence hasInputBreakpoint="0" comment="Order is important" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                                <AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </AddLink>
+                                                <SendAIConceptSignal_horseHandler_horseEvent hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </SendAIConceptSignal_horseHandler_horseEvent>
+                                              </Sequence>
+                                            </Then>
+                                            <Else>
+                                              <Sequence hasInputBreakpoint="0" comment="Order is important" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                                <SendAIConceptSignal_horseHandler_horseEvent hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </SendAIConceptSignal_horseHandler_horseEvent>
+                                                <RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </RemoveLink>
+                                              </Sequence>
+                                            </Else>
+                                          </IfElseCondition>
+                                        </Then>
+                                        <Else>
+                                          <Success hasInputBreakpoint="0" comment="Not mountable, ignore" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </Success>
+                                        </Else>
+                                      </LuaGate>
+                                    </Else>
+                                  </EntityContextCheck>
+                                </Else>
+                              </IfElseCondition>
+                            </Sequence>
+                          </Else>
+                        </IsDeadCheck>
+                      </Sequence>
+                    </Then>
+                    <Else>
+                      <Success hasInputBreakpoint="0" comment="Not a horse, don&apos;t care" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Success>
+                    </Else>
+                  </EntityContextCheck>
+                </AtomicDecorator>
+              </AreaPresenceListener>
+            </Loop>
+            <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <GetPlayerHorse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </GetPlayerHorse>
+                  <SuppressFailure hasInputBreakpoint="0" comment="Search for linked player horse and clean it up" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </VarOperation>
+                      <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </LinkTagFilter>
+                        <Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                          <OutputBreakpoints />
+                        </Nodalyzer>
+                      </GraphSearch>
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                      <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                          <OutputBreakpoints />
+                          <Then>
+                            <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                              <OutputBreakpoints />
+                              <Then>
+                                <RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </RemoveLink>
+                              </Then>
+                              <Else>
+                                <IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                  <OutputBreakpoints />
+                                  <Then>
+                                    <Sequence hasInputBreakpoint="0" comment="Order is important" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </Expression>
+                                      <SendAIConceptSignal_horseHandler_horseEvent hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </SendAIConceptSignal_horseHandler_horseEvent>
+                                      <RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </RemoveLink>
+                                    </Sequence>
+                                  </Then>
+                                </IsDeadCheck>
+                              </Else>
+                            </IfElseCondition>
+                          </Then>
+                        </EntityContextCheck>
+                      </ForEach>
+                    </Sequence>
+                  </SuppressFailure>
+                </Sequence>
+              </ProcessMessage>
+            </Loop>
+          </Parallel>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

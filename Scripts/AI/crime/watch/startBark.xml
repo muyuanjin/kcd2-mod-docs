@@ -1,0 +1,633 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_watch_startBark" is_function="1">
+		<Variables>
+			<Variable name="amIWitness" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="attackerHasWeapon" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="dialogContext" type="_float" values="" isPersistent="0" form="associative" />
+			<Variable name="isIndifferent" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="lockType" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="metarole" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="owner" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="targetTarget" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="watchData" type="switch:interruptData:watch" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Switch>
+					<IfCondition failOnCondition="false" condition="$watchData.defenceMode">
+						<Sequence>
+							<IfElseCondition failOnCondition="false" condition="$watchData.assaultData.directHit" saveVersion="2">
+								<Then canSkip="1">
+									<Function_crime_getHitMetaroleLabel attackKind="$watchData.assaultData.kind" attacker="$watchData.assaultData.attacker" hitStrength="$watchData.assaultData.hitStrength" isWitness="false" victim="$this.id" dialogContext="$dialogContext" metaroleLabel="$metarole" nodeLabel="43461405" />
+								</Then>
+								<Else canSkip="1">
+									<Switch>
+										<IfCondition failOnCondition="false" condition="$watchData.assaultData.kind == $enum:crime_attackKind.unarmed">
+											<Expression expressions="$metarole = &apos;OBET_REAGUJE_NA_NEARMISS_(UNARMED)&apos;" />
+										</IfCondition>
+										<IfCondition failOnCondition="false" condition="$watchData.assaultData.kind == $enum:crime_attackKind.armed">
+											<Expression expressions="$metarole = &apos;OBET_REAGUJE_NA_NEARMISS_(MELEE)&apos;" />
+										</IfCondition>
+										<DefaultBranch>
+											<Success />
+										</DefaultBranch>
+									</Switch>
+								</Else>
+							</IfElseCondition>
+							<SuppressFailure>
+								<Sequence>
+									<IfCondition failOnCondition="false" condition="~$amIWitness">
+										<Timeout duration="&apos;3s&apos;" timeType="GameTime" doFail="true" variation="">
+											<DialogGate Who="$this.id" Negation="true" EndDialogInRoot="false" Condition="InIngame" RunLogic="KeepRunning">
+												<Success />
+											</DialogGate>
+										</Timeout>
+									</IfCondition>
+									<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="$dialogContext" dramaticBark="true" lookAt="$watchData.assaultData.attacker" metarole="$metarole" priority="$enum:crime_barkPriority.important" nodeLabel="50832699" />
+								</Sequence>
+							</SuppressFailure>
+						</Sequence>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.freshlyAttributedCrime">
+						<Function_crime_startBark_freshlyAttributed information="$watchData.information" nodeLabel="42857915" />
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.criminalFreshness &gt; $enum:crime_criminalFreshness.veryFresh">
+						<IfElseCondition failOnCondition="false" condition="$watchData.criminalFreshness == $enum:crime_criminalFreshness.somewhatFresh" saveVersion="2">
+							<Then canSkip="1">
+								<Success />
+							</Then>
+							<Else canSkip="1">
+								<Function_crime_startBark_alreadyCriminal information="$watchData.information" nodeLabel="71201779" />
+							</Else>
+						</IfElseCondition>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind == $enum:crime_stimulusKind.aim">
+						<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="true" lookAt="$watchData.target" metarole="&apos;NPC_JE_ZAMEREN_HRACEM&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="42636862" />
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind  == $enum:crime_stimulusKind.combat">
+						<IfCondition failOnCondition="false" condition="$watchData.assaultData.victim ~= $__player">
+							<Sequence>
+								<IfCondition failOnCondition="false" condition="$watchData.target ~= $__null">
+									<Sequence>
+										<SuppressFailure>
+											<GetTarget ReferenceNPC="$watchData.target" TargetVarOut="$targetTarget" />
+										</SuppressFailure>
+										<IsIndifferent NPC="$watchData.target" saveVersion="2">
+											<Then canSkip="1">
+												<Expression expressions="$isIndifferent = true" />
+											</Then>
+											<Else canSkip="1">
+												<IfCondition failOnCondition="false" condition="$targetTarget ~= $__null">
+													<IsIndifferent NPC="$targetTarget" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$isIndifferent = true" />
+														</Then>
+													</IsIndifferent>
+												</IfCondition>
+											</Else>
+										</IsIndifferent>
+									</Sequence>
+								</IfCondition>
+								<Expression expressions="$amIWitness = $watchData.assaultData.victim ~= this.id &#10;$metarole = &apos;&apos;" />
+								<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+									<Then canSkip="1">
+										<IfCondition failOnCondition="false" condition="$isIndifferent">
+											<Selector>
+												<GraphSearch Origin="$watchData.target" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+													<LinkTagFilter tag="&apos;crime_guardBarkWhenSeeingAnIndifferentCombat&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$metarole" />
+												</GraphSearch>
+												<IfCondition failOnCondition="true" condition="$targetTarget ~= $__null">
+													<GraphSearch Origin="$targetTarget" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+														<LinkTagFilter tag="&apos;crime_guardBarkWhenSeeingAnIndifferentCombat&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$metarole" />
+													</GraphSearch>
+												</IfCondition>
+												<Expression expressions="$metarole = &apos;&apos;" />
+											</Selector>
+										</IfCondition>
+									</Then>
+								</EntityContextCheck>
+								<IfCondition failOnCondition="false" condition="$metarole == &apos;&apos;">
+									<IfElseCondition failOnCondition="false" condition="$watchData.assaultData.directHit" saveVersion="2">
+										<Then canSkip="1">
+											<Function_crime_getHitMetaroleLabel attackKind="$watchData.assaultData.kind" attacker="$watchData.assaultData.attacker" hitStrength="$watchData.assaultData.hitStrength" isWitness="$amIWitness" victim="$watchData.assaultData.victim" dialogContext="$dialogContext" metaroleLabel="$metarole" nodeLabel="11662105" />
+										</Then>
+										<Else canSkip="1">
+											<Sequence>
+												<Function_crime_hasWeaponDrawn checkingMethod="$enum:crime_weaponCheckingMethod.perceivableState" npc="$watchData.assaultData.attacker" result="$attackerHasWeapon" nodeLabel="29435806" />
+												<IfElseCondition failOnCondition="false" condition="$attackerHasWeapon" saveVersion="2">
+													<Then canSkip="1">
+														<IsWeaponDrawn who="$__player" WeaponSet="Secondary" saveVersion="2">
+															<Then canSkip="1">
+																<Expression expressions="$metarole = &apos;HRAC_DELA_BORDEL_V_TRESPASSU&apos;" />
+															</Then>
+															<Else canSkip="1">
+																<Expression expressions="$metarole = &apos;SVEDEK_REAGUJE_NA_NEARMISS_(MELEE)&apos;" />
+															</Else>
+														</IsWeaponDrawn>
+													</Then>
+													<Else canSkip="1">
+														<Expression expressions="$metarole = &apos;SVEDEK_REAGUJE_NA_NEARMISS_(UNARMED)&apos;" />
+													</Else>
+												</IfElseCondition>
+											</Sequence>
+										</Else>
+									</IfElseCondition>
+								</IfCondition>
+								<SuppressFailure>
+									<Sequence>
+										<IfCondition failOnCondition="false" condition="~$amIWitness">
+											<Timeout duration="&apos;3s&apos;" timeType="GameTime" doFail="true" variation="">
+												<DialogGate Who="$this.id" Negation="true" EndDialogInRoot="false" Condition="InIngame" RunLogic="KeepRunning">
+													<Success />
+												</DialogGate>
+											</Timeout>
+										</IfCondition>
+										<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="$dialogContext" dramaticBark="true" lookAt="$watchData.target" metarole="$metarole" priority="$enum:crime_barkPriority.important" nodeLabel="31407710" />
+									</Sequence>
+								</SuppressFailure>
+							</Sequence>
+						</IfCondition>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind  == $enum:crime_stimulusKind.pilloryBreak">
+						<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_VIDI_OSVOBOZENI_Z_PRANYRE&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="22565624" />
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind == $enum:crime_stimulusKind.lockpick">
+						<Sequence>
+							<LockDynamicInformationValues Information="$watchData.information">
+								<Sequence>
+									<GetDynamicInformationValue Information="$watchData.information" Tag="&apos;lockType&apos;" Out="$lockType" />
+									<GetDynamicInformationValue Information="$watchData.information" Tag="&apos;victim&apos;" Out="$owner" />
+								</Sequence>
+							</LockDynamicInformationValues>
+							<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$metarole = &apos;STRAZ_VIDI_ZLOCIN_(LOCKPICK__&apos;" />
+								</Then>
+								<Else canSkip="1">
+									<IfElseCondition failOnCondition="false" condition="$owner == $this.id" saveVersion="2">
+										<Then canSkip="1">
+											<Expression expressions="$metarole = &apos;OWNER_VIDI_ZLOCIN_(LOCKPICK__&apos;" />
+										</Then>
+										<Else canSkip="1">
+											<Expression expressions="$metarole = &apos;SVEDEK_VIDI_ZLOCIN_(LOCKPICK__&apos;" />
+										</Else>
+									</IfElseCondition>
+								</Else>
+							</EntityContextCheck>
+							<IfElseCondition failOnCondition="false" condition="$lockType == &apos;STASH&apos; | $lockType == &apos;UNK&apos;" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$metarole = $metarole + &apos;STASH)&apos;" />
+								</Then>
+								<Else canSkip="1">
+									<Expression expressions="$metarole = $metarole + &apos;DVERE)&apos;" />
+								</Else>
+							</IfElseCondition>
+							<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="$metarole" priority="$enum:crime_barkPriority.important" nodeLabel="52938865" />
+						</Sequence>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind  == $enum:crime_stimulusKind.murder">
+						<Function_crime_startBark_murder information="$watchData.information" nodeLabel="64796904" />
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind  == $enum:crime_stimulusKind.pickpocket">
+						<Sequence>
+							<LockDynamicInformationValues Information="$watchData.information">
+								<GetDynamicInformationValue Information="$watchData.information" Tag="&apos;victim&apos;" Out="$owner" />
+							</LockDynamicInformationValues>
+							<IfElseCondition failOnCondition="false" condition="$owner == $this.id" saveVersion="2">
+								<Then canSkip="1">
+									<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="true" lookAt="$__player" metarole="&apos;OBET_PRISTIHLA_HRACE_(PICKPOCKET)&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="39499640" />
+								</Then>
+								<Else canSkip="1">
+									<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="true" lookAt="$__player" metarole="&apos;SVEDEK_VIDI_ZLOCIN_(PICKPOCKET)&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="24109105" />
+								</Else>
+							</IfElseCondition>
+						</Sequence>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind  == $enum:crime_stimulusKind.theft">
+						<Function_crime_startBark_theft information="$watchData.information" nodeLabel="73124433" />
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind == $enum:crime_stimulusKind.corpse">
+						<Function_crime_startBark_corpse corpse="$watchData.information.perceivedWuid" corpseState="$watchData.corpseState" nodeLabel="67138487" />
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind == $enum:crime_stimulusKind.graveRobbing">
+						<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="true" lookAt="$__player" metarole="&apos;NPC_VIDI_HRACE_VYKRADAT_HROB&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="25484594" />
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind == $enum:crime_stimulusKind.corpseViolation">
+						<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="true" lookAt="$__player" metarole="&apos;NPC_VIDI_HRACE_JAK_HANOBI_MRTVOLU_(PRITEL)&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="25143540" />
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind == $enum:crime_stimulusKind.kettlePoisoning">
+						<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="true" lookAt="$__player" metarole="&apos;NPC_VIDI_HRACE_JAK_NECO_VLEVA_DO_KOTLIKU&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="57838957" />
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$watchData.stimulusKind == $enum:crime_stimulusKind.threat">
+						<HasGenderCheck Gender="Female" SoulWUID="$this.id" FailSubtMissing="false" saveVersion="2">
+							<Then canSkip="1">
+								<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_SE_CITI_OHROZENE_ZBABELEC&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="39209933" />
+							</Then>
+							<Else canSkip="1">
+								<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_SE_CITI_OHROZENE&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="37439192" />
+							</Else>
+						</HasGenderCheck>
+					</IfCondition>
+					<DefaultBranch>
+						<Success />
+					</DefaultBranch>
+				</Switch>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="amIWitness" comment="" />
+				<Variable name="attackerHasWeapon" comment="" />
+				<Variable name="dialogContext" comment="" />
+				<Variable name="isIndifferent" comment="" />
+				<Variable name="lockType" comment="" />
+				<Variable name="metarole" comment="" />
+				<Variable name="owner" comment="" />
+				<Variable name="targetTarget" comment="" />
+				<Variable name="watchData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-120" editorPosY="10" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Function_crime_getHitMetaroleLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_getHitMetaroleLabel>
+									</Then>
+									<Else>
+										<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</IfCondition>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</IfCondition>
+											<DefaultBranch>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</DefaultBranch>
+										</Switch>
+									</Else>
+								</IfElseCondition>
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Timeout hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<DialogGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Success>
+												</DialogGate>
+											</Timeout>
+										</IfCondition>
+										<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_crimeBark>
+									</Sequence>
+								</SuppressFailure>
+							</Sequence>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Function_crime_startBark_freshlyAttributed hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_startBark_freshlyAttributed>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Then>
+									<Success hasInputBreakpoint="0" comment="ask karel" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Success>
+								</Then>
+								<Else>
+									<Function_crime_startBark_alreadyCriminal hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_startBark_alreadyCriminal>
+								</Else>
+							</IfElseCondition>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_crimeBark>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GetTarget hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetTarget>
+											</SuppressFailure>
+											<IsIndifferent hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Then>
+												<Else>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IsIndifferent hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+														</IsIndifferent>
+													</IfCondition>
+												</Else>
+											</IsIndifferent>
+										</Sequence>
+									</IfCondition>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<GraphSearch hasInputBreakpoint="0" comment="Quest override on KCD2-77317" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</LinkTagFilter>
+													</GraphSearch>
+													<IfCondition hasInputBreakpoint="0" comment="Quest override KCD2-77317" breakpointFlags="0">
+														<OutputBreakpoints />
+														<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</LinkTagFilter>
+														</GraphSearch>
+													</IfCondition>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Selector>
+											</IfCondition>
+										</Then>
+									</EntityContextCheck>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_crime_getHitMetaroleLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_crime_getHitMetaroleLabel>
+											</Then>
+											<Else>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_crime_hasWeaponDrawn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_hasWeaponDrawn>
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<IsWeaponDrawn hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Then>
+																<Else>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Else>
+															</IsWeaponDrawn>
+														</Then>
+														<Else>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Else>
+													</IfElseCondition>
+												</Sequence>
+											</Else>
+										</IfElseCondition>
+									</IfCondition>
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Timeout hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<DialogGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Success>
+													</DialogGate>
+												</Timeout>
+											</IfCondition>
+											<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_crimeBark>
+										</Sequence>
+									</SuppressFailure>
+								</Sequence>
+							</IfCondition>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_crimeBark>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetDynamicInformationValue>
+										<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetDynamicInformationValue>
+									</Sequence>
+								</LockDynamicInformationValues>
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+									<Else>
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Then>
+											<Else>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Else>
+										</IfElseCondition>
+									</Else>
+								</EntityContextCheck>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+									<Else>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Else>
+								</IfElseCondition>
+								<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_crimeBark>
+							</Sequence>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Function_crime_startBark_murder hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_startBark_murder>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetDynamicInformationValue>
+								</LockDynamicInformationValues>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_crimeBark>
+									</Then>
+									<Else>
+										<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_crimeBark>
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Function_crime_startBark_theft hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_startBark_theft>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Function_crime_startBark_corpse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_startBark_corpse>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_crimeBark>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_crimeBark>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_crimeBark>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<HasGenderCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Then>
+									<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_crimeBark>
+								</Then>
+								<Else>
+									<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_crimeBark>
+								</Else>
+							</HasGenderCheck>
+						</IfCondition>
+						<DefaultBranch>
+							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Success>
+						</DefaultBranch>
+					</Switch>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

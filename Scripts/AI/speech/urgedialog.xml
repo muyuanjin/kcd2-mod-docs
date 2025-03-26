@@ -1,0 +1,648 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="urgeDialog" is_function="1">
+		<Variables>
+			<Variable name="NPCInitialPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="inChatOrBarking" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="isAwareOfPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="milisecondsAfterUrgeBeforeReaction" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="newDistance" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="oldDistance" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="pathFindingParams" type="pathFindingParams" values="useGeneratedNSO(true)" isPersistent="0" form="single" />
+			<Variable name="playerAlreadyHasWeaponDrawn" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="drawWeaponIfPlayerDoes" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="movementType" type="enum:movementType" values="$enum:movementType.TurnBody" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="playerFleeDistanceBeforeReaction" type="_int" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="secondsAfterUrgeBeforeReaction" type="_int" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="urgeAliasOrMetarole" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="urgeIsChat" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="useMetarole" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="waveAtPlayer" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<AnyDecorator preset="crime_keepConfiscatedItems" enabled="true">
+					<EntityContext context="crime_ignorePlayersDrawnWeapon" target="">
+						<FuseBox StatusPropagation="Child" OneCleanup="false" saveVersion="2">
+							<Child canSkip="1">
+								<Sequence>
+									<IsFastTraveling saveVersion="2">
+										<Then canSkip="1">
+											<Success />
+										</Then>
+										<Else canSkip="1">
+											<Sequence>
+												<Function_crime_checkPlayerAwareness timeThreshold="10000" isAwareOfPlayer="$isAwareOfPlayer" nodeLabel="87848512" />
+												<IfElseCondition failOnCondition="false" condition="$isAwareOfPlayer" saveVersion="2">
+													<Then canSkip="1">
+														<Success />
+													</Then>
+													<Else canSkip="1">
+														<Callback_empty EventName="&apos;HasNotSeenPlayer&apos;" />
+													</Else>
+												</IfElseCondition>
+											</Sequence>
+										</Else>
+									</IsFastTraveling>
+									<ForceLook LookTarget="$__player" DisableVariations="false">
+										<AnyDecorator preset="crime_keepItems" enabled="true">
+											<Parallel successMode="Any" failureMode="Any">
+												<Parallel successMode="Any" failureMode="Any">
+													<Sequence>
+														<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;waveAtPlayerLock&apos;" />
+														<Function_crime_hasWeaponDrawn checkingMethod="$enum:crime_weaponCheckingMethod.graphSearch" npc="$__player" result="$playerAlreadyHasWeaponDrawn" nodeLabel="96947601" />
+														<IfCondition failOnCondition="false" condition="~$playerAlreadyHasWeaponDrawn">
+															<Function_crime_waitForWeaponChange npc="$__player" succeedOnArmed="true" nodeLabel="39611533" />
+														</IfCondition>
+														<Callback_empty EventName="&apos;OnPlayerWeaponDraw&apos;" />
+														<IfCondition failOnCondition="false" condition="$drawWeaponIfPlayerDoes">
+															<Sequence>
+																<SetExternalLock LockManagerType="Intellect" Locked="true" LockName="&apos;waveAtPlayerLock&apos;" />
+																<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;drawWeaponLock&apos;" />
+															</Sequence>
+														</IfCondition>
+														<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;drawWeaponBarkLock&apos;" />
+														<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+													</Sequence>
+													<Sequence>
+														<GetSpatialInfo In="$this.id" Out="$NPCInitialPos" What="Position" />
+														<MeasureDistance position1="$NPCInitialPos" position2="$__player" mode="ThreeDimensions" result="$oldDistance" />
+														<Loop count="-1">
+															<Sequence>
+																<MeasureDistance position1="$NPCInitialPos" position2="$__player" mode="ThreeDimensions" result="$newDistance" />
+																<IfElseCondition failOnCondition="false" condition="$newDistance &gt; $oldDistance + $playerFleeDistanceBeforeReaction" saveVersion="2">
+																	<Then canSkip="1">
+																		<Sequence>
+																			<Callback_empty EventName="&apos;OnPlayerFlee&apos;" />
+																			<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																		</Sequence>
+																	</Then>
+																	<Else canSkip="1">
+																		<Wait duration="&apos;500ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																	</Else>
+																</IfElseCondition>
+															</Sequence>
+														</Loop>
+													</Sequence>
+													<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;chattedOrBarkedLock&apos;" RunLogic="KeepRunning">
+														<Sequence>
+															<Expression expressions="$milisecondsAfterUrgeBeforeReaction = 1000 * $secondsAfterUrgeBeforeReaction" />
+															<Wait duration="$milisecondsAfterUrgeBeforeReaction" timeType="GameTime" doFail="false" variation="" />
+															<Callback_empty EventName="&apos;OnTimeout&apos;" />
+															<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+														</Sequence>
+													</ExternalLock>
+												</Parallel>
+												<Sequence>
+													<IfElseCondition failOnCondition="false" condition="$movementType ~= $enum:movementType.NoMovement" saveVersion="2">
+														<Then canSkip="1">
+															<Selector>
+																<Move stopWithinDistance="99999.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="99999.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$__player" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+																<WaitAction />
+															</Selector>
+														</Then>
+														<Else canSkip="1">
+															<StanceCheck soul="$this.id" stance="lying" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
+																<Then canSkip="1">
+																	<WaitAction />
+																</Then>
+																<Else canSkip="1">
+																	<AnyDecorator preset="crime_keepStance" enabled="true">
+																		<AnyDecorator preset="crime_keepStateAndItems" enabled="true">
+																			<Sequence>
+																				<WaitAction />
+																				<StopMovement waitUntilStopped="false" />
+																			</Sequence>
+																		</AnyDecorator>
+																	</AnyDecorator>
+																</Else>
+															</StanceCheck>
+														</Else>
+													</IfElseCondition>
+													<Parallel successMode="Any" failureMode="Any">
+														<IfGate atomic="false" condition="$movementType ~= $enum:movementType.NoMovement" RunLogic="KeepRunning">
+															<EntityContextElement context="urgeDialog_moveStarted" enabled="true">
+																<IfElseCondition failOnCondition="false" condition="$movementType == $enum:movementType.FollowPlayer" saveVersion="2">
+																	<Then canSkip="1">
+																		<CrimeFollower Target="$__player" Mode="DontBackOff" Role="Main" RelativeSpeedLimit="Walk" DisableGhosting="false" />
+																	</Then>
+																	<Else canSkip="1">
+																		<CrimeFollower Target="$__player" Mode="NoMoveOnlyTurn" Role="Main" RelativeSpeedLimit="Dash" DisableGhosting="false" />
+																	</Else>
+																</IfElseCondition>
+															</EntityContextElement>
+														</IfGate>
+														<Sequence>
+															<IfCondition failOnCondition="false" condition="$waveAtPlayer">
+																<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;waveAtPlayerLock&apos;" RunLogic="Halt">
+																	<EntityContextBarrier context="urgeDialog_moveStarted" target="" Negation="false" RunLogic="KeepRunning">
+																		<Switch>
+																			<DistanceCondition Origin="$this.id" ReferencePt="$__player" Low="5.000000" High="5.000000" Negation="true" ValueOnMiddle="false" failOnCondition="false">
+																				<AnimationAction fragment="&apos;GreetingsUpperBody&apos;" tags="&apos;waveBig&apos;" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																			</DistanceCondition>
+																			<DefaultBranch>
+																				<AnimationAction fragment="&apos;GreetingsUpperBody&apos;" tags="&apos;waveSmall&apos;" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																			</DefaultBranch>
+																		</Switch>
+																	</EntityContextBarrier>
+																</ExternalLock>
+															</IfCondition>
+															<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+														</Sequence>
+														<Sequence>
+															<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;drawWeaponLock&apos;" RunLogic="Halt">
+																<Sequence>
+																	<EntityContextBarrier context="urgeDialog_moveStarted" target="" Negation="false" RunLogic="KeepRunning">
+																		<SuppressFailure>
+																			<Sequence>
+																				<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+																				<DrawAction WeaponSet="Primary" fullBody="false" tags="" useSelectedWeaponSet="false" />
+																			</Sequence>
+																		</SuppressFailure>
+																	</EntityContextBarrier>
+																	<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																</Sequence>
+															</ExternalLock>
+															<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+														</Sequence>
+														<Selector>
+															<InstantSemaphore SemaphoreCount="1" LockManagerType="Local" SemaphoreName="&apos;$urgeAliasOrMetarole&apos;">
+																<IfElseCondition failOnCondition="false" condition="$urgeIsChat" saveVersion="2">
+																	<Then canSkip="1">
+																		<Sequence>
+																			<LoopUntil until="Success" attemptCount="0">
+																				<Selector>
+																					<Sequence>
+																						<IfElseCondition failOnCondition="false" condition="$useMetarole" saveVersion="2">
+																							<Then canSkip="1">
+																								<Function_speech_dialogInitiator alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="$urgeAliasOrMetarole" preset="$enum:dialogPreset.chat" recipient="$__player" recipientMetaroles="" nodeLabel="41335373" />
+																							</Then>
+																							<Else canSkip="1">
+																								<Function_speech_dialogInitiator alias="$urgeAliasOrMetarole" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="" preset="$enum:dialogPreset.chat" recipient="$__player" recipientMetaroles="" nodeLabel="26096491" />
+																							</Else>
+																						</IfElseCondition>
+																						<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;chattedOrBarkedLock&apos;" />
+																					</Sequence>
+																					<Sequence>
+																						<Wait duration="&apos;500ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																						<Fail />
+																					</Sequence>
+																				</Selector>
+																			</LoopUntil>
+																			<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																		</Sequence>
+																	</Then>
+																	<Else canSkip="1">
+																		<Loop count="-1">
+																			<Sequence>
+																				<SuppressFailure>
+																					<IfElseCondition failOnCondition="false" condition="$useMetarole" saveVersion="2">
+																						<Then canSkip="1">
+																							<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="$__player" metarole="$urgeAliasOrMetarole" skipInLod="false" subtitlesDown="false" nodeLabel="88229837" />
+																						</Then>
+																						<Else canSkip="1">
+																							<Function_speech_schedulerMonolog alias="$urgeAliasOrMetarole" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="$__player" metarole="" skipInLod="false" subtitlesDown="false" nodeLabel="62315607" />
+																						</Else>
+																					</IfElseCondition>
+																				</SuppressFailure>
+																				<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;chattedOrBarkedLock&apos;" />
+																				<Wait duration="&apos;3s&apos;" timeType="GameTime" doFail="false" variation="&apos;1s&apos;" />
+																			</Sequence>
+																		</Loop>
+																	</Else>
+																</IfElseCondition>
+															</InstantSemaphore>
+															<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;drawWeaponBarkLock&apos;" RunLogic="Halt">
+																<Semaphore SemaphoreCount="1" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;urgeDialog_weapon&apos;">
+																	<Sequence>
+																		<SuppressFailure>
+																			<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_SE_CITI_OHROZENE&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="73526101" />
+																		</SuppressFailure>
+																		<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																	</Sequence>
+																</Semaphore>
+															</ExternalLock>
+														</Selector>
+													</Parallel>
+												</Sequence>
+											</Parallel>
+										</AnyDecorator>
+									</ForceLook>
+								</Sequence>
+							</Child>
+							<OnFail canSkip="1">
+								<Callback_empty EventName="&apos;OnFail&apos;" />
+							</OnFail>
+						</FuseBox>
+					</EntityContext>
+				</AnyDecorator>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="urgeDialog" EventSet="urgeDialogNotifications">
+			<Variables>
+				<Variable name="NPCInitialPos" comment="" />
+				<Variable name="inChatOrBarking" comment="" />
+				<Variable name="isAwareOfPlayer" comment="" />
+				<Variable name="milisecondsAfterUrgeBeforeReaction" comment="" />
+				<Variable name="newDistance" comment="" />
+				<Variable name="oldDistance" comment="" />
+				<Variable name="pathFindingParams" comment="" />
+				<Variable name="playerAlreadyHasWeaponDrawn" comment="" />
+				<Variable name="drawWeaponIfPlayerDoes" comment="" />
+				<Variable name="movementType" comment="" />
+				<Variable name="playerFleeDistanceBeforeReaction" comment="" />
+				<Variable name="secondsAfterUrgeBeforeReaction" comment="" />
+				<Variable name="urgeAliasOrMetarole" comment="" />
+				<Variable name="urgeIsChat" comment="" />
+				<Variable name="useMetarole" comment="" />
+				<Variable name="waveAtPlayer" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-10" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Child>
+									<Sequence hasInputBreakpoint="0" comment="Init" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IsFastTraveling hasInputBreakpoint="0" comment="Propably only for random events cases where we send fake perception message during FT interruption. For some reason HasSeenPlayer (crime_checkPlayerAwareness) doesn&apos;t work in this case, so we just check for FT here" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Then>
+											<Else>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_crime_checkPlayerAwareness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_checkPlayerAwareness>
+													<IfElseCondition hasInputBreakpoint="0" comment="If NPC is getting this behavior, but don&apos;t see the player, thats propably due to this behavior was interrupted. In such case we should reset UrgeADialog module by failing here and waiting for perception in concept." breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Success>
+														</Then>
+														<Else>
+															<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Callback_empty>
+														</Else>
+													</IfElseCondition>
+												</Sequence>
+											</Else>
+										</IsFastTraveling>
+										<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Parallel hasInputBreakpoint="0" comment="CHECKS" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="DrawWeapon or Wave decision logic" breakpointFlags="0">
+															<OutputBreakpoints />
+															<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</SetExternalLock>
+															<Function_crime_hasWeaponDrawn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_hasWeaponDrawn>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_crime_waitForWeaponChange hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_waitForWeaponChange>
+															</IfCondition>
+															<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Callback_empty>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</SetExternalLock>
+																	<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</SetExternalLock>
+																</Sequence>
+															</IfCondition>
+															<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</SetExternalLock>
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</Sequence>
+														<Sequence hasInputBreakpoint="0" comment="Flee check" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</GetSpatialInfo>
+															<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</MeasureDistance>
+															<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<MeasureDistance hasInputBreakpoint="0" comment="Distance gate cant do vectors....." breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</MeasureDistance>
+																	<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Callback_empty>
+																				<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Wait>
+																			</Sequence>
+																		</Then>
+																		<Else>
+																			<Wait hasInputBreakpoint="0" comment="performance go brrrrr" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Wait>
+																		</Else>
+																	</IfElseCondition>
+																</Sequence>
+															</Loop>
+														</Sequence>
+														<ExternalLock hasInputBreakpoint="0" comment="Timeout check" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+																<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Callback_empty>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+															</Sequence>
+														</ExternalLock>
+													</Parallel>
+													<Sequence hasInputBreakpoint="0" comment="ACTIONS" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Move hasInputBreakpoint="0" comment="We need to reset NPC state, instead of using WaitAction we use Move with these big distances. Thats because WaitAction has not direction, and NPC don&apos;t know which animation to use while standing up from the bench. KCD2-80217" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Move>
+																	<WaitAction hasInputBreakpoint="0" comment="for situation where the other NPC is on a closed navmesh different from the players" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</WaitAction>
+																</Selector>
+															</Then>
+															<Else>
+																<StanceCheck hasInputBreakpoint="0" comment="It doesn&apos;t look good when NPC urging a dialog while lying in a bed" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</WaitAction>
+																	</Then>
+																	<Else>
+																		<AnyDecorator hasInputBreakpoint="0" comment="With NoMovement we dont want to interrupt NPC while he is doing something and urging dialog at the same time. But we want to be sure he stops in case he is going somewhere with move. KCD2-456849" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</WaitAction>
+																					<StopMovement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</StopMovement>
+																				</Sequence>
+																			</AnyDecorator>
+																		</AnyDecorator>
+																	</Else>
+																</StanceCheck>
+															</Else>
+														</IfElseCondition>
+														<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<EntityContextElement hasInputBreakpoint="0" comment="There is a possibility that we would call two state change request at the same time by running Move (CrimeFollower) and DrawAction at the same time in parallel. To prevent this we use ContextElement that is set only when the Move is actually started (post state search). Later we barrier the DrawAction with this context to run requests sequentially." breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfElseCondition hasInputBreakpoint="0" comment="Follow or Turn" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<CrimeFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</CrimeFollower>
+																		</Then>
+																		<Else>
+																			<CrimeFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</CrimeFollower>
+																		</Else>
+																	</IfElseCondition>
+																</EntityContextElement>
+															</IfGate>
+															<Sequence hasInputBreakpoint="0" comment="Wave" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</AnimationAction>
+																				</DistanceCondition>
+																				<DefaultBranch>
+																					<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</AnimationAction>
+																				</DefaultBranch>
+																			</Switch>
+																		</EntityContextBarrier>
+																	</ExternalLock>
+																</IfCondition>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+															</Sequence>
+															<Sequence hasInputBreakpoint="0" comment="Draw weapon" breakpointFlags="0">
+																<OutputBreakpoints />
+																<ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																					<DrawAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</DrawAction>
+																				</Sequence>
+																			</SuppressFailure>
+																		</EntityContextBarrier>
+																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Wait>
+																	</Sequence>
+																</ExternalLock>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+															</Sequence>
+															<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<InstantSemaphore hasInputBreakpoint="0" comment="It is kinda possible to use UrgeADialog effect for several NPCs, for that case make sure only one is speaking" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfElseCondition hasInputBreakpoint="0" comment="Chat or bark" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<LoopUntil hasInputBreakpoint="0" comment="Chat may fail due to the distance, we want to retry it in that case" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Selector hasInputBreakpoint="0" comment="wait half a second on fail" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																								<OutputBreakpoints />
+																								<Then>
+																									<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Function_speech_dialogInitiator>
+																								</Then>
+																								<Else>
+																									<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Function_speech_dialogInitiator>
+																								</Else>
+																							</IfElseCondition>
+																							<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</SetExternalLock>
+																						</Sequence>
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Wait>
+																							<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Fail>
+																						</Sequence>
+																					</Selector>
+																				</LoopUntil>
+																				<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Wait>
+																			</Sequence>
+																		</Then>
+																		<Else>
+																			<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																							<OutputBreakpoints />
+																							<Then>
+																								<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_speech_schedulerMonolog>
+																							</Then>
+																							<Else>
+																								<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_speech_schedulerMonolog>
+																							</Else>
+																						</IfElseCondition>
+																					</SuppressFailure>
+																					<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</SetExternalLock>
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																				</Sequence>
+																			</Loop>
+																		</Else>
+																	</IfElseCondition>
+																</InstantSemaphore>
+																<ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Semaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_crimeBark>
+																			</SuppressFailure>
+																			<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Wait>
+																		</Sequence>
+																	</Semaphore>
+																</ExternalLock>
+															</Selector>
+														</Parallel>
+													</Sequence>
+												</Parallel>
+											</AnyDecorator>
+										</ForceLook>
+									</Sequence>
+								</Child>
+								<OnFail>
+									<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Callback_empty>
+								</OnFail>
+							</FuseBox>
+						</EntityContext>
+					</AnyDecorator>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

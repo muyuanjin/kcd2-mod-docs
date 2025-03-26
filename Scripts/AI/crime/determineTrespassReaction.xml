@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="crime_determineTrespassReaction" is_function="1">
+    <Variables>
+      <Variable name="overrideArea" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="position" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="prohibitedOverriden" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="semipublicOverriden" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="trespassAreaSevereness_local" type="enum:trespassLevel" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="forceSemipublicReaction" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="observer" type="_wuid" values="$this.id" isPersistent="0" form="single" requirementType="In" optional="1" />
+      <Variable name="reaction" type="_bool" values="" isPersistent="0" form="single" requirementType="Out" />
+      <Variable name="reactionSuppressed" type="_bool" values="" isPersistent="0" form="single" requirementType="Out" />
+      <Variable name="shouldUseVec3Position" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="target" type="_wuid" values="$__player" isPersistent="0" form="single" requirementType="In" optional="1" />
+      <Variable name="trespassArea" type="_wuid" values="" isPersistent="0" form="single" requirementType="Out" />
+      <Variable name="trespassAreaSevereness" type="enum:trespassLevel" values="" isPersistent="0" form="single" requirementType="Reference" />
+      <Variable name="vec3Position" type="vec3" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <AtomicDecorator>
+          <Switch>
+            <GameContextCheck context="crime_disabledTrespassReactions" saveVersion="2">
+              <Then canSkip="1">
+                <Expression expressions="$reaction = false &#10;$reactionSuppressed = true &#10;$trespassAreaSevereness = $enum:trespassLevel.public" />
+              </Then>
+              <Else canSkip="1">
+                <EntityContextCheck context="crime_disabledDirectPlayerTrespassReactions" target="" saveVersion="2">
+                  <Then canSkip="1">
+                    <Expression expressions="$reaction = false &#10;$reactionSuppressed = true &#10;$trespassAreaSevereness = $enum:trespassLevel.public" />
+                  </Then>
+                </EntityContextCheck>
+              </Else>
+            </GameContextCheck>
+            <EntityContextCheck context="crime_bff" target="$observer" saveVersion="2">
+              <Then canSkip="1">
+                <Expression expressions="$reaction = false &#10;$trespassAreaSevereness = $enum:trespassLevel.public" />
+              </Then>
+            </EntityContextCheck>
+            <DefaultBranch>
+              <Sequence>
+                <IfElseCondition failOnCondition="false" condition="$shouldUseVec3Position" saveVersion="2">
+                  <Then canSkip="1">
+                    <Expression expressions="$position = $vec3Position" />
+                  </Then>
+                  <Else canSkip="1">
+                    <GetSpatialInfo In="$target" Out="$position" What="Position" />
+                  </Else>
+                </IfElseCondition>
+                <IsInsideAreaWithLabel Position="$position" Label="&apos;private&apos;" Area="$trespassArea" FailSubtMissing="false" saveVersion="2">
+                  <Then canSkip="1">
+                    <Sequence>
+                      <GetTrespass Position="$position" TrespassLevelOut="$trespassAreaSevereness_local" />
+                      <Switch>
+                        <IfCondition failOnCondition="false" condition="$trespassAreaSevereness_local == $enum:trespassLevel.semipublic">
+                          <IsNightTimeOfDay saveVersion="2">
+                            <Then canSkip="1">
+                              <Expression expressions="$trespassAreaSevereness_local = $enum:trespassLevel.semipersonal &#10;$semipublicOverriden = true" />
+                            </Then>
+                            <Else canSkip="1">
+                              <Success />
+                            </Else>
+                          </IsNightTimeOfDay>
+                        </IfCondition>
+                        <IfCondition failOnCondition="false" condition="$trespassAreaSevereness_local == $enum:trespassLevel.prohibited">
+                          <EntityContextCheck context="crime_treatProhibitedTrespassAsPersonal" target="$observer" saveVersion="2">
+                            <Then canSkip="1">
+                              <Expression expressions="$trespassAreaSevereness_local = $enum:trespassLevel.personal &#10;$prohibitedOverriden = true" />
+                            </Then>
+                          </EntityContextCheck>
+                        </IfCondition>
+                        <DefaultBranch>
+                          <Success />
+                        </DefaultBranch>
+                      </Switch>
+                      <SuppressFailure>
+                        <Sequence>
+                          <Selector>
+                            <IsInsideAreaWithLabel Position="$position" Label="&apos;antitrespass&apos;" Area="$overrideArea" FailSubtMissing="true" saveVersion="2">
+                              <Else canSkip="1">
+                                <IsInsideAreaWithLabel Position="$position" Label="&apos;publicServiceTrespassOverride&apos;" Area="$overrideArea" FailSubtMissing="true" saveVersion="2">
+                                  <Else canSkip="1">
+                                    <Success />
+                                  </Else>
+                                </IsInsideAreaWithLabel>
+                              </Else>
+                            </IsInsideAreaWithLabel>
+                            <IsInsideAreaWithLabel Position="$position" Label="&apos;crime_reactionsToTrespass&apos;" Area="$overrideArea" FailSubtMissing="true" saveVersion="2">
+                              <Then canSkip="1">
+                                <GraphSearch Origin="$overrideArea" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                  <LinkTagFilter tag="&apos;crime_doNotReactToTrespass&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                                  <WUIDFilter WUID="$observer" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                                </GraphSearch>
+                              </Then>
+                            </IsInsideAreaWithLabel>
+                            <IfCondition failOnCondition="true" condition="$trespassAreaSevereness_local &lt; $enum:trespassLevel.prohibited">
+                              <GraphSearch Origin="$trespassArea" Borders="" depth="3" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;home_area_reverse,crime_trespass_expected,area_union_member_reverse&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                <LinkTagFilter tag="&apos;crime_trespass_expected&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                              </GraphSearch>
+                            </IfCondition>
+                          </Selector>
+                          <Expression expressions="$reactionSuppressed = true" />
+                        </Sequence>
+                      </SuppressFailure>
+                      <IfCondition failOnCondition="false" condition="$trespassAreaSevereness &lt; $trespassAreaSevereness_local">
+                        <Expression expressions="$trespassAreaSevereness = $trespassAreaSevereness_local" />
+                      </IfCondition>
+                      <IfCondition failOnCondition="false" condition="~$reactionSuppressed &amp; &#10;( &#10;$trespassAreaSevereness_local &gt; $enum:trespassLevel.semipublic | &#10; ($trespassAreaSevereness_local == $enum:trespassLevel.semipublic &amp; &#10;  $forceSemipublicReaction &#10; ) &#10;)">
+                        <Selector>
+                          <IfCondition failOnCondition="true" condition="$overrideArea ~= $__null">
+                            <Sequence>
+                              <GraphSearch Origin="$overrideArea" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                <LinkTagFilter tag="&apos;crime_reactToTrespass&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                                <WUIDFilter WUID="$observer" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                              </GraphSearch>
+                              <Expression expressions="$trespassArea = $overrideArea &#10;$reaction = true" />
+                            </Sequence>
+                          </IfCondition>
+                          <Sequence>
+                            <Switch>
+                              <IfCondition failOnCondition="false" condition="$trespassAreaSevereness_local == $enum:trespassLevel.prohibited  &#10; | ($trespassAreaSevereness_local == $enum:trespassLevel.personal &#10; &amp; $prohibitedOverriden)">
+                                <IsInsideAreaWithLabel Position="$position" Label="&apos;prohibited&apos;" Area="$trespassArea" FailSubtMissing="false" saveVersion="2" />
+                              </IfCondition>
+                              <IfCondition failOnCondition="false" condition="$trespassAreaSevereness_local == $enum:trespassLevel.personal">
+                                <IsInsideAreaWithLabel Position="$position" Label="&apos;personal&apos;" Area="$trespassArea" FailSubtMissing="false" saveVersion="2" />
+                              </IfCondition>
+                              <IfCondition failOnCondition="false" condition="$trespassAreaSevereness_local == $enum:trespassLevel.semipublic | &#10; &#10;($trespassAreaSevereness_local == $enum:trespassLevel.semipersonal &amp; &#10; $semipublicOverriden)">
+                                <IsInsideAreaWithLabel Position="$position" Label="&apos;semipublic&apos;" Area="$trespassArea" FailSubtMissing="false" saveVersion="2" />
+                              </IfCondition>
+                              <IfCondition failOnCondition="false" condition="$trespassAreaSevereness_local == $enum:trespassLevel.semipersonal">
+                                <IsInsideAreaWithLabel Position="$position" Label="&apos;semipersonal&apos;" Area="$trespassArea" FailSubtMissing="false" saveVersion="2" />
+                              </IfCondition>
+                            </Switch>
+                            <EntityContextCheck context="crime_isAuthority" target="$observer" saveVersion="2">
+                              <Then canSkip="1">
+                                <Expression expressions="$reaction = true" />
+                              </Then>
+                              <Else canSkip="1">
+                                <SuppressFailure>
+                                  <Sequence>
+                                    <GraphSearch Origin="$observer" Borders="" depth="3" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;home,home_area,area_union_member&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                      <WUIDFilter WUID="$trespassArea" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                                    </GraphSearch>
+                                    <Expression expressions="$reaction = true" />
+                                  </Sequence>
+                                </SuppressFailure>
+                              </Else>
+                            </EntityContextCheck>
+                          </Sequence>
+                        </Selector>
+                      </IfCondition>
+                    </Sequence>
+                  </Then>
+                </IsInsideAreaWithLabel>
+              </Sequence>
+            </DefaultBranch>
+          </Switch>
+        </AtomicDecorator>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="overrideArea" comment="" />
+        <Variable name="position" comment="" />
+        <Variable name="prohibitedOverriden" comment="" />
+        <Variable name="semipublicOverriden" comment="" />
+        <Variable name="trespassAreaSevereness_local" comment="" />
+        <Variable name="forceSemipublicReaction" comment="" />
+        <Variable name="observer" comment="" />
+        <Variable name="reaction" comment="" />
+        <Variable name="reactionSuppressed" comment="" />
+        <Variable name="shouldUseVec3Position" comment="" />
+        <Variable name="target" comment="" />
+        <Variable name="trespassArea" comment="" />
+        <Variable name="trespassAreaSevereness" comment="" />
+        <Variable name="vec3Position" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root editorPosX="-780" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+                <Then>
+                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Expression>
+                </Then>
+                <Else>
+                  <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </Then>
+                  </EntityContextCheck>
+                </Else>
+              </GameContextCheck>
+              <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+                <Then>
+                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Expression>
+                </Then>
+              </EntityContextCheck>
+              <DefaultBranch>
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </Then>
+                    <Else>
+                      <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </GetSpatialInfo>
+                    </Else>
+                  </IfElseCondition>
+                  <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <GetTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </GetTrespass>
+                        <Switch hasInputBreakpoint="0" comment="shit gets weird here" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <IsNightTimeOfDay hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                              <OutputBreakpoints />
+                              <Then>
+                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Expression>
+                              </Then>
+                              <Else>
+                                <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Success>
+                              </Else>
+                            </IsNightTimeOfDay>
+                          </IfCondition>
+                          <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                              <OutputBreakpoints />
+                              <Then>
+                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Expression>
+                              </Then>
+                            </EntityContextCheck>
+                          </IfCondition>
+                          <DefaultBranch>
+                            <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </Success>
+                          </DefaultBranch>
+                        </Switch>
+                        <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                <OutputBreakpoints />
+                                <Else>
+                                  <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                    <OutputBreakpoints />
+                                    <Else>
+                                      <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </Success>
+                                    </Else>
+                                  </IsInsideAreaWithLabel>
+                                </Else>
+                              </IsInsideAreaWithLabel>
+                              <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                <OutputBreakpoints />
+                                <Then>
+                                  <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </LinkTagFilter>
+                                    <WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </WUIDFilter>
+                                  </GraphSearch>
+                                </Then>
+                              </IsInsideAreaWithLabel>
+                              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </LinkTagFilter>
+                                </GraphSearch>
+                              </IfCondition>
+                            </Selector>
+                            <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </Expression>
+                          </Sequence>
+                        </SuppressFailure>
+                        <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                        </IfCondition>
+                        <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </LinkTagFilter>
+                                  <WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </WUIDFilter>
+                                </GraphSearch>
+                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Expression>
+                              </Sequence>
+                            </IfCondition>
+                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Switch hasInputBreakpoint="0" comment="Get correct TrespassArea wuid" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                    <OutputBreakpoints />
+                                  </IsInsideAreaWithLabel>
+                                </IfCondition>
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                    <OutputBreakpoints />
+                                  </IsInsideAreaWithLabel>
+                                </IfCondition>
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                    <OutputBreakpoints />
+                                  </IsInsideAreaWithLabel>
+                                </IfCondition>
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                    <OutputBreakpoints />
+                                  </IsInsideAreaWithLabel>
+                                </IfCondition>
+                              </Switch>
+                              <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                <OutputBreakpoints />
+                                <Then>
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                </Then>
+                                <Else>
+                                  <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </WUIDFilter>
+                                      </GraphSearch>
+                                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </Expression>
+                                    </Sequence>
+                                  </SuppressFailure>
+                                </Else>
+                              </EntityContextCheck>
+                            </Sequence>
+                          </Selector>
+                        </IfCondition>
+                      </Sequence>
+                    </Then>
+                  </IsInsideAreaWithLabel>
+                </Sequence>
+              </DefaultBranch>
+            </Switch>
+          </AtomicDecorator>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

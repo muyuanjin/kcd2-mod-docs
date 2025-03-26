@@ -1,0 +1,7 @@
+LayerProfile = 
+{
+	Properties=
+	{
+		esGameProfile = ""
+	}
+}

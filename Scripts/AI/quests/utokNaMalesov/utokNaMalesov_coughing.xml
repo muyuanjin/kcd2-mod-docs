@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="onUpdate" is_function="0">
+		<Variables>
+			<Variable name="archetype" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="cougingSouls" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="currentSoulsInCooldownLength" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="eligibleSouls" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="key" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="randomSoul" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="soul" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="souls" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="soulsInCooldown" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;coughingSoul&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+						<Nodalyzer Quantifiers="ForAll" Parent="" Child="$eligibleSouls" saveVersion="2" />
+					</GraphSearch>
+					<PushToArray array="$eligibleSouls" value="$__player" direction="Back" />
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<Parallel successMode="Any" failureMode="Any">
+					<Loop count="-1">
+						<IfGate atomic="false" condition="#souls &gt; 0" RunLogic="Halt">
+							<Sequence>
+								<LoopUntil until="Success" attemptCount="0">
+									<Sequence>
+										<LoopUntil until="Success" attemptCount="0">
+											<Sequence>
+												<ForEach startIndex="0" step="1" array="$souls" iterator="" value="$soul" break="">
+													<Selector>
+														<FindInArray array="$soulsInCooldown" keyOut="$key" condition="$__value == $soul" />
+														<FindInArray array="$cougingSouls" keyOut="$key" condition="$__value == $soul" />
+														<PushToArray array="$cougingSouls" value="$soul" direction="Back" />
+													</Selector>
+												</ForEach>
+												<IfCondition failOnCondition="false" condition="#cougingSouls == 0">
+													<Sequence>
+														<Expression expressions="$currentSoulsInCooldownLength = #soulsInCooldown" />
+														<IfGate atomic="false" condition="#soulsInCooldown &lt; $currentSoulsInCooldownLength" RunLogic="KeepRunning">
+															<Fail />
+														</IfGate>
+													</Sequence>
+												</IfCondition>
+											</Sequence>
+										</LoopUntil>
+										<RandomItem Array="$cougingSouls" Result="$randomSoul" Clamp="-1" />
+										<EraseFromArray array="$cougingSouls" condition="$__value == $randomSoul" />
+										<IsDeadCheck SoulWUID="$randomSoul" FailSubtMissing="false" saveVersion="2">
+											<Then canSkip="1">
+												<Sequence>
+													<EraseFromArray array="$souls" condition="$__value == $randomSoul" />
+													<Fail />
+												</Sequence>
+											</Then>
+											<Else canSkip="1">
+												<PushToArray array="$soulsInCooldown" value="$randomSoul" direction="Back" />
+											</Else>
+										</IsDeadCheck>
+									</Sequence>
+								</LoopUntil>
+								<IfElseCondition failOnCondition="false" condition="$randomSoul == $__player" saveVersion="2">
+									<Then canSkip="1">
+										<InstantSendMessageToNPC target="$__player" type="&apos;dialog:monologRequest&apos;" values="&apos;utokNaMalesov_jindraPokaslavaVHoriciVesnici&apos;" />
+									</Then>
+									<Else canSkip="1">
+										<InstantSendMessageToNPC target="$randomSoul" type="&apos;dialog:monologRequest&apos;" values="&apos;utokNaMalesov_vipPokaslavaVHoriciVesnici&apos;" />
+									</Else>
+								</IfElseCondition>
+								<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Sequence>
+						</IfGate>
+					</Loop>
+					<Loop count="-1">
+						<IfGate atomic="false" condition="#soulsInCooldown &gt; 0" RunLogic="Halt">
+							<Sequence>
+								<Wait duration="&apos;8s&apos;" timeType="GameTime" doFail="false" variation="" />
+								<EraseFromArray array="$soulsInCooldown" condition="$__key == 0" />
+							</Sequence>
+						</IfGate>
+					</Loop>
+					<Loop count="-1">
+						<AreaPresenceListener aiObjects="" area="$this.id" trackIn="true" trackOut="true" reportInitialState="true">
+							<Sequence>
+								<FindInArray array="$eligibleSouls" keyOut="$key" condition="$__value == $__presenceObject" />
+								<Function_crime_getSoulArchetype soul="$__presenceObject" archetype="$archetype" nodeLabel="51613070" />
+								<IfCondition failOnCondition="false" condition="$archetype == &apos;NPC&apos; | &#10;$__presenceObject == $__player">
+									<IfElseCondition failOnCondition="false" condition="$__presence" saveVersion="2">
+										<Then canSkip="1">
+											<Selector>
+												<FindInArray array="$souls" keyOut="$key" condition="$__value == $__presenceObject" />
+												<PushToArray array="$souls" value="$__presenceObject" direction="Back" />
+											</Selector>
+										</Then>
+										<Else canSkip="1">
+											<Sequence>
+												<EraseFromArray array="$souls" condition="$__value == $__presenceObject" />
+												<EraseFromArray array="$soulsInCooldown" condition="$__value == $__presenceObject" />
+												<EraseFromArray array="$cougingSouls" condition="$__value == $__presenceObject" />
+											</Sequence>
+										</Else>
+									</IfElseCondition>
+								</IfCondition>
+							</Sequence>
+						</AreaPresenceListener>
+					</Loop>
+				</Parallel>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="archetype" comment="" />
+				<Variable name="cougingSouls" comment="" />
+				<Variable name="currentSoulsInCooldownLength" comment="" />
+				<Variable name="eligibleSouls" comment="" />
+				<Variable name="key" comment="" />
+				<Variable name="randomSoul" comment="" />
+				<Variable name="soul" comment="" />
+				<Variable name="souls" comment="" />
+				<Variable name="soulsInCooldown" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+							<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+							</Nodalyzer>
+						</GraphSearch>
+						<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</PushToArray>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</FindInArray>
+															<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</FindInArray>
+															<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</PushToArray>
+														</Selector>
+													</ForEach>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Fail>
+															</IfGate>
+														</Sequence>
+													</IfCondition>
+												</Sequence>
+											</LoopUntil>
+											<RandomItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RandomItem>
+											<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</EraseFromArray>
+											<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</EraseFromArray>
+														<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Fail>
+													</Sequence>
+												</Then>
+												<Else>
+													<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</PushToArray>
+												</Else>
+											</IsDeadCheck>
+										</Sequence>
+									</LoopUntil>
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</InstantSendMessageToNPC>
+										</Then>
+										<Else>
+											<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</InstantSendMessageToNPC>
+										</Else>
+									</IfElseCondition>
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Sequence>
+							</IfGate>
+						</Loop>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+									<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</EraseFromArray>
+								</Sequence>
+							</IfGate>
+						</Loop>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<AreaPresenceListener hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</FindInArray>
+									<Function_crime_getSoulArchetype hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_getSoulArchetype>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</FindInArray>
+													<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</PushToArray>
+												</Selector>
+											</Then>
+											<Else>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</EraseFromArray>
+													<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</EraseFromArray>
+													<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</EraseFromArray>
+												</Sequence>
+											</Else>
+										</IfElseCondition>
+									</IfCondition>
+								</Sequence>
+							</AreaPresenceListener>
+						</Loop>
+					</Parallel>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="switch_animal_fleeDecision" is_function="1">
+    <Variables>
+      <Variable name="activateFleeDecision" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="hitReaction" type="hitReaction" values="" isPersistent="0" form="single" />
+      <Variable name="inGuard" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="inIdle" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="inSkirmishAgainstPlayer" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="lowHp" type="_bool" values="false" isPersistent="0" form="single" />
+      <Variable name="lowMorale" type="_bool" values="false" isPersistent="0" form="single" />
+      <Variable name="receivedHitFromPlayer" type="_bool" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="attackData" type="switch:animal_interruptData:attack" values="" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <EntityContextBarrier context="combat_neverSurrenderOrFlee" target="" Negation="true" RunLogic="KeepRunning">
+          <Parallel successMode="Any" failureMode="Any">
+            <Loop count="-1">
+              <Sequence>
+                <Expression expressions="$inSkirmishAgainstPlayer = false" />
+                <SkirmishingAgainstPlayerBarrier Npc="$this.id" Active="true" Passive="true" RunLogic="KeepRunning">
+                  <Sequence>
+                    <Expression expressions="$inSkirmishAgainstPlayer = true" />
+                    <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                  </Sequence>
+                </SkirmishingAgainstPlayerBarrier>
+              </Sequence>
+            </Loop>
+            <Loop count="-1">
+              <IfGate atomic="false" condition="$inSkirmishAgainstPlayer" RunLogic="Halt">
+                <ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hitReaction" senderInfo="" inbox="&apos;hitReaction&apos;" condition="" answerVar="">
+                  <IfCondition failOnCondition="false" condition="$hitReaction.attacker == $__player &amp; &#10;$hitReaction.hitStrength &gt; $enum:HitReactionStrength.Tickle">
+                    <Expression expressions="$receivedHitFromPlayer = true" />
+                  </IfCondition>
+                </ProcessMessage>
+              </IfGate>
+            </Loop>
+            <Loop count="-1">
+              <IfGate atomic="false" condition="$inSkirmishAgainstPlayer &amp; $receivedHitFromPlayer" RunLogic="Halt">
+                <GameContext context="combat_allowDogsInSkirmishWithPlayerToEscape">
+                  <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                </GameContext>
+              </IfGate>
+            </Loop>
+            <GameContextBarrier context="combat_allowDogsInSkirmishWithPlayerToEscape" Negation="false" RunLogic="KeepRunning">
+              <GameContext context="combat_allowDogsInSkirmishWithPlayerToEscape">
+                <Sequence>
+                  <Expression expressions="$activateFleeDecision = true" />
+                  <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                </Sequence>
+              </GameContext>
+            </GameContextBarrier>
+            <Loop count="-1">
+              <IfGate atomic="false" condition="$activateFleeDecision | ~$inSkirmishAgainstPlayer" RunLogic="Halt">
+                <Parallel successMode="Any" failureMode="Any">
+                  <Parallel successMode="Any" failureMode="Any">
+                    <Loop count="-1">
+                      <Sequence>
+                        <Expression expressions="$inGuard = false" />
+                        <OnCombatStateChange NegateFromStates="false" StateFrom="xx_Any" NegateToStates="false" StateTo="1_Guard" WaitForNext="false" Combatants="Me" Who="" RunLogic="Halt">
+                          <Sequence>
+                            <Expression expressions="$inGuard = true" />
+                            <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                          </Sequence>
+                        </OnCombatStateChange>
+                      </Sequence>
+                    </Loop>
+                    <Loop count="-1">
+                      <Sequence>
+                        <Expression expressions="$inIdle = false" />
+                        <ActorStateBarrier Who="" ToState="idle" NegateTo="false" RunLogic="Halt">
+                          <Sequence>
+                            <Expression expressions="$inIdle = true" />
+                            <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                          </Sequence>
+                        </ActorStateBarrier>
+                      </Sequence>
+                    </Loop>
+                  </Parallel>
+                  <Sequence>
+                    <Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                    <HasMoraleForCombatGate Who="" Negation="true" RunLogic="KeepRunning">
+                      <Sequence>
+                        <Expression expressions="$lowMorale = true" />
+                        <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                      </Sequence>
+                    </HasMoraleForCombatGate>
+                  </Sequence>
+                  <NPCStateGate State="Health" Target="$this.id" Low="$data:script_param[&apos;combat_surrenderHealthThresholdInstant&apos;].value" High="$data:script_param[&apos;combat_surrenderHealthThresholdInstant&apos;].value" Negation="false" RunLogic="KeepRunning">
+                    <Sequence>
+                      <Expression expressions="$lowHp = true" />
+                      <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                    </Sequence>
+                  </NPCStateGate>
+                  <Sequence>
+                    <Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                    <NPCStateGate State="Health" Target="$this.id" Low="$data:script_param[&apos;combat_surrenderHealthThresholdDelayed&apos;].value" High="$data:script_param[&apos;combat_surrenderHealthThresholdDelayed&apos;].value" Negation="false" RunLogic="KeepRunning">
+                      <Sequence>
+                        <Expression expressions="$lowHp = true" />
+                        <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                      </Sequence>
+                    </NPCStateGate>
+                  </Sequence>
+                  <Sequence>
+                    <IfGate atomic="true" condition="($lowHp | $lowMorale) &amp; ($inGuard | $inIdle)" RunLogic="KeepRunning">
+                      <Function_callInterrupt_animal_escape escapeFromVec3="" escapeFromWuid="$attackData.target" ignorePriority="true" initiator="$enum:switch_interruptInitiator.scheduler" previousReaction="$enum:crime_animal_reactionKind.attack" stimulusKind="$attackData.stimulusKind" useVec3ForEscape="false" nodeLabel="71843149" />
+                    </IfGate>
+                    <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                  </Sequence>
+                </Parallel>
+              </IfGate>
+            </Loop>
+          </Parallel>
+        </EntityContextBarrier>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="activateFleeDecision" comment="" />
+        <Variable name="hitReaction" comment="" />
+        <Variable name="inGuard" comment="" />
+        <Variable name="inIdle" comment="" />
+        <Variable name="inSkirmishAgainstPlayer" comment="" />
+        <Variable name="lowHp" comment="" />
+        <Variable name="lowMorale" comment="" />
+        <Variable name="receivedHitFromPlayer" comment="" />
+        <Variable name="attackData" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Expression>
+                  <SkirmishingAgainstPlayerBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                      <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Wait>
+                    </Sequence>
+                  </SkirmishingAgainstPlayerBarrier>
+                </Sequence>
+              </Loop>
+              <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </IfCondition>
+                  </ProcessMessage>
+                </IfGate>
+              </Loop>
+              <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <GameContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Wait>
+                  </GameContext>
+                </IfGate>
+              </Loop>
+              <GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <GameContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                    <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Wait>
+                  </Sequence>
+                </GameContext>
+              </GameContextBarrier>
+              <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                          <OnCombatStateChange hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Expression>
+                              <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Wait>
+                            </Sequence>
+                          </OnCombatStateChange>
+                        </Sequence>
+                      </Loop>
+                      <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                          <ActorStateBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Expression>
+                              <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Wait>
+                            </Sequence>
+                          </ActorStateBarrier>
+                        </Sequence>
+                      </Loop>
+                    </Parallel>
+                    <Sequence hasInputBreakpoint="0" comment="Morale" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Wait>
+                      <HasMoraleForCombatGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                          <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Wait>
+                        </Sequence>
+                      </HasMoraleForCombatGate>
+                    </Sequence>
+                    <NPCStateGate hasInputBreakpoint="0" comment="Low HP instant" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                        <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Wait>
+                      </Sequence>
+                    </NPCStateGate>
+                    <Sequence hasInputBreakpoint="0" comment="Low HP delayed" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Wait>
+                      <NPCStateGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                          <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Wait>
+                        </Sequence>
+                      </NPCStateGate>
+                    </Sequence>
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <IfGate hasInputBreakpoint="0" comment="#KCD2-285659" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Function_callInterrupt_animal_escape hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Function_callInterrupt_animal_escape>
+                      </IfGate>
+                      <Wait hasInputBreakpoint="0" comment="CallInterrupt should halt this tree anyway" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Wait>
+                    </Sequence>
+                  </Parallel>
+                </IfGate>
+              </Loop>
+            </Parallel>
+          </EntityContextBarrier>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

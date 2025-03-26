@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="special_hostageSituation_femaleHoldsFemale_hostage" is_function="0">
+    <Variables>
+      <Variable name="killedByKidnapper" type="_bool" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="state" type="enum:hostageSituation_femaleHoldsFemale" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <OnInit canSkip="1">
+        <Sequence>
+          <SetExternalLock LockManagerType="Local" Locked="true" LockName="&apos;hostageSituation_kidnapper_aborting&apos;" />
+          <SetExternalLock LockManagerType="Local" Locked="true" LockName="&apos;hostageSituation_hostage_aborting&apos;" />
+        </Sequence>
+      </OnInit>
+      <Behavior canSkip="1">
+        <FuseBox StatusPropagation="Child" OneCleanup="false" saveVersion="2">
+          <Child canSkip="1">
+            <EntityContextPreset preset="switch_unresponsive" target="">
+              <EntityContextElement context="speech_readyForSwitchDialog" enabled="true">
+                <UrgencyDecorator Urgency="Slow">
+                  <Parallel successMode="Any" failureMode="Any">
+                    <ContinuousSwitch>
+                      <IfCondition failOnCondition="false" condition="$state == $enum:hostageSituation_femaleHoldsFemale.HoldHostage">
+                        <Selector>
+                          <Sequence>
+                            <JoinedUnstanceAction lockContext="$__object.id" lockName="&apos;HoldHostage&apos;" lockCount="2" timeout="&apos;10s&apos;" ignoreOthersLeaving="false" unstance="hostageSituation_femaleHoldsFemale_hostage_holdHostage" locationObject="$__object.id" slaveObject="" />
+                            <ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;hostageSituation_kidnapper_aborting&apos;" RunLogic="KeepRunning">
+                              <Fail />
+                            </ExternalLock>
+                          </Sequence>
+                          <SetExternalLock LockManagerType="Local" Locked="false" LockName="&apos;hostageSituation_hostage_aborting&apos;" />
+                        </Selector>
+                      </IfCondition>
+                      <IfCondition failOnCondition="false" condition="$state == $enum:hostageSituation_femaleHoldsFemale.KidnapperReleasesHostage">
+                        <FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+                          <Child canSkip="1">
+                            <UnstanceElement unstance="hostageSituation_femaleHoldsFemale_hostage_holdHostage" locationObject="$__object.id" slaveObject="" enabled="true">
+                              <JoinedAnimationAction requiresMovement="false" lockContext="$__object.id" lockName="&apos;KidnapperReleasesHostage&apos;" lockCount="2" timeout="&apos;10s&apos;" ignoreOthersLeaving="true" fragment="&apos;Quest_FemmeFatal_Hostage_KidnapperReleasesHostage&apos;" tags="" eventReferenceObject="" alignObject="$__object.id" slaveObject="" resourceOverride="&apos;hostage&apos;" allowTorchForPlayer="false" />
+                            </UnstanceElement>
+                          </Child>
+                          <OnSuccess canSkip="1">
+                            <Callback_empty EventName="&apos;OnHostageReleased&apos;" />
+                          </OnSuccess>
+                        </FuseBox>
+                      </IfCondition>
+                      <IfCondition failOnCondition="false" condition="$state == $enum:hostageSituation_femaleHoldsFemale.KidnapperKillsHostage">
+                        <EntityContext context="deadBody_allowActorAnimsForDeadNPC" target="">
+                          <FuseBox StatusPropagation="Child" OneCleanup="false" saveVersion="2">
+                            <Child canSkip="1">
+                              <Parallel successMode="Any" failureMode="Any">
+                                <UnstanceElement unstance="hostageSituation_femaleHoldsFemale_hostage_holdHostage" locationObject="$__object.id" slaveObject="" enabled="true">
+                                  <JoinedAnimationAction requiresMovement="false" lockContext="$__object.id" lockName="&apos;KidnapperKillsHostage&apos;" lockCount="2" timeout="&apos;500ms&apos;" ignoreOthersLeaving="true" fragment="&apos;Quest_FemmeFatal_Hostage_KidnapperKillsHostage&apos;" tags="" eventReferenceObject="" alignObject="$__object.id" slaveObject="" resourceOverride="&apos;hostage&apos;" allowTorchForPlayer="false" />
+                                </UnstanceElement>
+                                <Sequence>
+                                  <Wait duration="&apos;1000ms&apos;" timeType="GameTime" doFail="false" variation="" />
+                                  <AtomicDecorator>
+                                    <Sequence>
+                                      <Expression expressions="$killedByKidnapper = true" />
+                                      <ExecuteLua code="entity.actor:AddBlood(1.0, &apos;torso&apos;) &#10;entity.soul:DealDamage(999, 999, entity.this.id, true)" />
+                                    </Sequence>
+                                  </AtomicDecorator>
+                                </Sequence>
+                                <ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;hostageSituation_kidnapper_aborting&apos;" RunLogic="KeepRunning">
+                                  <Fail />
+                                </ExternalLock>
+                              </Parallel>
+                            </Child>
+                            <OnFail canSkip="1">
+                              <IfCondition failOnCondition="false" condition="!$killedByKidnapper">
+                                <Sequence>
+                                  <ActorStateCheck Who="" State="hit" FailWithSubtreeMissing="false" saveVersion="2">
+                                    <Else canSkip="1">
+                                      <IsDeadCheck SoulWUID="" FailSubtMissing="false" saveVersion="2">
+                                        <Else canSkip="1">
+                                          <UrgencyDecorator Urgency="Instant">
+                                            <WaitAction />
+                                          </UrgencyDecorator>
+                                        </Else>
+                                      </IsDeadCheck>
+                                    </Else>
+                                  </ActorStateCheck>
+                                  <SetExternalLock LockManagerType="Local" Locked="false" LockName="&apos;hostageSituation_hostage_aborting&apos;" />
+                                </Sequence>
+                              </IfCondition>
+                            </OnFail>
+                          </FuseBox>
+                        </EntityContext>
+                      </IfCondition>
+                      <IfCondition failOnCondition="false" condition="true">
+                        <SetExternalLock LockManagerType="Local" Locked="false" LockName="&apos;hostageSituation_hostage_aborting&apos;" />
+                      </IfCondition>
+                    </ContinuousSwitch>
+                    <ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;hostageSituation_hostage_aborting&apos;" RunLogic="KeepRunning">
+                      <Fail />
+                    </ExternalLock>
+                  </Parallel>
+                </UrgencyDecorator>
+              </EntityContextElement>
+            </EntityContextPreset>
+          </Child>
+          <OnFail canSkip="1">
+            <IfElseCondition failOnCondition="false" condition="!$killedByKidnapper" saveVersion="2">
+              <Then canSkip="1">
+                <Sequence>
+                  <SetExternalLock LockManagerType="Local" Locked="false" LockName="&apos;hostageSituation_hostage_aborting&apos;" />
+                  <Callback_empty EventName="&apos;OnAborting&apos;" />
+                </Sequence>
+              </Then>
+              <Else canSkip="1">
+                <Callback_empty EventName="&apos;OnHostageKilledByKidnapper&apos;" />
+              </Else>
+            </IfElseCondition>
+          </OnFail>
+        </FuseBox>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData Signature="hostageSituation_femaleHoldsFemale_hostage" EventSet="hostageSituation_femaleHoldsFemale_hostage">
+      <Variables>
+        <Variable name="killedByKidnapper" comment="" />
+        <Variable name="state" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root editorPosX="-20" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <OnInit>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </SetExternalLock>
+            <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </SetExternalLock>
+          </Sequence>
+        </OnInit>
+        <Behavior>
+          <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+            <OutputBreakpoints />
+            <Child>
+              <EntityContextPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <IfCondition hasInputBreakpoint="0" comment="HoldHostage" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <JoinedUnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </JoinedUnstanceAction>
+                              <ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Fail>
+                              </ExternalLock>
+                            </Sequence>
+                            <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </SetExternalLock>
+                          </Selector>
+                        </IfCondition>
+                        <IfCondition hasInputBreakpoint="0" comment="KidnapperReleasesHostage" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                            <Child>
+                              <UnstanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <JoinedAnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </JoinedAnimationAction>
+                              </UnstanceElement>
+                            </Child>
+                            <OnSuccess>
+                              <Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Callback_empty>
+                            </OnSuccess>
+                          </FuseBox>
+                        </IfCondition>
+                        <IfCondition hasInputBreakpoint="0" comment="KidnapperKillsHostage" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                              <OutputBreakpoints />
+                              <Child>
+                                <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <UnstanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <JoinedAnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </JoinedAnimationAction>
+                                  </UnstanceElement>
+                                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </Wait>
+                                    <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </Expression>
+                                        <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </ExecuteLua>
+                                      </Sequence>
+                                    </AtomicDecorator>
+                                  </Sequence>
+                                  <ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </Fail>
+                                  </ExternalLock>
+                                </Parallel>
+                              </Child>
+                              <OnFail>
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <ActorStateCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                      <OutputBreakpoints />
+                                      <Else>
+                                        <IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                          <OutputBreakpoints />
+                                          <Else>
+                                            <UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                              <WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                              </WaitAction>
+                                            </UrgencyDecorator>
+                                          </Else>
+                                        </IsDeadCheck>
+                                      </Else>
+                                    </ActorStateCheck>
+                                    <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </SetExternalLock>
+                                  </Sequence>
+                                </IfCondition>
+                              </OnFail>
+                            </FuseBox>
+                          </EntityContext>
+                        </IfCondition>
+                        <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </SetExternalLock>
+                        </IfCondition>
+                      </ContinuousSwitch>
+                      <ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Fail>
+                      </ExternalLock>
+                    </Parallel>
+                  </UrgencyDecorator>
+                </EntityContextElement>
+              </EntityContextPreset>
+            </Child>
+            <OnFail>
+              <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+                <Then>
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </SetExternalLock>
+                    <Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Callback_empty>
+                  </Sequence>
+                </Then>
+                <Else>
+                  <Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Callback_empty>
+                </Else>
+              </IfElseCondition>
+            </OnFail>
+          </FuseBox>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

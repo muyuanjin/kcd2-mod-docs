@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_secondArrest" is_function="0">
+		<Variables>
+			<Variable name="assaultData" type="crime:assaultData" values="" isPersistent="0" form="single" />
+			<Variable name="dialogContext" type="_float" values="" isPersistent="0" form="associative" />
+			<Variable name="knownInformation" type="information" values="" isPersistent="0" form="array" />
+			<Variable name="knownInformation_value" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="lock_teleport" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="mostImportantInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="newPunishmentType" type="enum:crime_punishmentType" values="" isPersistent="0" form="single" />
+			<Variable name="playerPoint" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="playerTeleportRequest" type="switch:teleportRequest" values="" isPersistent="0" form="single" />
+			<Variable name="resolution" type="crime:resolution" values="" isPersistent="0" form="single" />
+			<Variable name="resolveDialogFeedback" type="crime:resolveDialogFeedback" values="" isPersistent="0" form="single" />
+			<Variable name="resolveSuccessful" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusKind" type="enum:crime_stimulusKind" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItemsChest" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="guardPoint" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Concatenation OutString="$lock_teleport" Pattern="&apos;$__player;_teleported&apos;" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:secondArrest&apos;">
+					<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+						<Child canSkip="1">
+							<FaderBarrier Fader="&apos;crime_secondArrestFader_2&apos;" MuteSounds="true">
+								<Selector>
+									<Sequence>
+										<RemoveBuffs SoulWUID="" BuffGUID="&apos;ffc20522-134d-4811-8bc5-e933b74b7081&apos;" BuffTagId="-1" />
+										<TeleportAction Position="$guardPoint" EndInterruptOnActionStart="false" />
+										<SetExternalLock LockManagerType="Global" Locked="true" LockName="&apos;$lock_teleport&apos;" />
+										<Sequence>
+											<GraphSearch Origin="$guardPoint" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+												<LinkTagFilter tag="&apos;playerPoint&apos;" prune="true" negprune="unknown" Parent="" Child="$playerPoint" Data="" />
+											</GraphSearch>
+											<Expression expressions="$playerTeleportRequest.positionWuid = $playerPoint &#10;$playerTeleportRequest.shouldUseWuidPosition = true" />
+											<InstantSendMessageToNPC target="$__player" variable="$playerTeleportRequest" />
+										</Sequence>
+										<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;$lock_teleport&apos;" RunLogic="KeepRunning">
+											<Sequence>
+												<Function_crime_getKnownInformationForSecondArrest shouldIncludeLastArrester="true" knownInformation="$knownInformation" nodeLabel="95640213" />
+												<Function_crime_patch_animalUIName nodeLabel="19297474" />
+												<ResolveCrimeDecorator Information="$knownInformation">
+													<Sequence>
+														<Function_crime_recalculatePunishment knownInformations="$knownInformation" dialogContext="$dialogContext" newPunishmentType="$newPunishmentType" nodeLabel="41960564" />
+														<Expression expressions="$dialogContext[&apos;isSecondArrest&apos;] = 1" />
+														<SendAIConceptSignal_crime_aiResolveFinished />
+														<Function_speech_dialogInitiator alias="" animationApproach="$enum:animationApproach.tryDialogAnimations" context="$dialogContext" customParameters="" metarole="&apos;STRAZ_ZATYKANI&apos;" preset="$enum:dialogPreset.fader" recipient="$__player" recipientMetaroles="" nodeLabel="31994751" />
+														<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$resolveDialogFeedback" senderInfo="" inbox="&apos;crime_resolveDialogFeedback&apos;" condition="" answerVar="">
+															<Sequence>
+																<Expression expressions="$resolution.kind = $resolveDialogFeedback.action &#10;$resolveSuccessful = $resolution.kind ~= $enum:crime_resolutionKind.fight" />
+																<IfCondition failOnCondition="false" condition="$resolveSuccessful">
+																	<Sequence>
+																		<ForEach startIndex="0" step="1" array="$knownInformation" iterator="" value="$knownInformation_value" break="">
+																			<IfCondition failOnCondition="false" condition="$data:crime[$knownInformation_value.label].isCrime">
+																				<FuseBox StatusPropagation="Success" OneCleanup="false" saveVersion="2">
+																					<Child canSkip="1">
+																						<Function_crime_resolveCrimeInformation information="$knownInformation_value" resolutionKindIsSkillcheck="false" nodeLabel="38231852" />
+																					</Child>
+																					<OnSuccess canSkip="1">
+																						<Success />
+																					</OnSuccess>
+																					<OnFail canSkip="1">
+																						<ErrorNode Message="&apos;ERROR: resolveCrimeInformation failed for information $knownInformation_value.label, $knownInformation_value.perceivedWuid!&apos;" />
+																					</OnFail>
+																				</FuseBox>
+																			</IfCondition>
+																		</ForEach>
+																		<Function_crime_broadcastCooperationNotification cooperationNotification="$enum:crime_cooperationNotification.crimeResolved" nodeLabel="54342198" />
+																	</Sequence>
+																</IfCondition>
+																<Switch>
+																	<IfCondition failOnCondition="false" condition="$resolution.kind == $enum:crime_resolutionKind.punishment">
+																		<Function_crime_forcePlayerPunishment fine="$dialogContext[&apos;fine&apos;]" punishmentType="$newPunishmentType" nodeLabel="59372104" />
+																	</IfCondition>
+																	<IfCondition failOnCondition="false" condition="$resolution.kind == $enum:crime_resolutionKind.fine">
+																		<Sequence>
+																			<Function_crime_getStolenItemsStorageChest inventory="" storage="$stolenItemsChest" nodeLabel="36440566" />
+																			<Confiscate ConfiscateItems="None" ConfiscateFine="true" TargetStash="$stolenItemsChest" />
+																			<SendAIConceptSignal_crime_moneyTaken amount="$punishment.fine" />
+																		</Sequence>
+																	</IfCondition>
+																	<IfCondition failOnCondition="false" condition="$resolution.kind == $enum:crime_resolutionKind.fight">
+																		<Sequence>
+																			<AffectFeelings Npc="$this.id" Token="&apos;confrontationDialog_run&apos;" AffectNervousness="false" AffectReputation="true" />
+																			<GetMostImportantCrimeInformation Npc="$this.id" OnlyRelated="false" MostImportantInformation="$mostImportantInformation" />
+																			<Function_crime_broadcastCooperationNotification cooperationNotification="$enum:crime_cooperationNotification.arrestEscalation" nodeLabel="27067091" />
+																			<Function_crime_getStimulusKindFromString label="$mostImportantInformation.label" stimulusKind="$stimulusKind" nodeLabel="63615492" />
+																			<Function_callInterrupt_attack assaultData="$assaultData" criminalFreshness="$enum:crime_criminalFreshness.unknown" defenceMode="false" escalatedFromFailedSurrender="true" freshlyAttributedCrime="false" ignorePriority="true" information="$mostImportantInformation" initiator="$enum:switch_interruptInitiator.scheduler" previousReaction="$enum:crime_reactionKind.arrest" priority="160" questBehavior="false" relationOverride="true" stimulusKind="$stimulusKind" target="$__player" nodeLabel="65056351" />
+																		</Sequence>
+																	</IfCondition>
+																	<DefaultBranch>
+																		<Success />
+																	</DefaultBranch>
+																</Switch>
+															</Sequence>
+														</ProcessMessage>
+													</Sequence>
+												</ResolveCrimeDecorator>
+											</Sequence>
+										</ExternalLock>
+									</Sequence>
+									<ErrorNode Message="&apos;ERROR: Unexpected error occured in the second arrest, contact patrik.papso with a nice message and a repro&apos;" />
+								</Selector>
+							</FaderBarrier>
+						</Child>
+						<OnFail canSkip="1">
+							<SendAIConceptSignal_crime_secondArrest_interruptFinished />
+						</OnFail>
+					</FuseBox>
+				</LogToLabel>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="interrupt_secondArrest" EventSet="">
+			<Variables>
+				<Variable name="assaultData" comment="" />
+				<Variable name="dialogContext" comment="" />
+				<Variable name="knownInformation" comment="" />
+				<Variable name="knownInformation_value" comment="" />
+				<Variable name="lock_teleport" comment="" />
+				<Variable name="mostImportantInformation" comment="" />
+				<Variable name="newPunishmentType" comment="" />
+				<Variable name="playerPoint" comment="" />
+				<Variable name="playerTeleportRequest" comment="" />
+				<Variable name="resolution" comment="" />
+				<Variable name="resolveDialogFeedback" comment="" />
+				<Variable name="resolveSuccessful" comment="" />
+				<Variable name="stimulusKind" comment="" />
+				<Variable name="stolenItemsChest" comment="" />
+				<Variable name="guardPoint" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Concatenation>
+				</OnInit>
+				<Behavior>
+					<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Child>
+								<FaderBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<RemoveBuffs hasInputBreakpoint="0" comment="rm drunkeness" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RemoveBuffs>
+											<TeleportAction hasInputBreakpoint="0" comment="Has to be teleported before dialogue" breakpointFlags="0">
+												<OutputBreakpoints />
+											</TeleportAction>
+											<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</SetExternalLock>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</LinkTagFilter>
+												</GraphSearch>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</InstantSendMessageToNPC>
+											</Sequence>
+											<ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_crime_getKnownInformationForSecondArrest hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_getKnownInformationForSecondArrest>
+													<Function_crime_patch_animalUIName hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_patch_animalUIName>
+													<ResolveCrimeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_crime_recalculatePunishment hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_recalculatePunishment>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<SendAIConceptSignal_crime_aiResolveFinished hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</SendAIConceptSignal_crime_aiResolveFinished>
+															<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_speech_dialogInitiator>
+															<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Child>
+																							<Function_crime_resolveCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_resolveCrimeInformation>
+																						</Child>
+																						<OnSuccess>
+																							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Success>
+																						</OnSuccess>
+																						<OnFail>
+																							<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</ErrorNode>
+																						</OnFail>
+																					</FuseBox>
+																				</IfCondition>
+																			</ForEach>
+																			<Function_crime_broadcastCooperationNotification hasInputBreakpoint="0" comment="Notify reactors that SOME information got resolved, they have to check for themselves" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_broadcastCooperationNotification>
+																		</Sequence>
+																	</IfCondition>
+																	<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Function_crime_forcePlayerPunishment hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_forcePlayerPunishment>
+																		</IfCondition>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Function_crime_getStolenItemsStorageChest hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_getStolenItemsStorageChest>
+																				<Confiscate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Confiscate>
+																				<SendAIConceptSignal_crime_moneyTaken hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</SendAIConceptSignal_crime_moneyTaken>
+																			</Sequence>
+																		</IfCondition>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<AffectFeelings hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</AffectFeelings>
+																				<GetMostImportantCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</GetMostImportantCrimeInformation>
+																				<Function_crime_broadcastCooperationNotification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_broadcastCooperationNotification>
+																				<Function_crime_getStimulusKindFromString hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_getStimulusKindFromString>
+																				<Function_callInterrupt_attack hasInputBreakpoint="0" comment="note to future self: reactionKind was always arrest here, but it might have changed since" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_callInterrupt_attack>
+																			</Sequence>
+																		</IfCondition>
+																		<DefaultBranch>
+																			<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Success>
+																		</DefaultBranch>
+																	</Switch>
+																</Sequence>
+															</ProcessMessage>
+														</Sequence>
+													</ResolveCrimeDecorator>
+												</Sequence>
+											</ExternalLock>
+										</Sequence>
+										<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ErrorNode>
+									</Selector>
+								</FaderBarrier>
+							</Child>
+							<OnFail>
+								<SendAIConceptSignal_crime_secondArrest_interruptFinished hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</SendAIConceptSignal_crime_secondArrest_interruptFinished>
+							</OnFail>
+						</FuseBox>
+					</LogToLabel>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

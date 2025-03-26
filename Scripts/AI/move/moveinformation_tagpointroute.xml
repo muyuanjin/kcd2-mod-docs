@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="moveInFormation_tagpointRoute" is_function="0">
+		<Variables>
+			<Variable name="currentFollowType" type="enum:tour_followType" values="" isPersistent="0" form="single" />
+			<Variable name="currentFormation" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="enableHorseElement" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="formationLock" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="formationWUID" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="horse" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="index" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="pathFindingParams" type="pathFindingParams" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="context" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="destination" type="_wuid" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="finalTagpoint" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="followFormationParams" type="followFormationParams" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="followType" type="enum:tour_followType" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="followableSoul" type="_wuid" values="" isPersistent="0" form="single" requirementType="ConstReference" optional="1" />
+			<Variable name="formationName" type="_string" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="formationType" type="enum:formationType" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="keepHandContent" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="movementSpeed" type="enum:movementSpeed" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="movingNPCs" type="_wuid" values="" isPersistent="0" form="array" requirementType="In" />
+			<Variable name="pathOffset" type="_float" values="0" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="preferredPositions" type="_string" values="" isPersistent="0" form="array" requirementType="In" />
+			<Variable name="successDistance" type="_float" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="usePaths" type="_bool" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkDataFilter tag="&apos;useHorse&apos;" condition="$__link_useHorse==$context" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+						<EntityClassFilter Class="NHNPC" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+						<SoulIsAliveFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+						<Nodalyzer Quantifiers="ForAll" Parent="" Child="$horse" saveVersion="2" />
+					</GraphSearch>
+					<Switch>
+						<IfCondition failOnCondition="false" condition="$formationType == $enum:formationType.KeepDistance">
+							<Expression expressions="$followFormationParams.formation.policy = $enum:formationMode.KeepDistance" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$formationType == $enum:formationType.MoveHistory">
+							<Expression expressions="$followFormationParams.formation.policy = $enum:formationMode.MoveHistory" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$formationType == $enum:formationType.KeepShape">
+							<Expression expressions="$followFormationParams.formation.policy = $enum:formationMode.KeepShape" />
+						</IfCondition>
+						<DefaultBranch>
+							<Expression expressions="$followFormationParams.formation.policy = $enum:formationMode.Relaxed" />
+						</DefaultBranch>
+					</Switch>
+					<Expression expressions="$enableHorseElement = $horse ~= $__null" />
+					<AnyDecorator preset="bothHands_changeEquipment" enabled="$keepHandContent">
+						<EntityContext context="speech_readyForSwitchDialog" target="">
+							<StanceElement smartObject="$horse" stance="horse" allowAny="false" enabled="$enableHorseElement">
+								<Parallel successMode="Any" failureMode="Any">
+									<IfElseCondition failOnCondition="false" condition="$followFormationParams.formation.leader == $this.id" saveVersion="2">
+										<Then canSkip="1">
+											<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+												<Child canSkip="1">
+													<Sequence>
+														<MakeFormation FormationName="$followFormationParams.formation.type" HandleVariable="$formationWUID" />
+														<Expression expressions="$currentFormation = $formationName" />
+														<Concatenation OutString="$formationLock" Pattern="&apos;followNPC_leader_$this.id&apos;" />
+														<SetExternalLock LockManagerType="Global" Locked="false" LockName="&apos;$formationLock&apos;" />
+														<Parallel successMode="Any" failureMode="Any">
+															<Loop count="-1">
+																<Sequence>
+																	<Expression expressions="$pathFindingParams.pathOffset = $pathOffset &#10;$pathFindingParams.usePaths = $usePaths" />
+																	<Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="$successDistance" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$destination" destinationSpecification2="" destinationSpecification3="" speed="$movementSpeed" additionalParams="" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+																	<IfElseCondition failOnCondition="false" condition="$destination ~= $finalTagpoint" saveVersion="2">
+																		<Then canSkip="1">
+																			<InstantCallback_empty EventName="&apos;TagpointReached&apos;" />
+																		</Then>
+																		<Else canSkip="1">
+																			<InstantCallback_empty EventName="&apos;FinalTagpointReached&apos;" />
+																		</Else>
+																	</IfElseCondition>
+																</Sequence>
+															</Loop>
+															<While doFail="false" propagateChildFail="false" condition="true">
+																<IfGate atomic="false" condition="$currentFormation ~= $formationName" RunLogic="KeepRunning">
+																	<Sequence>
+																		<ChangeFormation NewName="$formationName" Formation="$formationWUID" />
+																		<Expression expressions="$currentFormation = $formationName" />
+																	</Sequence>
+																</IfGate>
+															</While>
+														</Parallel>
+													</Sequence>
+												</Child>
+												<OnSuccess canSkip="1">
+													<Sequence>
+														<EndFormation FormationHandle="$formationWUID" />
+														<SetExternalLock LockManagerType="Global" Locked="true" LockName="&apos;$formationLock&apos;" />
+													</Sequence>
+												</OnSuccess>
+											</FuseBox>
+										</Then>
+										<Else canSkip="1">
+											<Sequence>
+												<FindInArray array="$movingNPCs" keyOut="$index" condition="$__value == $this.id" />
+												<IfCondition failOnCondition="false" condition="$index &lt; #preferredPositions">
+													<Expression expressions="$followFormationParams.formation.preferedPosition = $preferredPositions[$index]" />
+												</IfCondition>
+												<Function_moveInFormation_slave followFormationParams="$followFormationParams" nodeLabel="22336082" />
+											</Sequence>
+										</Else>
+									</IfElseCondition>
+									<While doFail="false" propagateChildFail="false" condition="true">
+										<Sequence>
+											<Expression expressions="$currentFollowType = $followType" />
+											<IfGate atomic="false" condition="$followableSoul == $this.id &amp; &#10;$currentFollowType ~= $enum:tour_followType.none &amp; &#10;$currentFollowType == $followType" RunLogic="Halt">
+												<Sequence>
+													<Switch>
+														<IfCondition failOnCondition="false" condition="$followType == $enum:tour_followType.followableNpcCenter">
+															<Expression expressions="$context = &apos;FollowableNPCCenter&apos;" />
+														</IfCondition>
+														<IfCondition failOnCondition="false" condition="$followType == $enum:tour_followType.followableNpcLeft">
+															<Expression expressions="$context = &apos;FollowableNPCLeft&apos;" />
+														</IfCondition>
+														<IfCondition failOnCondition="false" condition="$followType == $enum:tour_followType.followableNpcRight">
+															<Expression expressions="$context = &apos;FollowableNPCRight&apos;" />
+														</IfCondition>
+													</Switch>
+													<EntityContext context="$context" target="">
+														<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+													</EntityContext>
+												</Sequence>
+											</IfGate>
+										</Sequence>
+									</While>
+								</Parallel>
+							</StanceElement>
+						</EntityContext>
+					</AnyDecorator>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="moveInFormation_tagpointRoute" EventSet="moveInFormation_tagpointRoute">
+			<Variables>
+				<Variable name="currentFollowType" comment="" />
+				<Variable name="currentFormation" comment="" />
+				<Variable name="enableHorseElement" comment="" />
+				<Variable name="formationLock" comment="" />
+				<Variable name="formationWUID" comment="" />
+				<Variable name="horse" comment="" />
+				<Variable name="index" comment="" />
+				<Variable name="pathFindingParams" comment="" />
+				<Variable name="context" comment="" />
+				<Variable name="destination" comment="" />
+				<Variable name="finalTagpoint" comment="" />
+				<Variable name="followFormationParams" comment="" />
+				<Variable name="followType" comment="" />
+				<Variable name="followableSoul" comment="" />
+				<Variable name="formationName" comment="" />
+				<Variable name="formationType" comment="" />
+				<Variable name="keepHandContent" comment="" />
+				<Variable name="movementSpeed" comment="" />
+				<Variable name="movingNPCs" comment="" />
+				<Variable name="pathOffset" comment="" />
+				<Variable name="preferredPositions" comment="" />
+				<Variable name="successDistance" comment="" />
+				<Variable name="usePaths" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkDataFilter>
+							<EntityClassFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</EntityClassFilter>
+							<SoulIsAliveFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</SoulIsAliveFilter>
+							<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+							</Nodalyzer>
+						</GraphSearch>
+						<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<DefaultBranch>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</DefaultBranch>
+						</Switch>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfElseCondition hasInputBreakpoint="0" comment="Is leader?" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Child>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<MakeFormation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</MakeFormation>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Concatenation>
+															<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</SetExternalLock>
+															<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																		<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Move>
+																		<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</InstantCallback_empty>
+																			</Then>
+																			<Else>
+																				<InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</InstantCallback_empty>
+																			</Else>
+																		</IfElseCondition>
+																	</Sequence>
+																</Loop>
+																<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<ChangeFormation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</ChangeFormation>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Sequence>
+																	</IfGate>
+																</While>
+															</Parallel>
+														</Sequence>
+													</Child>
+													<OnSuccess>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<EndFormation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</EndFormation>
+															<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</SetExternalLock>
+														</Sequence>
+													</OnSuccess>
+												</FuseBox>
+											</Then>
+											<Else>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</FindInArray>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</IfCondition>
+													<Function_moveInFormation_slave hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_moveInFormation_slave>
+												</Sequence>
+											</Else>
+										</IfElseCondition>
+										<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</IfCondition>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</IfCondition>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</IfCondition>
+														</Switch>
+														<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</EntityContext>
+													</Sequence>
+												</IfGate>
+											</Sequence>
+										</While>
+									</Parallel>
+								</StanceElement>
+							</EntityContext>
+						</AnyDecorator>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

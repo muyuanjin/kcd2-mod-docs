@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="speech_tour_speech_dialogInit" is_function="1">
+		<Variables>
+			<Variable name="currentAlias_dialog" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="playerInDialog" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerKey" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="restartingDialogAfterInterrupt" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="alias" type="_string" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="animationApproach" type="enum:animationApproach" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="dialogFinishedAndTagpointReachedLock" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="isBark" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="leader" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="nextPhaseTrigger" type="enum:tour_nextPhaseTrigger" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="onPlayerLeft_dialogProgression" type="enum:tour_onPlayerLeft_dialogProgression" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="participants" type="_wuid" values="" isPersistent="0" form="array" requirementType="ConstReference" />
+			<Variable name="playerIsBackAfterLeaving" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="polylogPreset" type="enum:dialogPreset" values="$enum:dialogPreset.ingame" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="progressTour" type="enum:tour_tourProgress" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="startDialogOnTagpoint" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="subtitlesDown" type="_bool" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Expression expressions="$currentAlias_dialog = $alias" />
+					<Parallel successMode="Any" failureMode="Any">
+						<LoopUntil until="Success" attemptCount="0">
+							<Sequence>
+								<IfCondition failOnCondition="false" condition="!$isBark">
+									<SuppressFailure>
+										<Sequence>
+											<FindInArray array="$participants" keyOut="$playerKey" condition="$__value == $__player" />
+											<Expression expressions="$playerInDialog = true" />
+										</Sequence>
+									</SuppressFailure>
+								</IfCondition>
+								<ReinitVariable variable="$playerInDialog" />
+								<DialogGate Who="" Negation="true" EndDialogInRoot="false" Condition="InMonolog" RunLogic="KeepRunning">
+									<Switch>
+										<IfCondition failOnCondition="false" condition="$isBark">
+											<Function_speech_tour_speech_barkAfterInterruption playerIsBackAfterLeaving="$playerIsBackAfterLeaving" restartingDialogAfterInterrupt="$restartingDialogAfterInterrupt" nodeLabel="65416043" />
+										</IfCondition>
+										<IfCondition failOnCondition="false" condition="!$playerInDialog">
+											<LinkGate from="$participants" to="$this.id" tag="&apos;tour_interruptedDialog&apos;" amount="All" presence="NotThere" RunLogic="KeepRunning">
+												<Function_speech_tour_speech_barkAfterInterruption playerIsBackAfterLeaving="$playerIsBackAfterLeaving" restartingDialogAfterInterrupt="$restartingDialogAfterInterrupt" nodeLabel="18844683" />
+											</LinkGate>
+										</IfCondition>
+										<DefaultBranch>
+											<DialogGate Who="$__player" Negation="true" EndDialogInRoot="false" Condition="InMonolog" RunLogic="KeepRunning">
+												<LinkGate from="$participants" to="$this.id" tag="&apos;tour_interruptedDialog&apos;" amount="All" presence="NotThere" RunLogic="KeepRunning">
+													<Function_speech_tour_speech_barkAfterInterruption playerIsBackAfterLeaving="$playerIsBackAfterLeaving" restartingDialogAfterInterrupt="$restartingDialogAfterInterrupt" nodeLabel="63166211" />
+												</LinkGate>
+											</DialogGate>
+										</DefaultBranch>
+									</Switch>
+								</DialogGate>
+								<IfElseCondition failOnCondition="false" condition="$startDialogOnTagpoint &amp; &#10;($nextPhaseTrigger == $enum:tour_nextPhaseTrigger.dialogFinished | &#10;$nextPhaseTrigger == $enum:tour_nextPhaseTrigger.none)" saveVersion="2">
+									<Then canSkip="1">
+										<EntityContextBarrier context="tour_reachedTagpoint" target="$leader" Negation="false" RunLogic="KeepRunning">
+											<Function_speech_tour_speech_dialogProgression alias="$currentAlias_dialog" animationApproach="$animationApproach" isBark="$isBark" leader="$leader" onPlayerLeft_dialogProgression="$onPlayerLeft_dialogProgression" participants="$participants" playerInDialog="$playerInDialog" polylogPreset="$polylogPreset" progressTour="$progressTour" subtitlesDown="$subtitlesDown" restartingDialogAfterInterrupt="$restartingDialogAfterInterrupt" nodeLabel="41053409" />
+										</EntityContextBarrier>
+									</Then>
+									<Else canSkip="1">
+										<Function_speech_tour_speech_dialogProgression alias="$currentAlias_dialog" animationApproach="$animationApproach" isBark="$isBark" leader="$leader" onPlayerLeft_dialogProgression="$onPlayerLeft_dialogProgression" participants="$participants" playerInDialog="$playerInDialog" polylogPreset="$polylogPreset" progressTour="$progressTour" subtitlesDown="$subtitlesDown" restartingDialogAfterInterrupt="$restartingDialogAfterInterrupt" nodeLabel="51507463" />
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+						</LoopUntil>
+						<IfGate atomic="false" condition="$currentAlias_dialog ~= $alias" RunLogic="KeepRunning">
+							<Fail />
+						</IfGate>
+					</Parallel>
+					<LoopUntil until="Success" attemptCount="0">
+						<Switch>
+							<IfCondition failOnCondition="false" condition="$nextPhaseTrigger == $enum:tour_nextPhaseTrigger.dialogFinished &amp; &#10;$currentAlias_dialog == $alias">
+								<Callback_empty EventName="&apos;OnDialogFinished&apos;" />
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$nextPhaseTrigger == $enum:tour_nextPhaseTrigger.both &amp; &#10;$currentAlias_dialog == $alias">
+								<Synchronize SemaphoreCount="3" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;$dialogFinishedAndTagpointReachedLock&apos;" RunLogic="KeepRunning">
+									<Success />
+								</Synchronize>
+							</IfCondition>
+							<DefaultBranch>
+								<IfGate atomic="false" condition="$currentAlias_dialog ~= $alias | &#10;$nextPhaseTrigger == $enum:tour_nextPhaseTrigger.both | &#10;$nextPhaseTrigger == $enum:tour_nextPhaseTrigger.dialogFinished" RunLogic="KeepRunning">
+									<IfCondition failOnCondition="true" condition="$currentAlias_dialog ~= $alias">
+										<Success />
+									</IfCondition>
+								</IfGate>
+							</DefaultBranch>
+						</Switch>
+					</LoopUntil>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<IfCondition failOnCondition="true" condition="$currentAlias_dialog == $alias" />
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="currentAlias_dialog" comment="" />
+				<Variable name="playerInDialog" comment="" />
+				<Variable name="playerKey" comment="" />
+				<Variable name="restartingDialogAfterInterrupt" comment="" />
+				<Variable name="alias" comment="" />
+				<Variable name="animationApproach" comment="" />
+				<Variable name="dialogFinishedAndTagpointReachedLock" comment="" />
+				<Variable name="isBark" comment="" />
+				<Variable name="leader" comment="" />
+				<Variable name="nextPhaseTrigger" comment="" />
+				<Variable name="onPlayerLeft_dialogProgression" comment="" />
+				<Variable name="participants" comment="" />
+				<Variable name="playerIsBackAfterLeaving" comment="" />
+				<Variable name="polylogPreset" comment="" />
+				<Variable name="progressTour" comment="" />
+				<Variable name="startDialogOnTagpoint" comment="" />
+				<Variable name="subtitlesDown" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</FindInArray>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Sequence>
+										</SuppressFailure>
+									</IfCondition>
+									<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</ReinitVariable>
+									<DialogGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_speech_tour_speech_barkAfterInterruption hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_speech_tour_speech_barkAfterInterruption>
+											</IfCondition>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_speech_tour_speech_barkAfterInterruption hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_speech_tour_speech_barkAfterInterruption>
+												</LinkGate>
+											</IfCondition>
+											<DefaultBranch>
+												<DialogGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_speech_tour_speech_barkAfterInterruption hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_speech_tour_speech_barkAfterInterruption>
+													</LinkGate>
+												</DialogGate>
+											</DefaultBranch>
+										</Switch>
+									</DialogGate>
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_speech_tour_speech_dialogProgression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_speech_tour_speech_dialogProgression>
+											</EntityContextBarrier>
+										</Then>
+										<Else>
+											<Function_speech_tour_speech_dialogProgression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_speech_tour_speech_dialogProgression>
+										</Else>
+									</IfElseCondition>
+								</Sequence>
+							</LoopUntil>
+							<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Fail>
+							</IfGate>
+						</Parallel>
+						<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Callback_empty>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Success>
+									</Synchronize>
+								</IfCondition>
+								<DefaultBranch>
+									<IfGate hasInputBreakpoint="0" comment="If nextPhaseTrigger is tagpointReached or none then Npc waits here for new alias or different nextPhaseTrigger " breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</IfCondition>
+									</IfGate>
+								</DefaultBranch>
+							</Switch>
+						</LoopUntil>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest>
+				<IfCondition editorPosX="860" editorPosY="800" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</IfCondition>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

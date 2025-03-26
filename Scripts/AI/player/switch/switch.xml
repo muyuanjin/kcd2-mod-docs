@@ -1,0 +1,1365 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="root" is_function="0">
+		<Variables>
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="dismountRequest" type="player:dismountRequest" values="" isPersistent="0" form="single" />
+			<Variable name="dudeProx" type="dudeProx:timestamps" values="" isPersistent="0" form="single" />
+			<Variable name="friskCooldownRequest" type="crime:friskCooldownRequest" values="" isPersistent="0" form="single" />
+			<Variable name="hitData" type="hitData" values="" isPersistent="0" form="single" />
+			<Variable name="hitReaction" type="hitReaction" values="" isPersistent="0" form="single" />
+			<Variable name="holsterRequest" type="player:holsterWeapon" values="" isPersistent="0" form="single" />
+			<Variable name="lastUsedBench" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="mount" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="mountedVolume" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="onHorsePosssessed" type="horseModule:onHorsePossessed" values="" isPersistent="0" form="single" />
+			<Variable name="openworldSurrender" type="combat:openworldSurrender" values="" isPersistent="0" form="single" />
+			<Variable name="placeBody" type="placeBody" values="" isPersistent="0" form="single" />
+			<Variable name="playerEat" type="player:playerEat" values="" isPersistent="0" form="single" />
+			<Variable name="playerEat_item" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="playerHorse" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="playerMountedVolumeData" type="crime:playerMountedVolume" values="" isPersistent="0" form="single" />
+			<Variable name="player_request" type="player:request" values="" isPersistent="0" form="single" />
+			<Variable name="player_sleepWalking" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="produceSound" type="crime:produceSound" values="" isPersistent="0" form="single" />
+			<Variable name="setPerceptibleRequest" type="player:setPerceptible" values="" isPersistent="0" form="single" />
+			<Variable name="stance" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="startFollow" type="player:followRequest" values="" isPersistent="0" form="single" />
+			<Variable name="teleportRequest" type="switch:teleportRequest" values="" isPersistent="0" form="single" />
+			<Variable name="unconsciousState" type="unconsciousState" values="" isPersistent="0" form="single" />
+			<Variable name="volumeParams" type="perceptibleParams" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+					<Expression expressions="$dudeProx.lastBarkTimestamp = $currentTime &#10;$dudeProx.cooldownPriority = 0" />
+					<AddLink From="$__player" To="$__player" Tag="&apos;dudeProx&apos;" Data="$dudeProx" LinkOpHandleMode="OverWrite" />
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<Parallel successMode="All" failureMode="Any">
+					<Function_player_handlePlayerPerceptionControl nodeLabel="28935478" />
+					<While doFail="true" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$holsterRequest" senderInfo="" inbox="&apos;player&apos;" condition="" answerVar="">
+							<Function_callInterrupt_player_waitAction keepTorch="$holsterRequest.keepTorch" nodeLabel="75347610" />
+						</ProcessMessage>
+					</While>
+					<While doFail="true" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$setPerceptibleRequest" senderInfo="" inbox="&apos;player&apos;" condition="" answerVar="">
+							<IfElseCondition failOnCondition="false" condition="$setPerceptibleRequest.value" saveVersion="2">
+								<Then canSkip="1">
+									<EnablePerception Perceptor="false" Perceptible="true" ToWhom="$__player" />
+								</Then>
+								<Else canSkip="1">
+									<DisablePerception Perceptor="false" Perceptible="true" ToWhom="$__player" />
+								</Else>
+							</IfElseCondition>
+						</ProcessMessage>
+					</While>
+					<While doFail="true" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$produceSound" senderInfo="" inbox="&apos;crime_produceSound&apos;" condition="" answerVar="">
+							<ProduceSound Sound="$produceSound.sound" Position="$produceSound.position" Multiplier="$produceSound.multiplier" />
+						</ProcessMessage>
+					</While>
+					<While doFail="true" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$dismountRequest" senderInfo="" inbox="&apos;player&apos;" condition="" answerVar="$dismountRequest">
+							<SuppressFailure>
+								<Sequence>
+									<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;mount&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;mount&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+									</GraphSearch>
+									<ExecuteLua code="player.human:ForceDismount()" />
+								</Sequence>
+							</SuppressFailure>
+						</ProcessMessage>
+					</While>
+					<While doFail="true" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$teleportRequest" senderInfo="" inbox="&apos;switch_teleportRequest&apos;" condition="" answerVar="">
+							<Function_callInterrupt_teleport positionVec3="$teleportRequest.positionVec3" positionWuid="$teleportRequest.positionWuid" useWuidPosition="$teleportRequest.shouldUseWuidPosition" nodeLabel="24339341" />
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<GameContextBarrier context="global_DisableSituationParticipation" Negation="false" RunLogic="Halt">
+							<DisableStartSituations>
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</DisableStartSituations>
+						</GameContextBarrier>
+					</While>
+					<While doFail="true" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$player_request" senderInfo="" inbox="&apos;player&apos;" condition="" answerVar="">
+							<Function_player_handlePlayerRequest request="$player_request" nodeLabel="87372306" />
+						</ProcessMessage>
+					</While>
+					<While doFail="true" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hitData" senderInfo="" inbox="&apos;hitData&apos;" condition="" answerVar="">
+							<Function_player_handleArrowHitData hitData="$hitData" nodeLabel="24944539" />
+						</ProcessMessage>
+					</While>
+					<While doFail="true" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hitReaction" senderInfo="" inbox="&apos;hitReaction&apos;" condition="" answerVar="">
+							<Function_player_handleHitReaction hitReaction="$hitReaction" nodeLabel="44408796" />
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<IncludeTree File="&apos;speech/sb_dialog.xml&apos;" Name="&apos;monologRequest&apos;" nodeLabel="48403004" />
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$unconsciousState" senderInfo="" inbox="&apos;unconsciousState&apos;" condition="" answerVar="">
+							<Parallel successMode="All" failureMode="Any">
+								<Function_hangoverTeleport unconsciousState="$unconsciousState" nodeLabel="74648745" />
+								<Function_player_postUnconsciousness unconsciousState="$unconsciousState" nodeLabel="56198865" />
+							</Parallel>
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$player_sleepWalking" senderInfo="" inbox="&apos;player_sleepWalking&apos;" condition="" answerVar="">
+							<Function_player_sleepWalkingTeleport player_sleepWalking="$player_sleepWalking" nodeLabel="14499894" />
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$placeBody" senderInfo="" inbox="&apos;placeBody&apos;" condition="" answerVar="">
+							<InstantPlaceBody />
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$playerEat" senderInfo="" inbox="&apos;playerEat&apos;" condition="" answerVar="">
+							<Sequence>
+								<CreateItem ItemGUID="$playerEat.itemGuid" Amount="1" CreatedItem="$playerEat_item" Target="$__player" NotifyUI="false" />
+								<SuppressFailure>
+									<UseItem item="$playerEat_item" count="1" bodyPartId="-1" combineWithItem="" />
+								</SuppressFailure>
+								<CheckWuidValid wuid="$playerEat_item" FailSubtMissing="false" saveVersion="2">
+									<Then canSkip="1">
+										<RemoveItem Item="$playerEat_item" ItemGUID="" Source="" Amount="0" FailOnDoesntExist="false" NotifyUI="false" />
+									</Then>
+								</CheckWuidValid>
+							</Sequence>
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<LinkGate from="$__player" to="" tag="&apos;mount&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="KeepRunning">
+							<LinkGate from="$__player" to="" tag="&apos;mount&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+								<AtomicDecorator>
+									<Sequence>
+										<GetPlayerHorse HorseWuid="$playerHorse" />
+										<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;mount&apos;" prune="true" negprune="unknown" Parent="" Child="$mount" Data="" />
+										</GraphSearch>
+										<IfCondition failOnCondition="false" condition="$mount ~= $playerHorse">
+											<Sequence>
+												<Function_crime_updatePlayerMountedHorseData horse="$mount" nodeLabel="17587653" />
+												<Expression expressions="$volumeParams.visibility = 0.005, &#10;$volumeParams.conspicuousness = 1 &#10; &#10;$playerMountedVolumeData.mount = $mount" />
+												<SpawnExpiringPerceptibleVolume Expiration="&apos;2s&apos;" TimerType="GameTime" Position="$mount" Radius="1.000000" Height="1.000000" Label="&apos;crime_playerMounted&apos;" OnlyVisiblePointsFromCenter="true" PerceptibleParams="$volumeParams" OutWuid="$mountedVolume" />
+												<AddLink From="$mountedVolume" To="$mountedVolume" Tag="&apos;crime_playerMounted&apos;" Data="$playerMountedVolumeData" LinkOpHandleMode="Error" />
+											</Sequence>
+										</IfCondition>
+									</Sequence>
+								</AtomicDecorator>
+							</LinkGate>
+						</LinkGate>
+					</While>
+					<Function_player_nightTutorial nodeLabel="14672979" />
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$openworldSurrender" senderInfo="" inbox="&apos;combat_openworldSurrender&apos;" condition="" answerVar="">
+							<Function_crime_openworldSurrender nodeLabel="31419578" />
+						</ProcessMessage>
+					</While>
+					<Function_player_handleLoot nodeLabel="17792171" />
+					<Function_player_handleLockpick nodeLabel="46214519" />
+					<Function_player_handleBodyCarrier nodeLabel="45507317" />
+					<Function_crime_processOpenWorldCooldowns_global nodeLabel="54423894" />
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<Loop count="-1">
+							<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$startFollow" senderInfo="" inbox="&apos;follow&apos;" condition="" answerVar="">
+								<Sequence>
+									<Parallel successMode="Any" failureMode="Any">
+										<EntityContextBarrier context="FollowableNPCCenter" target="$startFollow.npcWhoIsFollowed" Negation="false" RunLogic="KeepRunning">
+											<Success />
+										</EntityContextBarrier>
+										<EntityContextBarrier context="FollowableNPCLeft" target="$startFollow.npcWhoIsFollowed" Negation="false" RunLogic="KeepRunning">
+											<Success />
+										</EntityContextBarrier>
+										<EntityContextBarrier context="FollowableNPCRight" target="$startFollow.npcWhoIsFollowed" Negation="false" RunLogic="KeepRunning">
+											<Success />
+										</EntityContextBarrier>
+										<Sequence>
+											<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" />
+											<Fail />
+										</Sequence>
+									</Parallel>
+									<ExecuteLua code="player.actor:StartFollow(XGenAIModule.GetEntityByWUID(data.startFollow.npcWhoIsFollowed).id)" />
+								</Sequence>
+							</ProcessMessage>
+						</Loop>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<StanceBarrier soul="$this.id" stance="sitting" smartObject="" negate="false" failOnCondition="false" RunLogic="Halt">
+							<Sequence>
+								<GetStance Npc="$this.id" Stance="$stance" StanceObject="$lastUsedBench" />
+								<EnableRoleOnHubDecorator Hub="$lastUsedBench" Role="&apos;usedByPlayer&apos;">
+									<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+								</EnableRoleOnHubDecorator>
+							</Sequence>
+						</StanceBarrier>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<StanceBarrier soul="$this.id" stance="lying" smartObject="" negate="false" failOnCondition="false" RunLogic="Halt">
+							<Sequence>
+								<GetStance Npc="$this.id" Stance="$stance" StanceObject="$b_lastUsedBed" />
+								<EnableRoleOnHubDecorator Hub="$b_lastUsedBed" Role="&apos;usedByPlayer&apos;">
+									<SubtreeDecorator saveVersion="2">
+										<Init canSkip="1">
+											<AddLink From="$__player" To="$b_lastUsedBed" Tag="&apos;player_onBed&apos;" Data="" LinkOpHandleMode="Error" />
+										</Init>
+										<Subtree canSkip="1">
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Subtree>
+										<Cleanup canSkip="1">
+											<RemoveLink From="$__player" To="$b_lastUsedBed" Tag="&apos;player_onBed&apos;" LinkOpHandleMode="Error" />
+										</Cleanup>
+									</SubtreeDecorator>
+								</EnableRoleOnHubDecorator>
+							</Sequence>
+						</StanceBarrier>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;music_camp_bandits&apos;" Negation="false" RunLogic="Halt">
+							<GameContext context="crime_music_low">
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</GameContext>
+						</IsInsideAreaWithLabelBarrier>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<EntityContextBarrier context="player_hasDog" target="" Negation="false" RunLogic="KeepRunning">
+							<Sequence>
+								<SendAIConceptSignal_companionDog_playerHasDog />
+								<EntityContextBarrier context="player_hasDog" target="" Negation="true" RunLogic="KeepRunning">
+									<Sequence>
+										<SetCompanion Master="$__player" Companion="$__playerDog" Action="Remove" />
+										<SendAIConceptSignal_companionDog_playerLostDog />
+									</Sequence>
+								</EntityContextBarrier>
+							</Sequence>
+						</EntityContextBarrier>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<GameContextBarrier context="crime_global_instantPlayerRecognition" Negation="false" RunLogic="Halt">
+							<DecoratorBuff BuffId="&apos;dc4be505-46d6-4ca4-857b-59cfa36adc2a&apos;" SoulWUID="$__player">
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</DecoratorBuff>
+						</GameContextBarrier>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$onHorsePosssessed" senderInfo="" inbox="&apos;horsePlayerModule_onHorsePossessed&apos;" condition="" answerVar="">
+							<Function_player_handleOnHorsePossessed horse="$onHorsePosssessed.horse" nodeLabel="89282920" />
+						</ProcessMessage>
+					</While>
+					<Function_player_svotiDebug nodeLabel="96080074" />
+					<Function_player_timeskipInTrespass nodeLabel="34665092" />
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$friskCooldownRequest" senderInfo="" inbox="&apos;crime_friskCooldownRequest&apos;" condition="" answerVar="">
+							<Function_crime_addFriskCooldown nodeLabel="48305599" />
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<IsInsideAreaWithLabelBarrier Who="" Label="&apos;lowerVisibility&apos;" Negation="false" RunLogic="Halt">
+							<DecoratorBuff BuffId="&apos;2e9634d8-a7e4-4cdb-a5a5-eba2ca54ce16&apos;" SoulWUID="$this.id">
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</DecoratorBuff>
+						</IsInsideAreaWithLabelBarrier>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ActorStateBarrier Who="$__player" ToState="sprinting" NegateTo="false" RunLogic="Halt">
+							<DecoratorBuff BuffId="&apos;c502b267-8084-40b4-9cbd-ee76cf52b37a&apos;" SoulWUID="$this.id">
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</DecoratorBuff>
+						</ActorStateBarrier>
+					</While>
+					<Function_crime_processNpcEmergency nodeLabel="89729021" />
+				</Parallel>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Sequence>
+				<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+				<Expression expressions="$dudeProx.lastBarkTimestamp = $currentTime &#10;$dudeProx.cooldownPriority = 0" />
+				<AddLink From="$__player" To="$__player" Tag="&apos;dudeProx&apos;" Data="$dudeProx" LinkOpHandleMode="OverWrite" />
+			</Sequence>
+			<GameContext context="crime_global_instantPlayerRecognition" />
+			<DecoratorBuff BuffId="&apos;dc4be505-46d6-4ca4-857b-59cfa36adc2a&apos;" SoulWUID="$__player" />
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="currentTime" comment="" />
+				<Variable name="dismountRequest" comment="" />
+				<Variable name="dudeProx" comment="" />
+				<Variable name="friskCooldownRequest" comment="" />
+				<Variable name="hitData" comment="" />
+				<Variable name="hitReaction" comment="" />
+				<Variable name="holsterRequest" comment="" />
+				<Variable name="lastUsedBench" comment="" />
+				<Variable name="mount" comment="" />
+				<Variable name="mountedVolume" comment="" />
+				<Variable name="onHorsePosssessed" comment="" />
+				<Variable name="openworldSurrender" comment="" />
+				<Variable name="placeBody" comment="" />
+				<Variable name="playerEat" comment="" />
+				<Variable name="playerEat_item" comment="" />
+				<Variable name="playerHorse" comment="" />
+				<Variable name="playerMountedVolumeData" comment="" />
+				<Variable name="player_request" comment="" />
+				<Variable name="player_sleepWalking" comment="" />
+				<Variable name="produceSound" comment="" />
+				<Variable name="setPerceptibleRequest" comment="" />
+				<Variable name="stance" comment="" />
+				<Variable name="startFollow" comment="" />
+				<Variable name="teleportRequest" comment="" />
+				<Variable name="unconsciousState" comment="" />
+				<Variable name="volumeParams" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="210" editorPosY="400" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="Dudeprox link init" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetTime>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</AddLink>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Function_player_handlePlayerPerceptionControl hasInputBreakpoint="0" comment="@KCD2-136704" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_player_handlePlayerPerceptionControl>
+						<While hasInputBreakpoint="0" comment="Holster weapon" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_callInterrupt_player_waitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_callInterrupt_player_waitAction>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="Set perceptible" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<EnablePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</EnablePerception>
+									</Then>
+									<Else>
+										<DisablePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</DisablePerception>
+									</Else>
+								</IfElseCondition>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="Produce sound" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ProduceSound hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</ProduceSound>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="Request to dismount" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+										<ExecuteLua hasInputBreakpoint="0" comment=":shrug:" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ExecuteLua>
+									</Sequence>
+								</SuppressFailure>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="Request to teleport" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_callInterrupt_teleport hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_callInterrupt_teleport>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="Global disable situations" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<DisableStartSituations hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</DisableStartSituations>
+							</GameContextBarrier>
+						</While>
+						<While hasInputBreakpoint="0" comment="player:request" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_player_handlePlayerRequest hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_player_handlePlayerRequest>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="Pickup request" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_player_handleArrowHitData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_player_handleArrowHitData>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="hitReaction" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_player_handleHitReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_player_handleHitReaction>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="monolog requests" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IncludeTree hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</IncludeTree>
+						</While>
+						<While hasInputBreakpoint="0" comment="unco" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_hangoverTeleport hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_hangoverTeleport>
+									<Function_player_postUnconsciousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_player_postUnconsciousness>
+								</Parallel>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="HC_sleepWalkingPerk" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_player_sleepWalkingTeleport hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_player_sleepWalkingTeleport>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<InstantPlaceBody hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</InstantPlaceBody>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<CreateItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</CreateItem>
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<UseItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</UseItem>
+									</SuppressFailure>
+									<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<RemoveItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RemoveItem>
+										</Then>
+									</CheckWuidValid>
+								</Sequence>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetPlayerHorse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetPlayerHorse>
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_crime_updatePlayerMountedHorseData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_updatePlayerMountedHorseData>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<SpawnExpiringPerceptibleVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</SpawnExpiringPerceptibleVolume>
+													<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</AddLink>
+												</Sequence>
+											</IfCondition>
+										</Sequence>
+									</AtomicDecorator>
+								</LinkGate>
+							</LinkGate>
+						</While>
+						<Function_player_nightTutorial hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_player_nightTutorial>
+						<While hasInputBreakpoint="0" comment="openworldSurrender" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_crime_openworldSurrender hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_openworldSurrender>
+							</ProcessMessage>
+						</While>
+						<Function_player_handleLoot hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_player_handleLoot>
+						<Function_player_handleLockpick hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_player_handleLockpick>
+						<Function_player_handleBodyCarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_player_handleBodyCarrier>
+						<Function_crime_processOpenWorldCooldowns_global hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_crime_processOpenWorldCooldowns_global>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</EntityContextBarrier>
+											<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</EntityContextBarrier>
+											<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</EntityContextBarrier>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+												<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Fail>
+											</Sequence>
+										</Parallel>
+										<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ExecuteLua>
+									</Sequence>
+								</ProcessMessage>
+							</Loop>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<StanceBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GetStance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetStance>
+									<EnableRoleOnHubDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</EnableRoleOnHubDecorator>
+								</Sequence>
+							</StanceBarrier>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<StanceBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GetStance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetStance>
+									<EnableRoleOnHubDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Init>
+												<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</AddLink>
+											</Init>
+											<Subtree>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Subtree>
+											<Cleanup>
+												<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</RemoveLink>
+											</Cleanup>
+										</SubtreeDecorator>
+									</EnableRoleOnHubDecorator>
+								</Sequence>
+							</StanceBarrier>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GameContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</GameContext>
+							</IsInsideAreaWithLabelBarrier>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<SendAIConceptSignal_companionDog_playerHasDog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</SendAIConceptSignal_companionDog_playerHasDog>
+									<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<SetCompanion hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</SetCompanion>
+											<SendAIConceptSignal_companionDog_playerLostDog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</SendAIConceptSignal_companionDog_playerLostDog>
+										</Sequence>
+									</EntityContextBarrier>
+								</Sequence>
+							</EntityContextBarrier>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<DecoratorBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</DecoratorBuff>
+							</GameContextBarrier>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_player_handleOnHorsePossessed hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_player_handleOnHorsePossessed>
+							</ProcessMessage>
+						</While>
+						<Function_player_svotiDebug hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_player_svotiDebug>
+						<Function_player_timeskipInTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_player_timeskipInTrespass>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_crime_addFriskCooldown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_addFriskCooldown>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<DecoratorBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</DecoratorBuff>
+							</IsInsideAreaWithLabelBarrier>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ActorStateBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<DecoratorBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</DecoratorBuff>
+							</ActorStateBarrier>
+						</While>
+						<Function_crime_processNpcEmergency hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_crime_processNpcEmergency>
+					</Parallel>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Sequence editorPosX="4020" editorPosY="-160" hasInputBreakpoint="0" comment="Dudeprox link init" breakpointFlags="0">
+					<OutputBreakpoints />
+					<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</GetTime>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+					<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</AddLink>
+				</Sequence>
+				<GameContext editorPosX="-30" editorPosY="-220" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</GameContext>
+				<DecoratorBuff editorPosY="-130" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</DecoratorBuff>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="hangoverTeleport" is_function="1">
+		<Variables>
+			<Variable name="hangoverHub" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="hangoverPlaces" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="hasPerk" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="isLucky" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="jokey_points" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Parameters>
+			<Variable name="unconsciousState" type="unconsciousState" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<SuppressFailure>
+					<GameContextCheck context="disableHangoverTeleport" saveVersion="2">
+						<Else canSkip="1">
+							<Sequence>
+								<IfCondition failOnCondition="true" condition="$__land ~= $__null">
+									<GraphSearch Origin="$__land" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;hangoverSpotsHub&apos;" prune="true" negprune="unknown" Parent="" Child="$hangoverHub" Data="" />
+									</GraphSearch>
+								</IfCondition>
+								<IfCondition failOnCondition="false" condition="$unconsciousState.unconscious == 1 &amp; &#10;$unconsciousState.reason == $enum:UnconsciousReason.alcohol">
+									<LuaGate code="return Calendar.IsWorldTimePaused()" saveVersion="2">
+										<Then canSkip="1">
+											<Success />
+										</Then>
+										<Else canSkip="1">
+											<Sequence>
+												<ReinitVariable variable="$isLucky" />
+												<ReinitVariable variable="$hangoverPlaces" />
+												<RandomGate opensWithChance="0.350000" saveVersion="2">
+													<Then canSkip="1">
+														<Sequence>
+															<GraphSearch Origin="$hangoverHub" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																<LinkTagFilter tag="&apos;hangoverSpot_joke&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																<Nodalyzer Quantifiers="ForAll" Parent="" Child="$hangoverPlaces" saveVersion="2" />
+															</GraphSearch>
+															<Expression expressions="$isLucky = true" />
+														</Sequence>
+													</Then>
+													<Else canSkip="1">
+														<RandomGate opensWithChance="0.500000" saveVersion="2">
+															<Then canSkip="1">
+																<GraphSearch Origin="$hangoverHub" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																	<LinkTagFilter tag="&apos;hangoverSpot&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																	<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+																		<Child0 canSkip="1">
+																			<LinkTagFilter tag="&apos;ignoredHangoverSpot&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																		</Child0>
+																	</NegationOp>
+																	<Nodalyzer Quantifiers="ForAll" Parent="" Child="$hangoverPlaces" saveVersion="2">
+																		<Child0 canSkip="1">
+																			<RangeSorter point="" SortOrder="Ascending" Source="Child" />
+																		</Child0>
+																	</Nodalyzer>
+																</GraphSearch>
+															</Then>
+															<Else canSkip="1">
+																<Sequence>
+																	<GraphSearch Origin="$hangoverHub" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																		<LinkTagFilter tag="&apos;hangoverSpot&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																		<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+																			<Child0 canSkip="1">
+																				<LinkTagFilter tag="&apos;ignoredHangoverSpot&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																			</Child0>
+																		</NegationOp>
+																		<Nodalyzer Quantifiers="ForAll" Parent="" Child="$hangoverPlaces" saveVersion="2" />
+																	</GraphSearch>
+																	<RandomItem Array="$hangoverPlaces" Result="$hangoverPlaces[0]" Clamp="-1" />
+																</Sequence>
+															</Else>
+														</RandomGate>
+													</Else>
+												</RandomGate>
+												<IfElseCondition failOnCondition="false" condition="#hangoverPlaces &gt; 0" saveVersion="2">
+													<Then canSkip="1">
+														<ExecuteLua code="player.player:SetAlcoTeleportTarget(data.hangoverPlaces[0])" />
+													</Then>
+													<Else canSkip="1">
+														<ErrorNode Message="&apos;Nemam zadne misto na teleportovani pri bolehlavu? Ja chci na hnuj! - Jindra&apos;" />
+													</Else>
+												</IfElseCondition>
+											</Sequence>
+										</Else>
+									</LuaGate>
+								</IfCondition>
+							</Sequence>
+						</Else>
+					</GameContextCheck>
+				</SuppressFailure>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Sequence>
+				<GraphSearch Origin="$__land" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;arent,inventor&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+					<LinkTagFilter tag="&apos;ultimate_hangover_point&apos;" prune="true" negprune="unknown" Parent="" Child="$ultiHangover_point" Data="" />
+				</GraphSearch>
+				<GraphSearch Origin="$__land" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;arent,inventor&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+					<LinkTagFilter tag="&apos;ultimate_hangover_area&apos;" prune="true" negprune="unknown" Parent="" Child="$ultiHangover_trigger" Data="" />
+				</GraphSearch>
+				<GraphSearch Origin="$__land" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;arent,inventor&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+					<LinkTagFilter tag="&apos;hangoverSpotsHub&apos;" prune="true" negprune="unknown" Parent="" Child="$hangoverHub" Data="" />
+				</GraphSearch>
+				<AddLink From="$hangoverHub" To="$ultiHangover_point" Tag="&apos;hangoverSpot_joke&apos;" Data="" LinkOpHandleMode="Success" />
+				<AreaPresenceGate aiObjects="" area="" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+					<RemoveLink From="$hangoverHub" To="$ultiHangover_point" Tag="&apos;angoverSpot_jok&apos;" LinkOpHandleMode="Success" />
+				</AreaPresenceGate>
+			</Sequence>
+			<IfCondition failOnCondition="false" condition="$isLucky == true">
+				<DeadUnconsciousGate Who="$__player" State="Unconscious" Negation="true" RunLogic="KeepRunning">
+					<ExecuteLua code="Game.SendInfoText(&quot;@chap12_sch3_6Ntp_e1050_ShB2&quot;)" />
+				</DeadUnconsciousGate>
+			</IfCondition>
+			<IfCondition failOnCondition="false" condition="false">
+				<Sequence>
+					<Expression expressions="$hasPerk = false" />
+					<HasPerk SoulWUID="$__player" Perk="&apos;e59bbf6-86df-4d34-b80f-21e52da5f92&apos;" Value="$hasPerk" UsePerk="true" />
+					<VarOperation varName="$hangoverPlaces" targetVarName="" operation="Reinit" argument="" />
+					<VarOperation varName="$isLucky" targetVarName="" operation="Reinit" argument="" />
+					<IfElseCondition failOnCondition="false" condition="$hasPerk" saveVersion="2">
+						<Then canSkip="1">
+							<GraphSearch Origin="$__land" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<LinkTagFilter tag="&apos;playerHome&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+								<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+									<Child0 canSkip="1">
+										<ExistPath Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;ignoredHangoverSpot&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+										</ExistPath>
+									</Child0>
+								</NegationOp>
+								<Nodalyzer Quantifiers="ForAll" Parent="" Child="$hangoverPlaces" saveVersion="2">
+									<Child0 canSkip="1">
+										<RangeSorter point="" SortOrder="Ascending" Source="Child" />
+									</Child0>
+								</Nodalyzer>
+							</GraphSearch>
+						</Then>
+						<Else canSkip="1">
+							<RandomGate opensWithChance="0.300000" saveVersion="2">
+								<Then canSkip="1">
+									<Sequence>
+										<GraphSearch Origin="$hangoverHub" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;hangoverSpot_joke&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+											<Nodalyzer Quantifiers="ForAll" Parent="" Child="$hangoverPlaces" saveVersion="2" />
+										</GraphSearch>
+										<Expression expressions="$isLucky = true" />
+									</Sequence>
+								</Then>
+								<Else canSkip="1">
+									<RandomGate opensWithChance="0.500000" saveVersion="2">
+										<Then canSkip="1">
+											<GraphSearch Origin="$hangoverHub" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+												<LinkTagFilter tag="&apos;hangoverSpot&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+												<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+													<Child0 canSkip="1">
+														<LinkTagFilter tag="&apos;ignoredHangoverSpot&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+													</Child0>
+												</NegationOp>
+												<Nodalyzer Quantifiers="ForAll" Parent="" Child="$hangoverPlaces" saveVersion="2">
+													<Child0 canSkip="1">
+														<RangeSorter point="" SortOrder="Ascending" Source="Child" />
+													</Child0>
+												</Nodalyzer>
+											</GraphSearch>
+										</Then>
+										<Else canSkip="1">
+											<Sequence>
+												<GraphSearch Origin="$hangoverHub" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+													<LinkTagFilter tag="&apos;hangoverSpot&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+													<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+														<Child0 canSkip="1">
+															<LinkTagFilter tag="&apos;ignoredHangoverSpot&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+														</Child0>
+													</NegationOp>
+													<Nodalyzer Quantifiers="ForAll" Parent="" Child="$hangoverPlaces" saveVersion="2" />
+												</GraphSearch>
+												<RandomItem Array="$hangoverPlaces" Result="$hangoverPlaces[0]" Clamp="-1" />
+											</Sequence>
+										</Else>
+									</RandomGate>
+								</Else>
+							</RandomGate>
+						</Else>
+					</IfElseCondition>
+				</Sequence>
+			</IfCondition>
+			<Sequence>
+				<Sequence>
+					<GraphSearch Origin="$hangoverHub" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;hangoverSpot&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+						<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+							<Child0 canSkip="1">
+								<LinkTagFilter tag="&apos;ignoredHangoverSpot&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+							</Child0>
+						</NegationOp>
+						<Nodalyzer Quantifiers="ForAll" Parent="" Child="$hangoverPlaces" saveVersion="2" />
+					</GraphSearch>
+					<RandomItem Array="$hangoverPlaces" Result="$hangoverPlaces[0]" Clamp="-1" />
+				</Sequence>
+				<IfElseCondition failOnCondition="false" condition="#hangoverPlaces &gt; 0" saveVersion="2">
+					<Then canSkip="1">
+						<ExecuteLua code="player.player:SetAlcoTeleportTarget(data.hangoverPlaces[0])" />
+					</Then>
+					<Else canSkip="1">
+						<ErrorNode Message="&apos;Nemam zadne misto na teleportovani pri bolehlavu? Ja chci na hnuj! - Jindra&apos;" />
+					</Else>
+				</IfElseCondition>
+			</Sequence>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="hangoverHub" comment="" />
+				<Variable name="hangoverPlaces" comment="" />
+				<Variable name="hasPerk" comment="" />
+				<Variable name="isLucky" comment="" />
+				<Variable name="jokey_points" comment="" />
+				<Variable name="unconsciousState" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-270" editorPosY="-160" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Else>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+									</IfCondition>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LuaGate hasInputBreakpoint="0" comment="do nothing if time paused" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Then>
+											<Else>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</ReinitVariable>
+													<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</ReinitVariable>
+													<RandomGate hasInputBreakpoint="0" comment="x% chance for interesting (joke) point" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Sequence hasInputBreakpoint="0" comment="joke spots" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</LinkTagFilter>
+																	<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																	</Nodalyzer>
+																</GraphSearch>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Sequence>
+														</Then>
+														<Else>
+															<RandomGate hasInputBreakpoint="0" comment="50% chance for closest normal point" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<GraphSearch hasInputBreakpoint="0" comment="closest normal spot" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</LinkTagFilter>
+																		<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Child0>
+																				<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</LinkTagFilter>
+																			</Child0>
+																		</NegationOp>
+																		<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Child0>
+																				<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</RangeSorter>
+																			</Child0>
+																		</Nodalyzer>
+																	</GraphSearch>
+																</Then>
+																<Else>
+																	<Sequence hasInputBreakpoint="0" comment="random normal spot" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</LinkTagFilter>
+																			<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Child0>
+																					<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</LinkTagFilter>
+																				</Child0>
+																			</NegationOp>
+																			<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																			</Nodalyzer>
+																		</GraphSearch>
+																		<RandomItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</RandomItem>
+																	</Sequence>
+																</Else>
+															</RandomGate>
+														</Else>
+													</RandomGate>
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</ExecuteLua>
+														</Then>
+														<Else>
+															<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</ErrorNode>
+														</Else>
+													</IfElseCondition>
+												</Sequence>
+											</Else>
+										</LuaGate>
+									</IfCondition>
+								</Sequence>
+							</Else>
+						</GameContextCheck>
+					</SuppressFailure>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Sequence editorPosX="430" editorPosY="1090" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</LinkTagFilter>
+					</GraphSearch>
+					<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</LinkTagFilter>
+					</GraphSearch>
+					<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</LinkTagFilter>
+					</GraphSearch>
+					<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</AddLink>
+					<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</RemoveLink>
+					</AreaPresenceGate>
+				</Sequence>
+				<IfCondition editorPosX="390" editorPosY="1510" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</ExecuteLua>
+					</DeadUnconsciousGate>
+				</IfCondition>
+				<IfCondition editorPosX="2670" editorPosY="-500" hasInputBreakpoint="0" comment="" comment_box="disabled_on_purpose_as_WIP_solution" comment_box_color="216,38,38,255" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<HasPerk hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</HasPerk>
+						<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</VarOperation>
+						<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</VarOperation>
+						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<GraphSearch hasInputBreakpoint="0" comment="perk spots" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkTagFilter>
+									<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Child0>
+											<ExistPath hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</ExistPath>
+										</Child0>
+									</NegationOp>
+									<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Child0>
+											<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RangeSorter>
+										</Child0>
+									</Nodalyzer>
+								</GraphSearch>
+							</Then>
+							<Else>
+								<RandomGate hasInputBreakpoint="0" comment="x% chance for interesting (joke) point" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Sequence hasInputBreakpoint="0" comment="joke spots" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+												<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+												</Nodalyzer>
+											</GraphSearch>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+									</Then>
+									<Else>
+										<RandomGate hasInputBreakpoint="0" comment="50% chance for closest normal point" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<GraphSearch hasInputBreakpoint="0" comment="closest normal spot" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</LinkTagFilter>
+													<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Child0>
+															<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</LinkTagFilter>
+														</Child0>
+													</NegationOp>
+													<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Child0>
+															<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</RangeSorter>
+														</Child0>
+													</Nodalyzer>
+												</GraphSearch>
+											</Then>
+											<Else>
+												<Sequence hasInputBreakpoint="0" comment="random normal spot" breakpointFlags="0">
+													<OutputBreakpoints />
+													<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</LinkTagFilter>
+														<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Child0>
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+															</Child0>
+														</NegationOp>
+														<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+														</Nodalyzer>
+													</GraphSearch>
+													<RandomItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</RandomItem>
+												</Sequence>
+											</Else>
+										</RandomGate>
+									</Else>
+								</RandomGate>
+							</Else>
+						</IfElseCondition>
+					</Sequence>
+				</IfCondition>
+				<Sequence editorPosX="1300" editorPosY="1190" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Sequence hasInputBreakpoint="0" comment="random normal spot" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+							<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Child0>
+									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkTagFilter>
+								</Child0>
+							</NegationOp>
+							<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+							</Nodalyzer>
+						</GraphSearch>
+						<RandomItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</RandomItem>
+					</Sequence>
+					<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Then>
+							<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</ExecuteLua>
+						</Then>
+						<Else>
+							<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</ErrorNode>
+						</Else>
+					</IfElseCondition>
+				</Sequence>
+			</Forest>
+			<Comments>
+				<Comment text="Original_solution" posX="1250" posY="840" width="970" height="618" resizeBorderWidth="970" resizeBorderHeight="590" color="0.00,255.00,0.00" author="damian" />
+			</Comments>
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

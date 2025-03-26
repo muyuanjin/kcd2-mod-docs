@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="crime_getHitMetaroleLabel" is_function="1">
+    <Variables>
+      <Variable name="attackerType" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="playersSpeed" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="playersVelocity" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="useSleepingCollisionBark" type="_bool" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="attackKind" type="enum:crime_attackKind" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="attacker" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="dialogContext" type="_float" values="" isPersistent="0" form="associative" requirementType="Out" />
+      <Variable name="hitStrength" type="enum:HitReactionStrength" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="isWitness" type="_bool" values="false" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="metaroleLabel" type="_string" values="" isPersistent="0" form="single" requirementType="Out" />
+      <Variable name="victim" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <IfElseCondition failOnCondition="false" condition="$isWitness" saveVersion="2">
+            <Then canSkip="1">
+              <Expression expressions="$metaroleLabel = &apos;SVEDEK_VIDI_JAK_&apos;" />
+            </Then>
+            <Else canSkip="1">
+              <CheckRelationshipInterval_SoulToSoul TargetSoul="$attacker" Soul="$this.id" Flag="enemy" saveVersion="2">
+                <Then canSkip="1">
+                  <Expression expressions="$metaroleLabel = &apos;NEPRATELSKE_&apos;" />
+                </Then>
+                <Else canSkip="1">
+                  <Expression expressions="$metaroleLabel = &apos;PRATELSKE_&apos;" />
+                </Else>
+              </CheckRelationshipInterval_SoulToSoul>
+            </Else>
+          </IfElseCondition>
+          <Expression expressions="$metaroleLabel += &apos;NPC_DOSTALO_ZASAH&apos;" />
+          <GetType WUID="$attacker" OutString="$attackerType" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+          <Switch>
+            <IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.unarmed">
+              <Expression expressions="$metaroleLabel += &apos;_(UNARMED)&apos;" />
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.armed">
+              <Expression expressions="$metaroleLabel += &apos;_(MELEE)&apos;" />
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.missile">
+              <Expression expressions="$metaroleLabel += &apos;_(MISSILE)&apos;" />
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.collision | &#10;$attackKind == $enum:crime_attackKind.playerHorseCollision">
+              <Sequence>
+                <GetSpatialInfo In="$__player" Out="$playersVelocity" What="Velocity" />
+                <NumericalOperation In1VariableName="playersVelocity" In2VariableName="" In3VariableName="" OutVariableName="$playersSpeed" Operation="len" />
+                <IfCondition failOnCondition="false" condition="~$isWitness">
+                  <EntityContextCheck context="crime_sleeping" target="$victim" saveVersion="2">
+                    <Then canSkip="1">
+                      <Expression expressions="$metaroleLabel += &apos;_(KOLIZE__SPANEK)&apos; &#10;$useSleepingCollisionBark = true" />
+                    </Then>
+                  </EntityContextCheck>
+                </IfCondition>
+                <IfCondition failOnCondition="false" condition="$playersSpeed &gt; 1 &amp; &#10;~$useSleepingCollisionBark">
+                  <IfElseCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.playerHorseCollision" saveVersion="2">
+                    <Then canSkip="1">
+                      <IfElseCondition failOnCondition="false" condition="$isWitness" saveVersion="2">
+                        <Then canSkip="1">
+                          <Expression expressions="$metaroleLabel += &apos;_(KOLIZE_KUN)&apos;" />
+                        </Then>
+                        <Else canSkip="1">
+                          <IfElseCondition failOnCondition="false" condition="$hitStrength &lt; $enum:HitReactionStrength.MinorInjury" saveVersion="2">
+                            <Then canSkip="1">
+                              <Expression expressions="$metaroleLabel += &apos;_(KOLIZE_KUN_EASY)&apos;" />
+                            </Then>
+                            <Else canSkip="1">
+                              <Expression expressions="$metaroleLabel += &apos;_(KOLIZE_KUN_HARD)&apos;" />
+                            </Else>
+                          </IfElseCondition>
+                        </Else>
+                      </IfElseCondition>
+                    </Then>
+                    <Else canSkip="1">
+                      <Expression expressions="$metaroleLabel += &apos;_(KOLIZE)&apos;" />
+                    </Else>
+                  </IfElseCondition>
+                </IfCondition>
+              </Sequence>
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.stealth">
+              <Expression expressions="$metaroleLabel += &apos;_(STEALTH)&apos;" />
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.pebble">
+              <Expression expressions="$metaroleLabel += &apos;_(KAMINEK)&apos;" />
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.dog">
+              <Expression expressions="$metaroleLabel += &apos;_(PES)&apos;" />
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.stone">
+              <Success />
+            </IfCondition>
+            <DefaultBranch>
+              <Success />
+            </DefaultBranch>
+          </Switch>
+          <HasGenderCheck Gender="Female" SoulWUID="$victim" FailSubtMissing="false" saveVersion="2">
+            <Then canSkip="1">
+              <Expression expressions="$dialogContext[&apos;isMan&apos;] = 0" />
+            </Then>
+            <Else canSkip="1">
+              <Expression expressions="$dialogContext[&apos;isMan&apos;] = 1" />
+            </Else>
+          </HasGenderCheck>
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="attackerType" comment="" />
+        <Variable name="playersSpeed" comment="" />
+        <Variable name="playersVelocity" comment="" />
+        <Variable name="useSleepingCollisionBark" comment="" />
+        <Variable name="attackKind" comment="" />
+        <Variable name="attacker" comment="" />
+        <Variable name="dialogContext" comment="" />
+        <Variable name="hitStrength" comment="" />
+        <Variable name="isWitness" comment="" />
+        <Variable name="metaroleLabel" comment="" />
+        <Variable name="victim" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Then>
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </Then>
+              <Else>
+                <CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                  <OutputBreakpoints />
+                  <Then>
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </Then>
+                  <Else>
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </Else>
+                </CheckRelationshipInterval_SoulToSoul>
+              </Else>
+            </IfElseCondition>
+            <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Expression>
+            <GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </GetType>
+            <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </GetSpatialInfo>
+                  <NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </NumericalOperation>
+                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Then>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                      </Then>
+                    </EntityContextCheck>
+                  </IfCondition>
+                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <IfElseCondition hasInputBreakpoint="0" comment="HORSE COLIDE" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Then>
+                        <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                          <OutputBreakpoints />
+                          <Then>
+                            <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </Expression>
+                          </Then>
+                          <Else>
+                            <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                              <OutputBreakpoints />
+                              <Then>
+                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Expression>
+                              </Then>
+                              <Else>
+                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Expression>
+                              </Else>
+                            </IfElseCondition>
+                          </Else>
+                        </IfElseCondition>
+                      </Then>
+                      <Else>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                      </Else>
+                    </IfElseCondition>
+                  </IfCondition>
+                </Sequence>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Success hasInputBreakpoint="0" comment="no bark" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Success>
+              </IfCondition>
+              <DefaultBranch>
+                <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Success>
+              </DefaultBranch>
+            </Switch>
+            <HasGenderCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Then>
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </Then>
+              <Else>
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </Else>
+            </HasGenderCheck>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

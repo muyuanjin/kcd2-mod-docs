@@ -1,0 +1,6 @@
+PositioningAreaShape = {
+	type = "PositioningAreaShape",
+	Properties =
+	{
+	},
+}

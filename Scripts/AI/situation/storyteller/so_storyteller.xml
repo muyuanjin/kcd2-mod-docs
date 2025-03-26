@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="useSitting" is_function="0">
+		<Variables>
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="dialogTrigger" type="situation:storyteller:dialogTrigger" values="" isPersistent="0" form="single" />
+			<Variable name="hasListeners" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="isOffCooldown" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="isOnCooldown" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="listeners" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="reactionRequest" type="situation:storyteller:reactionRequest" values="" isPersistent="0" form="single" />
+			<Variable name="shouldExit" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="startedDialog" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="storyCooldown" type="_int64" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Expression expressions="$reactionRequest.sender = $this.id" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<Sequence>
+					<Selector>
+						<Sequence>
+							<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<LinkTagFilter tag="&apos;situation_storyTeller_cooldown&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$storyCooldown" />
+							</GraphSearch>
+							<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+							<Expression expressions="$isOnCooldown = $currentTime &lt; $storyCooldown" />
+						</Sequence>
+						<Expression expressions="$isOnCooldown = false" />
+					</Selector>
+					<Expression expressions="$isOffCooldown = ~$isOnCooldown" />
+					<StanceElement smartObject="$__resource.id" stance="sitting" allowAny="false" enabled="true">
+						<EntityContextElement context="situation_storyteller_talker" enabled="$isOffCooldown">
+							<EntityContextElement context="crime_dontGreetPlayer" enabled="$isOffCooldown">
+								<WaitAction />
+							</EntityContextElement>
+						</EntityContextElement>
+					</StanceElement>
+					<IfElseCondition failOnCondition="false" condition="$isOnCooldown" saveVersion="2">
+						<Then canSkip="1">
+							<LogToLabel Name="" Wuid="$this.id" Message="&apos;On cooldown&apos;">
+								<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+							</LogToLabel>
+						</Then>
+						<Else canSkip="1">
+							<Parallel successMode="Any" failureMode="Any">
+								<Loop count="-1">
+									<Sequence>
+										<Expression expressions="$hasListeners = false" />
+										<LinkGate from="$this.id" to="" tag="&apos;situation_storyteller_listener&apos;" amount="AtLeastOne" presence="Present" RunLogic="Halt">
+											<Sequence>
+												<Expression expressions="$hasListeners = true" />
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Sequence>
+										</LinkGate>
+									</Sequence>
+								</Loop>
+								<IfGate atomic="false" condition="~$shouldExit" RunLogic="Halt">
+									<ContinuousSwitch>
+										<IfCondition failOnCondition="false" condition="~$hasListeners">
+											<LogToLabel Name="" Wuid="$this.id" Message="&apos;Baiting people to come&apos;">
+												<Sequence>
+													<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" />
+													<Expression expressions="$shouldExit = true" />
+												</Sequence>
+											</LogToLabel>
+										</IfCondition>
+										<IfCondition failOnCondition="false" condition="$hasListeners">
+											<LogToLabel Name="" Wuid="$this.id" Message="&apos;Playing situation&apos;">
+												<EntityContext context="soliloquy_disable" target="">
+													<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+														<Child canSkip="1">
+															<Parallel successMode="Any" failureMode="Any">
+																<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+																	<Child canSkip="1">
+																		<Sequence>
+																			<Expression expressions="$startedDialog = true" />
+																			<Function_speech_schedulerMonolog alias="&apos;situaceVyprave_situaceVypravec&apos;" animationApproach="$enum:animationApproach.ingameDialogPoseAndAnimations" context="" lookAtId="" metarole="" skipInLod="false" subtitlesDown="false" nodeLabel="43615734" />
+																		</Sequence>
+																	</Child>
+																	<OnFail canSkip="1">
+																		<Expression expressions="$shouldExit = true" />
+																	</OnFail>
+																</FuseBox>
+																<Loop count="-1">
+																	<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$dialogTrigger" senderInfo="" inbox="&apos;storyteller_dialogTrigger&apos;" condition="" answerVar="">
+																		<Sequence>
+																			<ReinitVariable variable="$listeners" />
+																			<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																				<LinkTagFilter tag="&apos;situation_storyteller_listener&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																				<Nodalyzer Quantifiers="ForAll" Parent="" Child="$listeners" saveVersion="2" />
+																			</GraphSearch>
+																			<InstantMultiSendMessageToNPC targets="$listeners" successMode="Any" failureMode="All" variable="$reactionRequest" />
+																		</Sequence>
+																	</ProcessMessage>
+																</Loop>
+															</Parallel>
+														</Child>
+														<OnFail canSkip="1">
+															<IfCondition failOnCondition="false" condition="$startedDialog">
+																<Sequence>
+																	<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+																	<Expression expressions="$currentTime += $data:script_param[&apos;situation_storyTeller_cooldown&apos;].value" />
+																	<AddLink From="$this.id" To="$this.id" Tag="&apos;situation_storyTeller_cooldown&apos;" Data="$currentTime" LinkOpHandleMode="OverWrite" />
+																</Sequence>
+															</IfCondition>
+														</OnFail>
+													</FuseBox>
+												</EntityContext>
+											</LogToLabel>
+										</IfCondition>
+									</ContinuousSwitch>
+								</IfGate>
+							</Parallel>
+						</Else>
+					</IfElseCondition>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="currentTime" comment="" />
+				<Variable name="dialogTrigger" comment="" />
+				<Variable name="hasListeners" comment="" />
+				<Variable name="isOffCooldown" comment="" />
+				<Variable name="isOnCooldown" comment="" />
+				<Variable name="listeners" comment="" />
+				<Variable name="reactionRequest" comment="" />
+				<Variable name="shouldExit" comment="" />
+				<Variable name="startedDialog" comment="" />
+				<Variable name="storyCooldown" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+				</OnInit>
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkTagFilter>
+								</GraphSearch>
+								<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</GetTime>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Sequence>
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</Selector>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</WaitAction>
+								</EntityContextElement>
+							</EntityContextElement>
+						</StanceElement>
+						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</LogToLabel>
+							</Then>
+							<Else>
+								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Sequence>
+											</LinkGate>
+										</Sequence>
+									</Loop>
+									<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Wait>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Sequence>
+												</LogToLabel>
+											</IfCondition>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Child>
+																<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Child>
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_speech_schedulerMonolog>
+																			</Sequence>
+																		</Child>
+																		<OnFail>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</OnFail>
+																	</FuseBox>
+																	<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</ReinitVariable>
+																				<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</LinkTagFilter>
+																					<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																					</Nodalyzer>
+																				</GraphSearch>
+																				<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</InstantMultiSendMessageToNPC>
+																			</Sequence>
+																		</ProcessMessage>
+																	</Loop>
+																</Parallel>
+															</Child>
+															<OnFail>
+																<IfCondition hasInputBreakpoint="0" comment="Combination of Timeskip/Situation/SAL can fuck it up, so only cooldown if dialog actually started" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</GetTime>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																		<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</AddLink>
+																	</Sequence>
+																</IfCondition>
+															</OnFail>
+														</FuseBox>
+													</EntityContext>
+												</LogToLabel>
+											</IfCondition>
+										</ContinuousSwitch>
+									</IfGate>
+								</Parallel>
+							</Else>
+						</IfElseCondition>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

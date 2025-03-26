@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="onUpdate" is_function="0">
+    <Variables>
+      <Variable name="extendUntilPlayerLeaves" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="home" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="npc" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="trespassArea" type="_wuid" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <While doFail="false" propagateChildFail="false" condition="true">
+          <Sequence>
+            <SuppressFailure>
+              <Sequence>
+                <GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                  <LinkTagFilter tag="&apos;crime_trespass_expectedExtendedActive_reverse&apos;" prune="true" negprune="unknown" Parent="" Child="$home" Data="" />
+                </GraphSearch>
+                <IsInsideAreaWithLabel Position="$__player" Label="&apos;private&apos;" Area="$trespassArea" FailSubtMissing="false" saveVersion="2">
+                  <Then canSkip="1">
+                    <SuppressFailure>
+                      <Sequence>
+                        <GraphSearch Origin="$home" Borders="" depth="2" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;home_area,area_union_member&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                          <UnionOp Results="true" Advance="true" EndOp="true" ShortCircuit="false" LocalNodalyzers="false">
+                            <EntityClassFilter Class="SmartArea" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                            <EntityClassFilter Class="TriggerArea" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                            <EntityClassFilter Class="AreaUnion" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                          </UnionOp>
+                          <WUIDFilter WUID="$trespassArea" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                        </GraphSearch>
+                        <Parallel successMode="Any" failureMode="Any">
+                          <AreaPresenceGate aiObjects="$__player" area="$trespassArea" amount="All" presence="NotThere" RunLogic="KeepRunning">
+                            <Success />
+                          </AreaPresenceGate>
+                          <Wait duration="&apos;1h&apos;" timeType="WorldTime" doFail="false" variation="" />
+                        </Parallel>
+                      </Sequence>
+                    </SuppressFailure>
+                  </Then>
+                </IsInsideAreaWithLabel>
+                <RemoveLink From="$home" To="$this.id" Tag="&apos;crime_trespass_expectedExtendedActive&apos;" LinkOpHandleMode="Error" />
+                <Function_crime_removeExpectedEffectToHome home="$home" nodeLabel="97895112" />
+              </Sequence>
+            </SuppressFailure>
+            <LinkGate from="$this.id" to="" tag="&apos;crime_expectedDelegate&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+              <Sequence>
+                <AtomicDecorator>
+                  <Sequence>
+                    <ReinitVariable variable="$npc" />
+                    <ReinitVariable variable="$home" />
+                    <GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                      <LinkTagFilter tag="&apos;crime_expectedDelegate&apos;" prune="true" negprune="unknown" Parent="" Child="$npc" Data="" />
+                    </GraphSearch>
+                    <GraphSearch Origin="$npc" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                      <LinkTagFilter tag="&apos;home&apos;" prune="true" negprune="unknown" Parent="" Child="$home" Data="" />
+                    </GraphSearch>
+                    <EntityContextCheck context="crime_trespass_expected_extended" target="$npc" saveVersion="2">
+                      <Then canSkip="1">
+                        <Expression expressions="$extendUntilPlayerLeaves = true" />
+                      </Then>
+                    </EntityContextCheck>
+                  </Sequence>
+                </AtomicDecorator>
+                <FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+                  <Child canSkip="1">
+                    <LinkGate from="$this.id" to="$npc" tag="&apos;crime_expectedDelegate&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="KeepRunning">
+                      <Success />
+                    </LinkGate>
+                  </Child>
+                  <OnFail canSkip="1">
+                    <LoopUntil until="Success" attemptCount="3">
+                      <CheckWuidValid wuid="$npc" FailSubtMissing="false" saveVersion="2">
+                        <Then canSkip="1">
+                          <Sequence>
+                            <Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" />
+                            <Fail />
+                          </Sequence>
+                        </Then>
+                        <Else canSkip="1">
+                          <AtomicDecorator>
+                            <IfCondition failOnCondition="false" condition="$home ~= $__null">
+                              <Selector>
+                                <GraphSearch Origin="$home" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                  <LinkTagFilter tag="&apos;crime_trespass_expected&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                                </GraphSearch>
+                                <IfCondition failOnCondition="false" condition="$extendUntilPlayerLeaves">
+                                  <IsInsideAreaWithLabel Position="$__player" Label="&apos;private&apos;" Area="$trespassArea" FailSubtMissing="false" saveVersion="2">
+                                    <Then canSkip="1">
+                                      <AddLink From="$home" To="$this.id" Tag="&apos;crime_trespass_expectedExtendedActive&apos;" Data="" LinkOpHandleMode="OverWrite" />
+                                    </Then>
+                                    <Else canSkip="1">
+                                      <Function_crime_removeExpectedEffectToHome home="$home" nodeLabel="96086945" />
+                                    </Else>
+                                  </IsInsideAreaWithLabel>
+                                </IfCondition>
+                              </Selector>
+                            </IfCondition>
+                          </AtomicDecorator>
+                        </Else>
+                      </CheckWuidValid>
+                    </LoopUntil>
+                  </OnFail>
+                </FuseBox>
+              </Sequence>
+            </LinkGate>
+          </Sequence>
+        </While>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="extendUntilPlayerLeaves" comment="" />
+        <Variable name="home" comment="" />
+        <Variable name="npc" comment="" />
+        <Variable name="trespassArea" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <SuppressFailure hasInputBreakpoint="0" comment="Post-expected extension" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </LinkTagFilter>
+                  </GraphSearch>
+                  <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <UnionOp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <EntityClassFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </EntityClassFilter>
+                              <EntityClassFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </EntityClassFilter>
+                              <EntityClassFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </EntityClassFilter>
+                            </UnionOp>
+                            <WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </WUIDFilter>
+                          </GraphSearch>
+                          <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Success>
+                            </AreaPresenceGate>
+                            <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </Wait>
+                          </Parallel>
+                        </Sequence>
+                      </SuppressFailure>
+                    </Then>
+                  </IsInsideAreaWithLabel>
+                  <RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </RemoveLink>
+                  <Function_crime_removeExpectedEffectToHome hasInputBreakpoint="0" comment="Extended only gets added if there aren&apos;t valid home inhabitants" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Function_crime_removeExpectedEffectToHome>
+                </Sequence>
+              </SuppressFailure>
+              <LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </ReinitVariable>
+                      <ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </ReinitVariable>
+                      <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </LinkTagFilter>
+                      </GraphSearch>
+                      <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </LinkTagFilter>
+                      </GraphSearch>
+                      <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                        <OutputBreakpoints />
+                        <Then>
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                        </Then>
+                      </EntityContextCheck>
+                    </Sequence>
+                  </AtomicDecorator>
+                  <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Child>
+                      <LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Success>
+                      </LinkGate>
+                    </Child>
+                    <OnFail>
+                      <LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                          <OutputBreakpoints />
+                          <Then>
+                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Wait>
+                              <Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Fail>
+                            </Sequence>
+                          </Then>
+                          <Else>
+                            <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </LinkTagFilter>
+                                  </GraphSearch>
+                                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                      <OutputBreakpoints />
+                                      <Then>
+                                        <AddLink hasInputBreakpoint="0" comment="Activate post-expected extension" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </AddLink>
+                                      </Then>
+                                      <Else>
+                                        <Function_crime_removeExpectedEffectToHome hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                        </Function_crime_removeExpectedEffectToHome>
+                                      </Else>
+                                    </IsInsideAreaWithLabel>
+                                  </IfCondition>
+                                </Selector>
+                              </IfCondition>
+                            </AtomicDecorator>
+                          </Else>
+                        </CheckWuidValid>
+                      </LoopUntil>
+                    </OnFail>
+                  </FuseBox>
+                </Sequence>
+              </LinkGate>
+            </Sequence>
+          </While>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,647 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="camper_friendlyFight" is_function="0">
+		<Variables>
+			<Variable name="behHolders" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="behPhase" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="behaviorName" type="_string" values="&apos;use&apos;" isPersistent="0" form="single" />
+			<Variable name="isUsingWeapon" type="_bool" values="true" isPersistent="0" form="single" />
+			<Variable name="leaningSpot" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="myTarget" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="pathFindParams" type="pathFindingParams" values="useGeneratedNSO(true)" isPersistent="0" form="single" />
+			<Variable name="phase" type="_int" values="" isPersistent="1" form="single" />
+			<Variable name="point" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="situationArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="smartObject" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="weapon" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="weaponChangeMode" type="enum:weaponChange" values="enum:weaponChange.melee" isPersistent="0" form="single" />
+			<Variable name="weaponSlot" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<IfCondition failOnCondition="false" condition="$isUnarmed">
+						<Expression expressions="$weaponChangeMode = $enum:weaponChange.unarmed &#10;$isUsingWeapon = false &#10;$behaviorName = &apos;use_unarmed&apos;" />
+					</IfCondition>
+					<SuppressFailure>
+						<InstantSynchronize SemaphoreCount="2" LockManagerType="Local" SemaphoreName="&apos;friendlyFight_waitingForFriend&apos;" RunLogic="KeepRunning">
+							<Expression expressions="$phase = 1" />
+						</InstantSynchronize>
+					</SuppressFailure>
+					<SuppressFailure>
+						<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+							<LinkTagFilter tag="&apos;situationArea&apos;" prune="true" negprune="unknown" Parent="" Child="$situationArea" Data="" />
+						</GraphSearch>
+					</SuppressFailure>
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<Decision decisionLabel="camper_friendlyFight_phase" variable="$behPhase" saveVersion="2">
+					<Search canSkip="1">
+						<Success />
+					</Search>
+					<Exec canSkip="1">
+						<EntityContext context="crime_interruptAttack" target="$this.id">
+							<Sequence>
+								<IfCondition failOnCondition="false" condition="$behPhase == 0">
+									<Sequence>
+										<WaitAction />
+										<Expression expressions="$behPhase = 1" />
+									</Sequence>
+								</IfCondition>
+								<IfCondition failOnCondition="false" condition="$behPhase == 1">
+									<MoveParamsDecorator speed="Walk" pathFindingParams="$pathFindParams" doorClosingPolicy="Automatic">
+										<Parallel successMode="Any" failureMode="Any">
+											<ReserveBehavior reserveFrom="$leaningSpot" behaviorName="&apos;use&apos;" saveVersion="2">
+												<Search canSkip="1">
+													<ReserveBehaviorSearch>
+														<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+															<LinkTagFilter tag="&apos;leaning&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+															<HasBehaviorFilter FilterChoice="Requestable" BehaviorList="&apos;use&apos;" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+															<Nodalyzer Quantifiers="Exists" Parent="" Child="$leaningSpot" saveVersion="2" />
+														</GraphSearch>
+													</ReserveBehaviorSearch>
+												</Search>
+												<Exec canSkip="1">
+													<Sequence>
+														<UnstanceAction unstance="LeaningBack" locationObject="$leaningSpot" slaveObject="" />
+														<Wait duration="&apos;60s&apos;" timeType="GameTime" doFail="false" variation="" />
+													</Sequence>
+												</Exec>
+											</ReserveBehavior>
+											<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;friendlyFight_waitingForFriend&apos;" RunLogic="Halt">
+												<Expression expressions="$behPhase = 2" />
+											</Synchronize>
+										</Parallel>
+									</MoveParamsDecorator>
+								</IfCondition>
+								<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;5s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;friendlyFight_prepare&apos;" RunLogic="Halt">
+									<EntityContext context="combat_invisible" target="">
+										<EntityContext context="crime_suppressBandageMyself" target="">
+											<ReserveBehavior reserveFrom="$point" behaviorName="&apos;use&apos;" saveVersion="2">
+												<Search canSkip="1">
+													<ReserveBehaviorSearch>
+														<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+															<LinkTagFilter tag="&apos;point&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+															<HasBehaviorFilter FilterChoice="Requestable" BehaviorList="&apos;use&apos;" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+															<Nodalyzer Quantifiers="Exists" Parent="" Child="$point" saveVersion="2" />
+														</GraphSearch>
+													</ReserveBehaviorSearch>
+												</Search>
+												<Exec canSkip="1">
+													<HandContentElement hand="Right" item="$weapon" allowAny="false" allowHomeSlotAutoReturn="false" decisionLabel="camper_friendlyFight_weapon" useDecision="true" enabled="$isUsingWeapon" saveVersion="2">
+														<Search canSkip="1">
+															<Sequence>
+																<GraphSearch Origin="$__object.id" Borders="" depth="2" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																	<EntityClassFilter Class="Slot" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																	<SlotHasAvailableItemFilter reservationHolder="$this.id" useHomeItem="true" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																	<Nodalyzer Quantifiers="Exists" Parent="" Child="$weaponSlot" saveVersion="2" />
+																</GraphSearch>
+																<GetItemInSlot slot="$weaponSlot" useHomeItem="true" item="$weapon" />
+															</Sequence>
+														</Search>
+														<Exec canSkip="1">
+															<Sequence>
+																<IfCondition failOnCondition="false" condition="$behPhase == 2">
+																	<Sequence>
+																		<MoveParamsDecorator speed="Walk" pathFindingParams="$pathFindParams" doorClosingPolicy="Automatic">
+																			<ExactMove directionType="AlignWithEntity" directionSpecification="$point" animationTriggerDist="0.150000" precise="false" changeNPCState="true" fastForwardIncludesMove="true" destinationSpecification="$point" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																		</MoveParamsDecorator>
+																		<Expression expressions="$behPhase = 3" />
+																	</Sequence>
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="$behPhase == 3">
+																	<Sequence>
+																		<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;30s&apos;" InvalidateOnExpire="true" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;friendlyFight&apos;" RunLogic="Halt">
+																			<Parallel successMode="Any" failureMode="Any">
+																				<EntityContextElement context="activity_friendlyFight" enabled="true">
+																					<EntityContextElement context="combat_arrangedFight" enabled="true">
+																						<EntityContext context="crime_dontGreetPlayer" target="">
+																							<AddLinkElement from="$this.id" to="$__object.id" tag="&apos;combat_anchor&apos;" data="" enabled="true">
+																								<AddBuffElement Buff="&apos;f46120bf-b45f-4ec5-95c6-03d526cb40bf&apos;" enabled="true">
+																									<AddBuffElement Buff="&apos;11f44a76-21e3-4e1a-9b25-4b9341d4b8ef&apos;" enabled="true">
+																										<AddBuffElement Buff="&apos;a2088337-e015-4c28-8ab2-043f6925c087&apos;" enabled="true">
+																											<AddBuffElement Buff="&apos;6cf0aa39-e09c-42fa-bf67-10f2d03991b7&apos;" enabled="true">
+																												<CombatMoveDecorator>
+																													<MeleeOffenseAutomationDecorator active="true">
+																														<MeleeDefenseAutomationDecorator active="true">
+																															<MeleeGuardAutomationDecorator GuardMode="automate" active="true">
+																																<WeaponAutomationDecorator WeaponChange="$weaponChangeMode" active="true">
+																																	<CombatFollowerDecorator ProbablisticDrivenSweetSpot="true" RPGSweetSpotArcDriver="true" active="true">
+																																		<Parallel successMode="Any" failureMode="Any">
+																																			<IfElseCondition failOnCondition="false" condition="$situationArea ~= $__null" saveVersion="2">
+																																				<Then canSkip="1">
+																																					<AddLinkElement from="$situationArea" to="$this.id" tag="&apos;situation_friendlyFight_fighter&apos;" data="" enabled="true">
+																																						<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																																					</AddLinkElement>
+																																				</Then>
+																																				<Else canSkip="1">
+																																					<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																																				</Else>
+																																			</IfElseCondition>
+																																			<Sequence>
+																																				<GetBehaviorHolders area="$__object.id" behaviors="$behaviorName" targetVar="$behHolders" />
+																																				<IfElseCondition failOnCondition="false" condition="$behHolders[0] == $this.id" saveVersion="2">
+																																					<Then canSkip="1">
+																																						<Expression expressions="$myTarget = $behHolders[1]" />
+																																					</Then>
+																																					<Else canSkip="1">
+																																						<Expression expressions="$myTarget = $behHolders[0]" />
+																																					</Else>
+																																				</IfElseCondition>
+																																				<CombatAction TargetNPC="$myTarget" RelationOverride="Hostile" />
+																																			</Sequence>
+																																		</Parallel>
+																																	</CombatFollowerDecorator>
+																																</WeaponAutomationDecorator>
+																															</MeleeGuardAutomationDecorator>
+																														</MeleeDefenseAutomationDecorator>
+																													</MeleeOffenseAutomationDecorator>
+																												</CombatMoveDecorator>
+																											</AddBuffElement>
+																										</AddBuffElement>
+																									</AddBuffElement>
+																								</AddBuffElement>
+																							</AddLinkElement>
+																						</EntityContext>
+																					</EntityContextElement>
+																				</EntityContextElement>
+																				<EntityContextCheck context="friendlyFight_endlessFight" target="$this.id" saveVersion="2">
+																					<Then canSkip="1">
+																						<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																					</Then>
+																					<Else canSkip="1">
+																						<Wait duration="&apos;180s&apos;" timeType="GameTime" doFail="false" variation="" />
+																					</Else>
+																				</EntityContextCheck>
+																			</Parallel>
+																		</Synchronize>
+																		<Expression expressions="$behPhase = 4" />
+																	</Sequence>
+																</IfCondition>
+																<Parallel successMode="All" failureMode="Any">
+																	<Wait duration="&apos;3s&apos;" timeType="GameTime" doFail="false" variation="" />
+																	<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;10s&apos;" InvalidateOnExpire="true" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;friendlyFight_postFight&apos;" RunLogic="Halt">
+																		<Selector>
+																			<InstantSemaphore SemaphoreCount="1" LockManagerType="Local" SemaphoreName="&apos;friendlyFight_postFight_dialogMove&apos;">
+																				<Sequence>
+																					<Move stopWithinDistance="1.500000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$myTarget" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																					<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;10s&apos;" InvalidateOnExpire="true" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;friendlyFight_postFight_dialogWait&apos;" RunLogic="Halt">
+																						<Sequence>
+																							<Turn target="$myTarget" align="false" />
+																							<SuppressFailure>
+																								<Function_speech_dialogInitiator alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="&apos;PO_SOUBOJI_MUZ1&apos;" preset="$enum:dialogPreset.ingame" recipient="$myTarget" recipientMetaroles="&apos;PO_SOUBOJI_MUZ1&apos;" nodeLabel="85204425" />
+																							</SuppressFailure>
+																						</Sequence>
+																					</Synchronize>
+																				</Sequence>
+																			</InstantSemaphore>
+																			<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;10s&apos;" InvalidateOnExpire="true" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;friendlyFight_postFight_dialogWait&apos;" RunLogic="Halt">
+																				<Sequence>
+																					<Turn target="$myTarget" align="false" />
+																					<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																				</Sequence>
+																			</Synchronize>
+																		</Selector>
+																	</Synchronize>
+																</Parallel>
+															</Sequence>
+														</Exec>
+													</HandContentElement>
+												</Exec>
+											</ReserveBehavior>
+										</EntityContext>
+									</EntityContext>
+								</Synchronize>
+								<Expression expressions="$behPhase = 0" />
+							</Sequence>
+						</EntityContext>
+					</Exec>
+				</Decision>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="behHolders" comment="" />
+				<Variable name="behPhase" comment="" />
+				<Variable name="behaviorName" comment="" />
+				<Variable name="isUsingWeapon" comment="" />
+				<Variable name="leaningSpot" comment="" />
+				<Variable name="myTarget" comment="" />
+				<Variable name="pathFindParams" comment="" />
+				<Variable name="phase" comment="" />
+				<Variable name="point" comment="" />
+				<Variable name="situationArea" comment="" />
+				<Variable name="smartObject" comment="" />
+				<Variable name="weapon" comment="" />
+				<Variable name="weaponChangeMode" comment="" />
+				<Variable name="weaponSlot" comment="" />
+				<Variable name="isUnarmed" comment="" />
+			</Variables>
+			<ForwardDeclarations>
+				<Variable name="isUnarmed" type="_bool" values="false" isPersistent="0" form="single" requirementType="ForwardDeclaration" />
+			</ForwardDeclarations>
+			<Root editorPosX="-590" editorPosY="10" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</IfCondition>
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<InstantSynchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</InstantSynchronize>
+						</SuppressFailure>
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</LinkTagFilter>
+							</GraphSearch>
+						</SuppressFailure>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<Decision hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Search>
+							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Success>
+						</Search>
+						<Exec>
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</WaitAction>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+									</IfCondition>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ReserveBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Search>
+														<ReserveBehaviorSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+																<HasBehaviorFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</HasBehaviorFilter>
+																<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																</Nodalyzer>
+															</GraphSearch>
+														</ReserveBehaviorSearch>
+													</Search>
+													<Exec>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</UnstanceAction>
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</Sequence>
+													</Exec>
+												</ReserveBehavior>
+												<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Synchronize>
+											</Parallel>
+										</MoveParamsDecorator>
+									</IfCondition>
+									<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ReserveBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Search>
+														<ReserveBehaviorSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+																<HasBehaviorFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</HasBehaviorFilter>
+																<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																</Nodalyzer>
+															</GraphSearch>
+														</ReserveBehaviorSearch>
+													</Search>
+													<Exec>
+														<HandContentElement hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Search>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<EntityClassFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</EntityClassFilter>
+																		<SlotHasAvailableItemFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</SlotHasAvailableItemFilter>
+																		<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																		</Nodalyzer>
+																	</GraphSearch>
+																	<GetItemInSlot hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetItemInSlot>
+																</Sequence>
+															</Search>
+															<Exec>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</ExactMove>
+																			</MoveParamsDecorator>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Sequence>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<EntityContextElement hasInputBreakpoint="0" comment="Exclude this NPC from audience situation" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<AddLinkElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<AddBuffElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<AddBuffElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<AddBuffElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<AddBuffElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<CombatMoveDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<MeleeOffenseAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<MeleeDefenseAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<MeleeGuardAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<WeaponAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<CombatFollowerDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																			<Parallel hasInputBreakpoint="0" comment="Ghetto conditional decorator" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																				<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																					<OutputBreakpoints />
+																																					<Then>
+																																						<AddLinkElement hasInputBreakpoint="0" comment="Both fighters should add link, so the audience can choose who to watch" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																							</Wait>
+																																						</AddLinkElement>
+																																					</Then>
+																																					<Else>
+																																						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</Wait>
+																																					</Else>
+																																				</IfElseCondition>
+																																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																					<GetBehaviorHolders hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																					</GetBehaviorHolders>
+																																					<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																						<OutputBreakpoints />
+																																						<Then>
+																																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																							</Expression>
+																																						</Then>
+																																						<Else>
+																																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																							</Expression>
+																																						</Else>
+																																					</IfElseCondition>
+																																					<CombatAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																					</CombatAction>
+																																				</Sequence>
+																																			</Parallel>
+																																		</CombatFollowerDecorator>
+																																	</WeaponAutomationDecorator>
+																																</MeleeGuardAutomationDecorator>
+																															</MeleeDefenseAutomationDecorator>
+																														</MeleeOffenseAutomationDecorator>
+																													</CombatMoveDecorator>
+																												</AddBuffElement>
+																											</AddBuffElement>
+																										</AddBuffElement>
+																									</AddBuffElement>
+																								</AddLinkElement>
+																							</EntityContext>
+																						</EntityContextElement>
+																					</EntityContextElement>
+																					<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Then>
+																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Wait>
+																						</Then>
+																						<Else>
+																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Wait>
+																						</Else>
+																					</EntityContextCheck>
+																				</Parallel>
+																			</Synchronize>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Sequence>
+																	</IfCondition>
+																	<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Wait hasInputBreakpoint="0" comment="postFight hit" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Wait>
+																		<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<InstantSemaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Move>
+																						<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Turn>
+																								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Function_speech_dialogInitiator>
+																								</SuppressFailure>
+																							</Sequence>
+																						</Synchronize>
+																					</Sequence>
+																				</InstantSemaphore>
+																				<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Turn>
+																						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Wait>
+																					</Sequence>
+																				</Synchronize>
+																			</Selector>
+																		</Synchronize>
+																	</Parallel>
+																</Sequence>
+															</Exec>
+														</HandContentElement>
+													</Exec>
+												</ReserveBehavior>
+											</EntityContext>
+										</EntityContext>
+									</Synchronize>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+								</Sequence>
+							</EntityContext>
+						</Exec>
+					</Decision>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="use" is_function="0">
+		<Variables>
+			<Variable name="isUnarmed" type="_bool" values="false" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<IncludeTree File="&apos;profession/camper/so_campfriendlyfight.xml&apos;" Name="&apos;camper_friendlyFight&apos;" nodeLabel="70784776" />
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="isUnarmed" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<IncludeTree hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</IncludeTree>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="use_unarmed" is_function="0">
+		<Variables>
+			<Variable name="isUnarmed" type="_bool" values="true" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<IncludeTree File="&apos;profession/camper/so_campfriendlyfight.xml&apos;" Name="&apos;camper_friendlyFight&apos;" nodeLabel="18709676" />
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="isUnarmed" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="30" editorPosY="-10" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<IncludeTree hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</IncludeTree>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

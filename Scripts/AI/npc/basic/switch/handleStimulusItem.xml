@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleStimulusItem" is_function="1">
+		<Variables>
+			<Variable name="_chickenGuid" type="_string" values="&apos;18ff9093-2cc4-4ab3-9f34-7cb0dd7cd30a&apos;" isPersistent="0" form="single" />
+			<Variable name="areMatesWithOwner" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="break" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="category" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="chickensObjects" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="createFollowUp" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="dummyBool" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="equipments_val" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="followUpData" type="crime:followUpBehavior:pickUpItem" values="" isPersistent="0" form="single" />
+			<Variable name="handCheck_left" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="handCheck_right" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="isGoingToPickUp" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="isStolen" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="itemGuid" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="itemOwner" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="itemPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="itemPrice" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="itemReservee" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="ownerHomeEquipments" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="reservedItem" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="shouldReact" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="statusMultiplier" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusAnimalAbuse" type="switch:stimulus:animalAbuse" values="" isPersistent="0" form="single" />
+			<Variable name="subType" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="type" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="stimulus" type="switch:stimulus:item" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<AtomicDecorator>
+					<Sequence>
+						<GetItemType WUID="$stimulus.item" OutCategory="$category" OutType="$type" OutSubType="$subType" />
+						<IfCondition failOnCondition="false" condition="$type ~= &apos;halberd&apos;">
+							<Sequence>
+								<Sequence>
+									<GetOwner Object="$stimulus.item" Owner="$itemOwner" />
+									<IfCondition failOnCondition="false" condition="$itemOwner ~= $__null">
+										<GetAreMates Npc1="$this.id" Npc2="$itemOwner" AreMates="$areMatesWithOwner" />
+									</IfCondition>
+									<Expression expressions="$areMatesWithOwner = $areMatesWithOwner | $itemOwner == $this.id" />
+								</Sequence>
+								<GetItemProperty itemId="$stimulus.item" property="Price" result="$itemPrice" />
+								<GetStatusMultiplier Victim="$this.id" Multiplier="$statusMultiplier" />
+								<HandCheck who="$this.id" LeftHand="$handCheck_left" RightHand="$handCheck_right" />
+								<Sequence>
+									<IfCondition failOnCondition="false" condition="$areMatesWithOwner &amp; &#10;false">
+										<Sequence>
+											<GetItemProperty itemId="$stimulus.item" property="Guid" result="$itemGuid" />
+											<GetStolenInfo Item="$stimulus.item" InventoryOut="" IsStolenOut="$isStolen" />
+											<IfCondition failOnCondition="false" condition="$itemGuid == $_chickenGuid &amp; $isStolen">
+												<HasSeenPlayer NPC="" FullyAwareOnly="false" saveVersion="2">
+													<Then canSkip="1">
+														<SuppressFailure>
+															<Sequence>
+																<GraphSearch Origin="$this.id" Borders="" depth="3" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;home,home_area,home_equipment,area_union_member&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																	<LinkTagFilter tag="&apos;home_equipment&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																	<EntityClassFilter Class="SmartObject" Source="Child" prune="false" negprune="unknown" Parent="" Child="" />
+																	<Nodalyzer Quantifiers="ForAll" Parent="" Child="$ownerHomeEquipments" saveVersion="2" />
+																</GraphSearch>
+																<Expression expressions="$break = false" />
+																<ForEach startIndex="0" step="1" array="$ownerHomeEquipments" iterator="" value="$equipments_val" break="$break">
+																	<LuaGate code="local equipment = XGenAIModule.GetEntityByWUID(data.equipments_val) &#10; &#10;if equipment ~= nil and equipment.Properties.Boid ~= nil then &#10; return equipment.Properties.Boid.guidItemSpawnedOnKill == data._chickenGuid &#10;end &#10; &#10;return false" saveVersion="2">
+																		<Then canSkip="1">
+																			<Expression expressions="$break = true &#10;$chickensObjects = $equipments_val" />
+																		</Then>
+																		<Else canSkip="1">
+																			<Expression expressions="$break = false" />
+																		</Else>
+																	</LuaGate>
+																</ForEach>
+																<IfCondition failOnCondition="false" condition="$chickensObjects ~= $__null">
+																	<Sequence>
+																		<Expression expressions="$stimulusAnimalAbuse.culprit = $__player &#10;$stimulusAnimalAbuse.victim = $chickensObjects &#10;$stimulusAnimalAbuse.animalAbuseKind = $enum:crime_animalAbuseKind.murder &#10;$stimulusAnimalAbuse.isPoaching = false &#10;$stimulusAnimalAbuse.isRanged = false &#10;$stimulusAnimalAbuse.attributedCrime = true &#10;$stimulusAnimalAbuse.shouldIncreaseCount = true &#10; &#10;$createFollowUp = true" />
+																		<EntityContext context="switch_doNotOpenRecognizingLock" target="">
+																			<Function_switch_handleStimulusAnimalAbuse stimulus="$stimulusAnimalAbuse" nodeLabel="45347438" />
+																		</EntityContext>
+																	</Sequence>
+																</IfCondition>
+															</Sequence>
+														</SuppressFailure>
+													</Then>
+												</HasSeenPlayer>
+											</IfCondition>
+											<IgnorePerception PerceptorObject="$this.id" PerceptibleObject="$stimulus.item" IgnoreFor="&apos;-1&apos;" TimerType="GameTime" Uninterruptible="true" Persistent="true" />
+										</Sequence>
+									</IfCondition>
+									<IfElseCondition failOnCondition="false" condition="($itemPrice &gt; $statusMultiplier * $data:script_param[&apos;crime_pickUpItem_baseMinimumPrice&apos;].value | $areMatesWithOwner) &#10; &#10;&amp; $handCheck_left == $__null &#10;&amp; $handCheck_right == $__null" saveVersion="2">
+										<Then canSkip="1">
+											<Sequence>
+												<IfCondition failOnCondition="false" condition="~$createFollowUp">
+													<Selector>
+														<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+															<LinkTagFilter tag="&apos;crime_pickUpItemReserved&apos;" prune="true" negprune="unknown" Parent="" Child="$reservedItem" Data="" />
+														</GraphSearch>
+														<GraphSearch Origin="$stimulus.item" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+															<LinkTagFilter tag="&apos;crime_pickUpItemReserved_reverse&apos;" prune="true" negprune="unknown" Parent="" Child="$itemReservee" Data="" />
+														</GraphSearch>
+														<DistanceCondition Origin="$stimulus.item" ReferencePt="$__player" Low="$data:script_param[&apos;crime_pickUpItem_minDistanceToPlayer&apos;].value" High="$data:script_param[&apos;crime_pickUpItem_minDistanceToPlayer&apos;].value" Negation="true" ValueOnMiddle="false" failOnCondition="false">
+															<Sequence>
+																<GetSpatialInfo In="$stimulus.item" Out="$itemPos" What="Position" />
+																<CheckReactionLimit DesiredReactionType="$enum:crime_reactionType.pickUpItem" Information="" Position="$itemPos" StimulusKind="$enum:crime_stimulusKind.item" ShouldReact="$shouldReact" ShouldWatch="$dummyBool" />
+																<IfCondition failOnCondition="false" condition="$shouldReact">
+																	<Sequence>
+																		<Expression expressions="$isGoingToPickUp = true &#10;$createFollowUp = true" />
+																		<Function_callInterrupt_pickUpItem ignorePriority="false" initiator="$enum:switch_interruptInitiator.switch" item="$stimulus.item" previousReaction="$enum:crime_reactionKind.unknown" source="$enum:crime_source.direct" stimulusKind="$enum:crime_stimulusKind.item" nodeLabel="23170078" />
+																	</Sequence>
+																</IfCondition>
+															</Sequence>
+														</DistanceCondition>
+													</Selector>
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="~$isGoingToPickUp &amp; &#10;$reservedItem ~= $stimulus.item">
+													<EntityContextCheck context="crime_interruptPickUpItem" target="" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$createFollowUp = true" />
+														</Then>
+													</EntityContextCheck>
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$createFollowUp">
+													<Sequence>
+														<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+														<Expression expressions="$followUpData.item = $stimulus.item &#10;$followUpData.timestamp = $currentTime &#10;$followUpData.ignoreExpiration = $areMatesWithOwner" />
+														<AddLink From="$this.id" To="$stimulus.item" Tag="&apos;crime_followUpBehavior_pickUpItem&apos;" Data="$followUpData" LinkOpHandleMode="OverWrite" />
+													</Sequence>
+												</IfCondition>
+											</Sequence>
+										</Then>
+									</IfElseCondition>
+								</Sequence>
+							</Sequence>
+						</IfCondition>
+					</Sequence>
+				</AtomicDecorator>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="_chickenGuid" comment="" />
+				<Variable name="areMatesWithOwner" comment="" />
+				<Variable name="break" comment="" />
+				<Variable name="category" comment="" />
+				<Variable name="chickensObjects" comment="" />
+				<Variable name="createFollowUp" comment="" />
+				<Variable name="currentTime" comment="" />
+				<Variable name="dummyBool" comment="" />
+				<Variable name="equipments_val" comment="" />
+				<Variable name="followUpData" comment="" />
+				<Variable name="handCheck_left" comment="" />
+				<Variable name="handCheck_right" comment="" />
+				<Variable name="isGoingToPickUp" comment="" />
+				<Variable name="isStolen" comment="" />
+				<Variable name="itemGuid" comment="" />
+				<Variable name="itemOwner" comment="" />
+				<Variable name="itemPos" comment="" />
+				<Variable name="itemPrice" comment="" />
+				<Variable name="itemReservee" comment="" />
+				<Variable name="ownerHomeEquipments" comment="" />
+				<Variable name="reservedItem" comment="" />
+				<Variable name="shouldReact" comment="" />
+				<Variable name="statusMultiplier" comment="" />
+				<Variable name="stimulusAnimalAbuse" comment="" />
+				<Variable name="subType" comment="" />
+				<Variable name="type" comment="" />
+				<Variable name="stimulus" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GetItemType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</GetItemType>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="Ownership handling" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GetOwner hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetOwner>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetAreMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetAreMates>
+										</IfCondition>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Sequence>
+									<GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetItemProperty>
+									<GetStatusMultiplier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetStatusMultiplier>
+									<HandCheck hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</HandCheck>
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="Chicken, DISABLED in KCD2-411537" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetItemProperty>
+												<GetStolenInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetStolenInfo>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</LinkTagFilter>
+																		<EntityClassFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</EntityClassFilter>
+																		<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																		</Nodalyzer>
+																	</GraphSearch>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																	<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LuaGate hasInputBreakpoint="0" comment="For some reason I&apos;m unable to directly change data.break inside LUA, fml" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Then>
+																			<Else>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Else>
+																		</LuaGate>
+																	</ForEach>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Function_switch_handleStimulusAnimalAbuse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_switch_handleStimulusAnimalAbuse>
+																			</EntityContext>
+																		</Sequence>
+																	</IfCondition>
+																</Sequence>
+															</SuppressFailure>
+														</Then>
+													</HasSeenPlayer>
+												</IfCondition>
+												<IgnorePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</IgnorePerception>
+											</Sequence>
+										</IfCondition>
+										<IfElseCondition hasInputBreakpoint="0" comment="Handling item pickup itself" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GraphSearch hasInputBreakpoint="0" comment="I already have an item reserved" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+															</GraphSearch>
+															<GraphSearch hasInputBreakpoint="0" comment="Item is already reserved" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+															</GraphSearch>
+															<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetSpatialInfo>
+																	<CheckReactionLimit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</CheckReactionLimit>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<Function_callInterrupt_pickUpItem hasInputBreakpoint="0" comment="Item not reserved, try geting into pickUpItem" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_callInterrupt_pickUpItem>
+																		</Sequence>
+																	</IfCondition>
+																</Sequence>
+															</DistanceCondition>
+														</Selector>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+														</EntityContextCheck>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</GetTime>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</AddLink>
+														</Sequence>
+													</IfCondition>
+												</Sequence>
+											</Then>
+										</IfElseCondition>
+									</Sequence>
+								</Sequence>
+							</IfCondition>
+						</Sequence>
+					</AtomicDecorator>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,438 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleStimulusThreat" is_function="1">
+		<Variables>
+			<Variable name="assaultData" type="crime:assaultData" values="" isPersistent="0" form="single" />
+			<Variable name="break" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="escalate" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="ignorePriority" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="initiator" type="enum:switch_interruptInitiator" values="$enum:switch_interruptInitiator.switch" isPersistent="0" form="single" />
+			<Variable name="reactorData" type="crime:reactor" values="" isPersistent="0" form="array" />
+			<Variable name="reactorData_value" type="crime:reactor" values="" isPersistent="0" form="single" />
+			<Variable name="reactorData_value_stimulusKind" type="enum:crime_stimulusKind" values="" isPersistent="0" form="single" />
+			<Variable name="shouldReact" type="_bool" values="true" isPersistent="0" form="single" />
+			<Variable name="source" type="enum:crime_source" values="$enum:crime_source.direct" isPersistent="0" form="single" />
+			<Variable name="trespassInformation" type="information" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="stimulus" type="switch:stimulus:threat" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<IsPublicEnemy Soul="$this.id" FailOnSubtreeMissing="false" saveVersion="2">
+						<Then canSkip="1">
+							<EntityContextCheck context="crime_publicEnemy_handleThreatAsPublicFriend" target="" saveVersion="2">
+								<Else canSkip="1">
+									<Expression expressions="$escalate = true" />
+								</Else>
+							</EntityContextCheck>
+						</Then>
+					</IsPublicEnemy>
+					<IfElseCondition failOnCondition="false" condition="$escalate" saveVersion="2">
+						<Then canSkip="1">
+							<Sequence>
+								<IsWeaponDrawn who="$__player" WeaponSet="Secondary" saveVersion="2">
+									<Then canSkip="1">
+										<Expression expressions="$assaultData.kind = $enum:crime_attackKind.missile" />
+									</Then>
+									<Else canSkip="1">
+										<Expression expressions="$assaultData.kind = $enum:crime_attackKind.armed" />
+									</Else>
+								</IsWeaponDrawn>
+								<Expression expressions="$assaultData.attacker = $__player &#10;$assaultData.victim = $this.id &#10;$assaultData.directHit = false" />
+								<CreateCombatInformation Victim="$this.id" AttackKind="$assaultData.kind" DirectHit="false" AddConfiscation="false" Information="$information" />
+								<Function_crime_assessTrespass observer="" information="$trespassInformation" nodeLabel="20024775" />
+								<Function_crime_addEyeWitness information="$information" npc="$this.id" nodeLabel="69952242" />
+								<EntityContextCheck context="crime_stimulusInitiatedByScheduler" target="" saveVersion="2">
+									<Then canSkip="1">
+										<Expression expressions="$ignorePriority = true &#10;$initiator = $enum:switch_interruptInitiator.scheduler" />
+									</Then>
+								</EntityContextCheck>
+								<CallDecorator_crime_chooseReaction>
+									<Subtree canSkip="1">
+										<ChooseReaction Information="$information" ReactionNpc="$__player" SkirmishDecisionReason="Perception" Source="$source" StimulusKind="$enum:crime_stimulusKind.combat" />
+									</Subtree>
+									<Attack canSkip="1">
+										<CallbackEventCatch_empty>
+											<Function_callInterrupt_attack assaultData="$assaultData" criminalFreshness="$enum:crime_criminalFreshness.unknown" defenceMode="false" escalatedFromFailedSurrender="false" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="$information" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" priority="160" questBehavior="false" relationOverride="true" stimulusKind="$enum:crime_stimulusKind.enemy" target="$__player" nodeLabel="28602341" />
+										</CallbackEventCatch_empty>
+									</Attack>
+									<Arrest canSkip="1">
+										<CallbackEventCatch_empty>
+											<Function_callInterrupt_arrest assaultData="$assaultData" crimeSeen="true" criminalFreshness="$enum:crime_criminalFreshness.unknown" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="$information" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" source="$source" stimulusKind="$enum:crime_stimulusKind.enemy" trespassingRepeatedly="false" nodeLabel="66500018" />
+										</CallbackEventCatch_empty>
+									</Arrest>
+									<LookAround canSkip="1">
+										<CallbackEventCatch_empty>
+											<ErrorNode Message="&apos;Unhandled behavior \&apos;LookAround\&apos; for stimulus: $stimulusKind!&apos;" />
+										</CallbackEventCatch_empty>
+									</LookAround>
+									<Flee canSkip="1">
+										<CallbackEventCatch_fleeData>
+											<Sequence>
+												<Expression expressions="$ignorePriority = $ignoreScheduledPriority | $ignorePriority" />
+												<Function_callInterrupt_flee assaultData="" corpseState="$enum:corpseState.undiscovered" criminalFreshness="$enum:crime_criminalFreshness.unknown" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="$information" initiator="$initiator" isIndifferent="false" leaveLevel="false" mercyDialogueResult="$enum:crime_mercyDialogueResult.unknown" previousReaction="$enum:crime_reactionKind.unknown" priority="135" source="$source" stimulusKind="$enum:crime_stimulusKind.enemy" target="$__player" nodeLabel="44984104" />
+											</Sequence>
+										</CallbackEventCatch_fleeData>
+									</Flee>
+									<ReactionToRecognitionState_I canSkip="1">
+										<CallbackEventCatch_empty>
+											<Function_stealth_recognitionState_I_reaction target="$__player" nodeLabel="17931704" />
+										</CallbackEventCatch_empty>
+									</ReactionToRecognitionState_I>
+									<ReactionToRecognitionState_II canSkip="1">
+										<CallbackEventCatch_empty>
+											<Function_stealth_recognitionState_II_reaction stimulusKind="$enum:crime_stimulusKind.enemy" target="$__player" nodeLabel="61715189" />
+										</CallbackEventCatch_empty>
+									</ReactionToRecognitionState_II>
+									<Report canSkip="1">
+										<CallbackEventCatch_reportData>
+											<Sequence>
+												<Expression expressions="$ignorePriority = $ignoreScheduledPriority | $ignorePriority" />
+												<Function_callInterrupt_report assaultData="$assaultData" corpseState="$enum:corpseState.undiscovered" criminalFreshness="$enum:crime_criminalFreshness.unknown" disableDetectedIcon="false" disableEmitting="false" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="$information" initiator="$initiator" movementSpeed="$enum:movementSpeed.run" previousReaction="$enum:crime_reactionKind.unknown" reportDestination="$destination" reportDestinationType="$destinationType" source="$source" stimulusKind="$enum:crime_stimulusKind.enemy" nodeLabel="63374723" />
+											</Sequence>
+										</CallbackEventCatch_reportData>
+									</Report>
+									<Scan canSkip="1">
+										<CallbackEventCatch_empty>
+											<ErrorNode Message="&apos;[$this.name;] Unhandled behavior \&apos;Scan\&apos; for stimulus: $stimulusKind!&apos;" />
+										</CallbackEventCatch_empty>
+									</Scan>
+									<Selfhelp canSkip="1">
+										<CallbackEventCatch_empty>
+											<Function_callInterrupt_selfhelp assaultData="" criminalFreshness="$enum:crime_criminalFreshness.unknown" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="$information" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" source="$source" stimulusKind="$enum:crime_stimulusKind.enemy" nodeLabel="76476288" />
+										</CallbackEventCatch_empty>
+									</Selfhelp>
+									<Watch canSkip="1">
+										<CallbackEventCatch_empty>
+											<Function_callInterrupt_watch assaultData="$assaultData" corpseState="$enum:corpseState.undiscovered" criminalFreshness="$enum:crime_criminalFreshness.unknown" defenceMode="false" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="$information" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" source="$source" stimulusKind="$enum:crime_stimulusKind.threat" target="$__player" nodeLabel="59460817" />
+										</CallbackEventCatch_empty>
+									</Watch>
+								</CallDecorator_crime_chooseReaction>
+							</Sequence>
+						</Then>
+						<Else canSkip="1">
+							<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+								<Then canSkip="1">
+									<Function_callInterrupt_mindPlayer ignorePriority="$ignorePriority" initiator="$enum:switch_interruptInitiator.switch" previousReaction="$enum:crime_reactionKind.unknown" soundType="$enum:sound.invalid" stimulusKind="$enum:crime_stimulusKind.threat" nodeLabel="20264674" />
+								</Then>
+								<Else canSkip="1">
+									<EntityContextCheck context="crime_isSecurity" target="" saveVersion="2">
+										<Then canSkip="1">
+											<Function_callInterrupt_mindPlayer ignorePriority="$ignorePriority" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" soundType="$enum:sound.invalid" stimulusKind="$enum:crime_stimulusKind.threat" nodeLabel="34806808" />
+										</Then>
+										<Else canSkip="1">
+											<IsPublicEnemy Soul="$this.id" FailOnSubtreeMissing="false" saveVersion="2">
+												<Then canSkip="1">
+													<Function_callInterrupt_mindPlayer ignorePriority="$ignorePriority" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" soundType="$enum:sound.invalid" stimulusKind="$enum:crime_stimulusKind.threat" nodeLabel="98121809" />
+												</Then>
+												<Else canSkip="1">
+													<Sequence>
+														<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;crime_reactor&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+															<LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+															<LinkDataFilter tag="&apos;crime_reactor&apos;" condition="$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.mindPlayer | &#10;$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.watch" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+															<Datalyzer Tag="&apos;crime_reactor&apos;" Quantifiers="ForAll" Parent="" Child="" Data="$reactorData" saveVersion="2" />
+														</GraphSearch>
+														<ForEach startIndex="0" step="1" array="$reactorData" iterator="" value="$reactorData_value" break="$break">
+															<Sequence>
+																<GetReactorStimulusKind ReactorData="$reactorData_value" StimulusKind="$reactorData_value_stimulusKind" />
+																<IfCondition failOnCondition="false" condition="$reactorData_value_stimulusKind == $enum:crime_stimulusKind.threat">
+																	<Expression expressions="$shouldReact = false &#10;$break = true" />
+																</IfCondition>
+															</Sequence>
+														</ForEach>
+														<IfCondition failOnCondition="false" condition="$shouldReact">
+															<DecideSkirmishReaction ReferenceNPC="$this.id" TargetNPC="$stimulus.threatSource" Reason="Perception" RelationOverride="Hostile" MoraleBoost="0.000000" AllowFemaleJoin="true" saveVersion="2">
+																<Join canSkip="1">
+																	<Function_callInterrupt_mindPlayer ignorePriority="$ignorePriority" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" soundType="$enum:sound.invalid" stimulusKind="$enum:crime_stimulusKind.threat" nodeLabel="15972551" />
+																</Join>
+																<Withdraw canSkip="1">
+																	<Function_callInterrupt_watch assaultData="" corpseState="$enum:corpseState.undiscovered" criminalFreshness="$enum:crime_criminalFreshness.unknown" defenceMode="false" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" source="$source" stimulusKind="$enum:crime_stimulusKind.threat" target="$stimulus.threatSource" nodeLabel="33220170" />
+																</Withdraw>
+																<Indifference canSkip="1">
+																	<Function_callInterrupt_watch assaultData="" corpseState="$enum:corpseState.undiscovered" criminalFreshness="$enum:crime_criminalFreshness.unknown" defenceMode="false" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" source="$source" stimulusKind="$enum:crime_stimulusKind.threat" target="$stimulus.threatSource" nodeLabel="42817498" />
+																</Indifference>
+															</DecideSkirmishReaction>
+														</IfCondition>
+													</Sequence>
+												</Else>
+											</IsPublicEnemy>
+										</Else>
+									</EntityContextCheck>
+								</Else>
+							</EntityContextCheck>
+						</Else>
+					</IfElseCondition>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="assaultData" comment="" />
+				<Variable name="break" comment="" />
+				<Variable name="escalate" comment="" />
+				<Variable name="ignorePriority" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="initiator" comment="" />
+				<Variable name="reactorData" comment="" />
+				<Variable name="reactorData_value" comment="" />
+				<Variable name="reactorData_value_stimulusKind" comment="" />
+				<Variable name="shouldReact" comment="" />
+				<Variable name="source" comment="" />
+				<Variable name="trespassInformation" comment="" />
+				<Variable name="stimulus" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IsPublicEnemy hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Else>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Else>
+								</EntityContextCheck>
+							</Then>
+						</IsPublicEnemy>
+						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IsWeaponDrawn hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Then>
+										<Else>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Else>
+									</IsWeaponDrawn>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<CreateCombatInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</CreateCombatInformation>
+									<Function_crime_assessTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_assessTrespass>
+									<Function_crime_addEyeWitness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_addEyeWitness>
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Then>
+									</EntityContextCheck>
+									<CallDecorator_crime_chooseReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Subtree>
+											<ChooseReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</ChooseReaction>
+										</Subtree>
+										<Attack>
+											<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_callInterrupt_attack hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_callInterrupt_attack>
+											</CallbackEventCatch_empty>
+										</Attack>
+										<Arrest>
+											<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_callInterrupt_arrest hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_callInterrupt_arrest>
+											</CallbackEventCatch_empty>
+										</Arrest>
+										<LookAround>
+											<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</ErrorNode>
+											</CallbackEventCatch_empty>
+										</LookAround>
+										<Flee>
+											<CallbackEventCatch_fleeData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<Function_callInterrupt_flee hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_callInterrupt_flee>
+												</Sequence>
+											</CallbackEventCatch_fleeData>
+										</Flee>
+										<ReactionToRecognitionState_I>
+											<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_stealth_recognitionState_I_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_stealth_recognitionState_I_reaction>
+											</CallbackEventCatch_empty>
+										</ReactionToRecognitionState_I>
+										<ReactionToRecognitionState_II>
+											<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_stealth_recognitionState_II_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_stealth_recognitionState_II_reaction>
+											</CallbackEventCatch_empty>
+										</ReactionToRecognitionState_II>
+										<Report>
+											<CallbackEventCatch_reportData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<Function_callInterrupt_report hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_callInterrupt_report>
+												</Sequence>
+											</CallbackEventCatch_reportData>
+										</Report>
+										<Scan>
+											<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</ErrorNode>
+											</CallbackEventCatch_empty>
+										</Scan>
+										<Selfhelp>
+											<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_callInterrupt_selfhelp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_callInterrupt_selfhelp>
+											</CallbackEventCatch_empty>
+										</Selfhelp>
+										<Watch>
+											<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_callInterrupt_watch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_callInterrupt_watch>
+											</CallbackEventCatch_empty>
+										</Watch>
+									</CallDecorator_crime_chooseReaction>
+								</Sequence>
+							</Then>
+							<Else>
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Function_callInterrupt_mindPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_callInterrupt_mindPlayer>
+									</Then>
+									<Else>
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_callInterrupt_mindPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_callInterrupt_mindPlayer>
+											</Then>
+											<Else>
+												<IsPublicEnemy hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Function_callInterrupt_mindPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_callInterrupt_mindPlayer>
+													</Then>
+													<Else>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GraphSearch hasInputBreakpoint="0" comment="KCD2-430088" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+																<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkDataFilter>
+																<Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																</Datalyzer>
+															</GraphSearch>
+															<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GetReactorStimulusKind hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetReactorStimulusKind>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																</Sequence>
+															</ForEach>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<DecideSkirmishReaction hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Join>
+																		<Function_callInterrupt_mindPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_callInterrupt_mindPlayer>
+																	</Join>
+																	<Withdraw>
+																		<Function_callInterrupt_watch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_callInterrupt_watch>
+																	</Withdraw>
+																	<Indifference>
+																		<Function_callInterrupt_watch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_callInterrupt_watch>
+																	</Indifference>
+																</DecideSkirmishReaction>
+															</IfCondition>
+														</Sequence>
+													</Else>
+												</IsPublicEnemy>
+											</Else>
+										</EntityContextCheck>
+									</Else>
+								</EntityContextCheck>
+							</Else>
+						</IfElseCondition>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

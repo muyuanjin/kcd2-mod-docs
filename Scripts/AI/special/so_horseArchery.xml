@@ -1,0 +1,1803 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="onUpdate" is_function="0">
+		<Variables>
+			<Variable name="consecutiveMisses" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="hattrickCounter" type="_int" values="0" isPersistent="0" form="single" />
+			<Variable name="hideHUD" type="horseArcheryContest:hideHUD" values="" isPersistent="0" form="single" />
+			<Variable name="hitData_fromTarget" type="shootingTargetHitData" values="" isPersistent="0" form="single" />
+			<Variable name="missHeatOMeter" type="_float" values="0" isPersistent="0" form="single" />
+			<Variable name="playerHitData" type="hitDataForwarding" values="0" isPersistent="0" form="single" />
+			<Variable name="showHUD" type="horseArcheryContest:showHUD" values="" isPersistent="0" form="single" />
+			<Variable name="updateHUD" type="horseArcheryContest:updateHUD" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Parallel successMode="All" failureMode="Any">
+					<Parallel successMode="Any" failureMode="Any">
+						<Loop count="-1">
+							<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$showHUD" senderInfo="" inbox="&apos;horseArcheryContest&apos;" condition="" answerVar="">
+								<ExecuteLua code="local playerName = XGenAIModule.GetEntityByWUID(data.showHUD.player).soul:GetNameStringId() &#10;local opponentName = XGenAIModule.GetEntityByWUID(data.showHUD.opponent).soul:GetNameStringId() &#10; &#10;ShootingContest.ShowHorseShootingContestTable( &#10;  playerName, &#10;  opponentName, &#10;  data.showHUD.playerScore, &#10;  data.showHUD.opponentScore, &#10;  data.showHUD.trackName)" />
+							</ProcessMessage>
+						</Loop>
+						<Loop count="-1">
+							<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$updateHUD" senderInfo="" inbox="&apos;horseArcheryContest&apos;" condition="" answerVar="">
+								<ExecuteLua code="ShootingContest.UpdateHorseShootingContestTable(data.updateHUD.playerScore)" />
+							</ProcessMessage>
+						</Loop>
+						<Loop count="-1">
+							<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hideHUD" senderInfo="" inbox="&apos;horseArcheryContest&apos;" condition="" answerVar="">
+								<ExecuteLua code="ShootingContest.HideHorseShootingContestTable()" />
+							</ProcessMessage>
+						</Loop>
+					</Parallel>
+					<Loop count="-1">
+						<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hitData_fromTarget" senderInfo="" inbox="&apos;OnHitShootingTarget&apos;" condition="" answerVar="">
+							<EntityContextCheck context="jizdniLukostrelba_contestIsActive" target="$__player" saveVersion="2">
+								<Then canSkip="1">
+									<IfCondition failOnCondition="false" condition="$hitData_fromTarget.shooter == $__player">
+										<Sequence>
+											<AtomicDecorator>
+												<Sequence>
+													<SendAIConceptSignal_shootingTargetHitData hitScore="$hitData_fromTarget.hitScore" shooter="$hitData_fromTarget.shooter" />
+													<Expression expressions="$hattrickCounter = $hattrickCounter + 1 &#10;$missHeatOMeter = 0 &#10;$consecutiveMisses = 0" />
+													<Clamp value="$hattrickCounter" lowerBoundary="0.000000" upperBoundary="3.000000" result="$hattrickCounter" />
+												</Sequence>
+											</AtomicDecorator>
+											<SetExternalLock LockManagerType="Intellect" Locked="false" LockName="&apos;hitLanded&apos;" />
+											<IfElseCondition failOnCondition="false" condition="$hattrickCounter == 3" saveVersion="2">
+												<Then canSkip="1">
+													<Sequence>
+														<Function_notifyNearbySpectators reactionType="$enum:jizdniLukostrelba_spectatorsReactionType.hattrick" nodeLabel="41704554" />
+														<Function_speech_monolog alias="&apos;jizdniLukostrelba_henryBark_hattrick&apos;" canBeDelayed="false" context="" dramaticBark="false" lookAtId="" metarole="" target="$__player" wait="false" nodeLabel="88432219" />
+														<ReinitVariable variable="$hattrickCounter" />
+													</Sequence>
+												</Then>
+												<Else canSkip="1">
+													<Sequence>
+														<RandomGate opensWithChance="0.800000" saveVersion="2">
+															<Then canSkip="1">
+																<Function_speech_monolog alias="&apos;jizdniLukostrelba_henryBark_hit&apos;" canBeDelayed="false" context="" dramaticBark="false" lookAtId="" metarole="" target="$__player" wait="false" nodeLabel="56323260" />
+															</Then>
+															<Else canSkip="1">
+																<Success />
+															</Else>
+														</RandomGate>
+														<RandomGate opensWithChance="0.600000" saveVersion="2">
+															<Then canSkip="1">
+																<Function_notifyNearbySpectators reactionType="$enum:jizdniLukostrelba_spectatorsReactionType.normalHit" nodeLabel="75631929" />
+															</Then>
+															<Else canSkip="1">
+																<Success />
+															</Else>
+														</RandomGate>
+													</Sequence>
+												</Else>
+											</IfElseCondition>
+										</Sequence>
+									</IfCondition>
+								</Then>
+								<Else canSkip="1">
+									<Success />
+								</Else>
+							</EntityContextCheck>
+						</ProcessMessage>
+					</Loop>
+					<Loop count="-1">
+						<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$playerHitData" senderInfo="" inbox="&apos;hitDataForwarding&apos;" condition="" answerVar="">
+							<IfCondition failOnCondition="false" condition="$playerHitData.data.target == $__null">
+								<Sequence>
+									<AtomicDecorator>
+										<Sequence>
+											<Expression expressions="$missHeatOMeter = $missHeatOMeter + 0.1 &#10;$consecutiveMisses = $consecutiveMisses + 1" />
+											<IfCondition failOnCondition="false" condition="$consecutiveMisses &gt; 1">
+												<Expression expressions="$hattrickCounter = 0" />
+											</IfCondition>
+											<Clamp value="$missHeatOMeter" lowerBoundary="0.000000" upperBoundary="1.000000" result="$missHeatOMeter" />
+										</Sequence>
+									</AtomicDecorator>
+									<RandomGate opensWithChance="0.400000" saveVersion="2">
+										<Then canSkip="1">
+											<Function_speech_monolog alias="&apos;jizdniLukostrelba_henryBark_miss&apos;" canBeDelayed="false" context="" dramaticBark="false" lookAtId="" metarole="" target="$__player" wait="false" nodeLabel="82925357" />
+										</Then>
+										<Else canSkip="1">
+											<Success />
+										</Else>
+									</RandomGate>
+									<RandomGate opensWithChance="$missHeatOMeter" saveVersion="2">
+										<Then canSkip="1">
+											<Function_notifyNearbySpectators reactionType="$enum:jizdniLukostrelba_spectatorsReactionType.miss" nodeLabel="87262348" />
+										</Then>
+										<Else canSkip="1">
+											<Success />
+										</Else>
+									</RandomGate>
+								</Sequence>
+							</IfCondition>
+						</ProcessMessage>
+					</Loop>
+					<Loop count="-1">
+						<IfGate atomic="false" condition="$missHeatOMeter &gt; 0" RunLogic="KeepRunning">
+							<Sequence>
+								<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+								<AtomicDecorator>
+									<Sequence>
+										<Expression expressions="$missHeatOMeter = $missHeatOMeter-0.02" />
+										<Clamp value="$missHeatOMeter" lowerBoundary="0.000000" upperBoundary="1.000000" result="$missHeatOMeter" />
+									</Sequence>
+								</AtomicDecorator>
+							</Sequence>
+						</IfGate>
+					</Loop>
+					<Loop count="-1">
+						<Parallel successMode="Any" failureMode="Any">
+							<IfGate atomic="false" condition="$hattrickCounter &gt; 0" RunLogic="Halt">
+								<Sequence>
+									<Wait duration="&apos;6s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+									<AtomicDecorator>
+										<Sequence>
+											<Expression expressions="$hattrickCounter = $hattrickCounter-1" />
+											<Clamp value="$hattrickCounter" lowerBoundary="0.000000" upperBoundary="3.000000" result="$hattrickCounter" />
+										</Sequence>
+									</AtomicDecorator>
+								</Sequence>
+							</IfGate>
+							<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;hitLanded&apos;" RunLogic="KeepRunning">
+								<SetExternalLock LockManagerType="Intellect" Locked="true" LockName="&apos;hitLanded&apos;" />
+							</ExternalLock>
+						</Parallel>
+					</Loop>
+				</Parallel>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="consecutiveMisses" comment="" />
+				<Variable name="hattrickCounter" comment="" />
+				<Variable name="hideHUD" comment="" />
+				<Variable name="hitData_fromTarget" comment="" />
+				<Variable name="missHeatOMeter" comment="" />
+				<Variable name="playerHitData" comment="" />
+				<Variable name="showHUD" comment="" />
+				<Variable name="updateHUD" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-670" editorPosY="-610" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Parallel hasInputBreakpoint="0" comment="HUD" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</ExecuteLua>
+								</ProcessMessage>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</ExecuteLua>
+								</ProcessMessage>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</ExecuteLua>
+								</ProcessMessage>
+							</Loop>
+						</Parallel>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" comment_box="messages_from_targets" comment_box_color="12,12,216,255" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<SendAIConceptSignal_shootingTargetHitData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</SendAIConceptSignal_shootingTargetHitData>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<Clamp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Clamp>
+													</Sequence>
+												</AtomicDecorator>
+												<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</SetExternalLock>
+												<IfElseCondition hasInputBreakpoint="0" comment="comment hattrick" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_notifyNearbySpectators hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_notifyNearbySpectators>
+															<Function_speech_monolog hasInputBreakpoint="0" comment="player comment" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_speech_monolog>
+															<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</ReinitVariable>
+														</Sequence>
+													</Then>
+													<Else>
+														<Sequence hasInputBreakpoint="0" comment="ordinary hit" breakpointFlags="0">
+															<OutputBreakpoints />
+															<RandomGate hasInputBreakpoint="0" comment="player comment" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Function_speech_monolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_speech_monolog>
+																</Then>
+																<Else>
+																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Success>
+																</Else>
+															</RandomGate>
+															<RandomGate hasInputBreakpoint="0" comment="spectators comment" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Function_notifyNearbySpectators hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_notifyNearbySpectators>
+																</Then>
+																<Else>
+																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Success>
+																</Else>
+															</RandomGate>
+														</Sequence>
+													</Else>
+												</IfElseCondition>
+											</Sequence>
+										</IfCondition>
+									</Then>
+									<Else>
+										<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Success>
+									</Else>
+								</EntityContextCheck>
+							</ProcessMessage>
+						</Loop>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="missCounts" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="miss" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<IfCondition hasInputBreakpoint="0" comment="player is permitted 1 miss between hits and it would sstill count as hattrick" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</IfCondition>
+												<Clamp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Clamp>
+											</Sequence>
+										</AtomicDecorator>
+										<RandomGate hasInputBreakpoint="0" comment="player comment" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_speech_monolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_speech_monolog>
+											</Then>
+											<Else>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Else>
+										</RandomGate>
+										<RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_notifyNearbySpectators hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_notifyNearbySpectators>
+											</Then>
+											<Else>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Else>
+										</RandomGate>
+									</Sequence>
+								</IfCondition>
+							</ProcessMessage>
+						</Loop>
+						<Loop hasInputBreakpoint="0" comment="slowly lowering miss-o-meter over time" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+									<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<Clamp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Clamp>
+										</Sequence>
+									</AtomicDecorator>
+								</Sequence>
+							</IfGate>
+						</Loop>
+						<Loop hasInputBreakpoint="0" comment="timelimit between hattrick hits" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="lower hattrick score after time" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+										<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<Clamp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Clamp>
+											</Sequence>
+										</AtomicDecorator>
+									</Sequence>
+								</IfGate>
+								<ExternalLock hasInputBreakpoint="0" comment="interrupts the sister branch on hit" breakpointFlags="0">
+									<OutputBreakpoints />
+									<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</SetExternalLock>
+								</ExternalLock>
+							</Parallel>
+						</Loop>
+					</Parallel>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="showRunner_start_obsolete" is_function="0">
+		<Variables>
+			<Variable name="initialbarkSaid" type="_bool" values="" isPersistent="1" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="alias1" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="alias2" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="playerLoitering" type="_bool" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="spot" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="true" destinationSpecification="$spot" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+					<Parallel successMode="Any" failureMode="Any">
+						<Loop count="-1">
+							<ForceLook LookTarget="$__player" DisableVariations="false">
+								<Sequence>
+									<Turn target="$__player" align="false" />
+									<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+								</Sequence>
+							</ForceLook>
+						</Loop>
+						<Loop count="-1">
+							<Sequence>
+								<IfCondition failOnCondition="false" condition="$initialbarkSaid == false">
+									<Sequence>
+										<Wait duration="&apos;3s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+										<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+											<Child canSkip="1">
+												<Function_speech_schedulerMonolog alias="$alias1" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" metarole="" subtitlesDown="false" nodeLabel="52986306" />
+											</Child>
+											<OnSuccess canSkip="1">
+												<Expression expressions="$initialbarkSaid = true" />
+											</OnSuccess>
+										</FuseBox>
+									</Sequence>
+								</IfCondition>
+								<IfGate atomic="false" condition="$playerLoitering == true" RunLogic="KeepRunning">
+									<Sequence>
+										<Function_speech_schedulerMonolog alias="$alias2" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" metarole="" subtitlesDown="false" nodeLabel="74657945" />
+										<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="&apos;5s&apos;" skipInLOD="false" />
+									</Sequence>
+								</IfGate>
+							</Sequence>
+						</Loop>
+					</Parallel>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="horseContests_showrunnerStart" EventSet="">
+			<Variables>
+				<Variable name="initialbarkSaid" comment="" />
+				<Variable name="alias1" comment="" />
+				<Variable name="alias2" comment="" />
+				<Variable name="playerLoitering" comment="" />
+				<Variable name="spot" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Move>
+						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Turn>
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</Sequence>
+								</ForceLook>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+											<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Child>
+													<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="initial bark" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_speech_schedulerMonolog>
+												</Child>
+												<OnSuccess>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</OnSuccess>
+											</FuseBox>
+										</Sequence>
+									</IfCondition>
+									<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="initial bark" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_speech_schedulerMonolog>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</IfGate>
+								</Sequence>
+							</Loop>
+						</Parallel>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="npcRider_ride" is_function="0">
+		<Variables>
+			<Variable name="arrowsCount" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="bow" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="garage" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="hitData" type="hitData" values="" isPersistent="0" form="single" />
+			<Variable name="horse" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="i" type="_int" values="-1" isPersistent="1" form="single" />
+			<Variable name="lastPoint" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="maxTargetArrayIndex" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="nextPoint" type="_wuid" values="" isPersistent="1" form="single" />
+			<Variable name="nextTargetCandidate" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="stopShooting" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="targetAngle" type="_float" values="999" isPersistent="0" form="single" />
+			<Variable name="targetAreas" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="targetIndex" type="_int" values="-1" isPersistent="1" form="single" />
+			<Variable name="targets" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Parameters>
+			<Variable name="parkingMode" type="_bool" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;npcRiderHorse&apos;" prune="true" negprune="unknown" Parent="" Child="$horse" Data="" />
+					</GraphSearch>
+					<ContinuousSwitch>
+						<IfCondition failOnCondition="false" condition="$parkingMode == false">
+							<Sequence>
+								<Callback_empty EventName="&apos;Synchronize&apos;" />
+								<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+									<LinkTagFilter tag="&apos;npcRiderShootArea&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+									<Nodalyzer Quantifiers="ForAll" Parent="" Child="$targetAreas" saveVersion="2" />
+								</GraphSearch>
+								<IfCondition failOnCondition="false" condition="$nextPoint == $__null">
+									<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;npcRiderFirstPoint&apos;" prune="true" negprune="unknown" Parent="" Child="$nextPoint" Data="" />
+									</GraphSearch>
+								</IfCondition>
+								<GetItem InventoryHost="$this.id" ItemGUID="&apos;dfea5d01-b25c-414a-9ab4-6911a5f82118&apos;" ItemCategory="" FailIfNotFound="false" ItemOut="" AmountOut="$arrowsCount" />
+								<GetItem InventoryHost="$this.id" ItemGUID="&apos;e4f05e67-803e-4189-a09e-ad934db0ecad&apos;" ItemCategory="" FailIfNotFound="false" ItemOut="$bow" AmountOut="" />
+								<EquipItem item="$bow" Target="$this.id" />
+								<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+									<Child canSkip="1">
+										<StanceElement smartObject="$horse" stance="horse" allowAny="false" enabled="true">
+											<IfGate atomic="false" condition="$arrowsCount &gt; 0" RunLogic="Halt">
+												<Loop count="-1">
+													<Parallel successMode="Any" failureMode="Any">
+														<EntityContextPreset preset="switch_unresponsive" target="$this.id">
+															<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+														</EntityContextPreset>
+														<HandContentElement hand="Left" item="" allowAny="true" decisionLabel="Label1" useDecision="true" enabled="true" saveVersion="2">
+															<Search canSkip="1">
+																<Success />
+															</Search>
+															<Exec canSkip="1">
+																<Loop count="-1">
+																	<Sequence>
+																		<IfCondition failOnCondition="false" condition="$nextPoint == $__null">
+																			<GraphSearch Origin="$lastPoint" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																				<EntityClassFilter Class="TagPoint" Source="Child" prune="true" negprune="unknown" Parent="" Child="$nextPoint" />
+																			</GraphSearch>
+																		</IfCondition>
+																		<WaitAction />
+																		<Success />
+																		<Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="10.000000" changeNPCState="false" fastForwardIncludesMove="false" destinationSpecification="$nextPoint" destinationSpecification2="" destinationSpecification3="" speed="Run" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																		<Expression expressions="$lastPoint = $nextPoint  &#10;$nextPoint = $__null" />
+																	</Sequence>
+																</Loop>
+															</Exec>
+														</HandContentElement>
+														<Loop count="-1">
+															<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hitData" senderInfo="" inbox="&apos;hitData&apos;" condition="" answerVar="">
+																<GetItem InventoryHost="$this.id" ItemGUID="&apos;dfea5d01-b25c-414a-9ab4-6911a5f82118&apos;" ItemCategory="" FailIfNotFound="false" ItemOut="" AmountOut="$arrowsCount" />
+															</ProcessMessage>
+														</Loop>
+														<Loop count="-1">
+															<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+																<Child canSkip="1">
+																	<Sequence>
+																		<IfCondition failOnCondition="false" condition="$i &lt; 0">
+																			<Parallel successMode="Any" failureMode="Any">
+																				<AreaPresenceGate aiObjects="$this.id" area="$targetAreas[0]" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																					<Expression expressions="$i = 0" />
+																				</AreaPresenceGate>
+																				<AreaPresenceGate aiObjects="$this.id" area="$targetAreas[1]" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																					<Expression expressions="$i = 1" />
+																				</AreaPresenceGate>
+																				<AreaPresenceGate aiObjects="$this.id" area="$targetAreas[2]" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																					<Expression expressions="$i = 2" />
+																				</AreaPresenceGate>
+																				<AreaPresenceGate aiObjects="$this.id" area="$targetAreas[3]" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																					<Expression expressions="$i = 3" />
+																				</AreaPresenceGate>
+																				<AreaPresenceGate aiObjects="$this.id" area="$targetAreas[4]" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																					<Expression expressions="$i = 4" />
+																				</AreaPresenceGate>
+																				<AreaPresenceGate aiObjects="$this.id" area="$targetAreas[5]" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																					<Expression expressions="$i = 5" />
+																				</AreaPresenceGate>
+																				<AreaPresenceGate aiObjects="$this.id" area="$targetAreas[6]" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																					<Expression expressions="$i = 6" />
+																				</AreaPresenceGate>
+																				<AreaPresenceGate aiObjects="$this.id" area="$targetAreas[7]" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																					<Expression expressions="$i = 7" />
+																				</AreaPresenceGate>
+																			</Parallel>
+																		</IfCondition>
+																		<GraphSearch Origin="$targetAreas[$i]" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																			<AnyLinkFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																			<Nodalyzer Quantifiers="ForAll" Parent="" Child="$targets" saveVersion="2">
+																				<Child0 canSkip="1">
+																					<RangeSorter point="$this.id" SortOrder="Ascending" Source="Child" />
+																				</Child0>
+																			</Nodalyzer>
+																		</GraphSearch>
+																		<IfElseCondition failOnCondition="false" condition="#targets == 1" saveVersion="2">
+																			<Then canSkip="1">
+																				<Expression expressions="$targetIndex = 0" />
+																			</Then>
+																			<Else canSkip="1">
+																				<IfCondition failOnCondition="false" condition="$targetIndex &lt; 0">
+																					<RandomGate opensWithChance="0.300000" saveVersion="2">
+																						<Then canSkip="1">
+																							<IfElseCondition failOnCondition="false" condition="#targets == 2" saveVersion="2">
+																								<Then canSkip="1">
+																									<Expression expressions="$targetIndex = 1" />
+																								</Then>
+																								<Else canSkip="1">
+																									<Sequence>
+																										<Expression expressions="$maxTargetArrayIndex = #targets - 1" />
+																										<GenerateRandomInteger lowerBoundary="1" upperBoundary="$maxTargetArrayIndex" result="$targetIndex" />
+																									</Sequence>
+																								</Else>
+																							</IfElseCondition>
+																						</Then>
+																						<Else canSkip="1">
+																							<Expression expressions="$targetIndex = 0" />
+																						</Else>
+																					</RandomGate>
+																				</IfCondition>
+																			</Else>
+																		</IfElseCondition>
+																		<InstantSetTarget Target="$targets[$targetIndex]" />
+																		<Parallel successMode="Any" failureMode="Any">
+																			<DistanceGate Origin="$this.id" ReferencePt="$targets[$targetIndex]" Low="30.000000" High="30.000000" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+																				<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																			</DistanceGate>
+																			<Loop count="-1">
+																				<Sequence>
+																					<ExecuteLua code="local target &#10;local npcDir &#10;local a &#10;local vectorToTarget = {x=0,y=0} &#10;local b &#10;local vectorsAngleDeg &#10;local vectorsDeterminant &#10; &#10;npcDir = XGenAIModule.GetEntityByWUID(data.horse):GetDirectionVector() &#10;a = npcDir &#10; &#10;target = XGenAIModule.GetEntityByWUID(data.targets[data.targetIndex]) &#10;vectorToTarget.x = target:GetPos().x - entity:GetPos().x &#10;vectorToTarget.y = target:GetPos().y - entity:GetPos().y &#10;b = vectorToTarget &#10; &#10;vectorsAngleDeg = ((math.acos((a.x*b.x + a.y*b.y)/((math.sqrt(a.x^2 + a.y^2))*(math.sqrt(b.x^2 + b.y^2)))))*180)/math.pi &#10; &#10;--left-hand angle or right-hand angle? &#10;vectorsDeterminant = ((a.x)*(b.y)-(a.y)*(b.x)) &#10; &#10;if vectorsDeterminant &lt; 0 then &#10;vectorsAngleDeg = -vectorsAngleDeg end &#10;data.targetAngle = vectorsAngleDeg" />
+																					<Wait duration="&apos;300ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																				</Sequence>
+																			</Loop>
+																			<Loop count="-1">
+																				<Selector>
+																					<IfGate atomic="true" condition="$targetAngle &gt; 100 | $targetAngle &lt; -10" RunLogic="KeepRunning">
+																						<Sequence>
+																							<ReinitVariable variable="$nextTargetCandidate" />
+																							<While doFail="false" propagateChildFail="true" condition="$nextTargetCandidate == $__null">
+																								<Sequence>
+																									<Expression expressions="$targetIndex += 1" />
+																									<IfCondition failOnCondition="false" condition="$targetIndex &gt;= #targets">
+																										<Sequence>
+																											<Expression expressions="$targetIndex -= 1" />
+																											<Fail />
+																										</Sequence>
+																									</IfCondition>
+																									<ExecuteLua code="local target &#10;local npcDir &#10;local a &#10;local vectorToTarget = {x=0,y=0} &#10;local b &#10;local vectorsAngleDeg &#10;local vectorsDeterminant &#10; &#10;npcDir = XGenAIModule.GetEntityByWUID(data.horse):GetDirectionVector() &#10;a = npcDir &#10; &#10;target = XGenAIModule.GetEntityByWUID(data.targets[data.targetIndex]) &#10;vectorToTarget.x = target:GetPos().x - entity:GetPos().x &#10;vectorToTarget.y = target:GetPos().y - entity:GetPos().y &#10;b = vectorToTarget &#10; &#10;vectorsAngleDeg = ((math.acos((a.x*b.x + a.y*b.y)/((math.sqrt(a.x^2 + a.y^2))*(math.sqrt(b.x^2 + b.y^2)))))*180)/math.pi &#10; &#10;--left-hand angle or right-hand angle? &#10;vectorsDeterminant = ((a.x)*(b.y)-(a.y)*(b.x)) &#10; &#10;if vectorsDeterminant &lt; 0 then &#10;vectorsAngleDeg = -vectorsAngleDeg end &#10;data.targetAngle = vectorsAngleDeg &#10; &#10;Dump(&quot;nextTarget angle: &quot; .. vectorsAngleDeg) &#10; &#10;if vectorsAngleDeg &lt; 45 and vectorsAngleDeg &gt; -10 then &#10;data.nextTargetCandidate = data.targets[data.targetIndex] &#10;end" />
+																								</Sequence>
+																							</While>
+																						</Sequence>
+																					</IfGate>
+																					<Sequence>
+																						<ClearTarget />
+																						<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																					</Sequence>
+																				</Selector>
+																			</Loop>
+																			<AreaPresenceListener aiObjects="$this.id" area="$targetAreas[$i]" trackIn="false" trackOut="true" reportInitialState="false">
+																				<Expression expressions="$stopShooting = true" />
+																			</AreaPresenceListener>
+																			<IfGate atomic="true" condition="$stopShooting == true" RunLogic="KeepRunning">
+																				<ReinitVariable variable="$stopShooting" />
+																			</IfGate>
+																		</Parallel>
+																	</Sequence>
+																</Child>
+																<OnSuccess canSkip="1">
+																	<AtomicDecorator>
+																		<Sequence>
+																			<ReinitVariable variable="$targets" />
+																			<ReinitVariable variable="$targetIndex" />
+																			<ReinitVariable variable="$i" />
+																			<ReinitVariable variable="$nextTargetCandidate" />
+																			<ClearTarget />
+																		</Sequence>
+																	</AtomicDecorator>
+																</OnSuccess>
+															</FuseBox>
+														</Loop>
+													</Parallel>
+												</Loop>
+											</IfGate>
+										</StanceElement>
+									</Child>
+									<OnSuccess canSkip="1">
+										<ClearTarget />
+									</OnSuccess>
+								</FuseBox>
+							</Sequence>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$parkingMode == true">
+							<StanceElement smartObject="$horse" stance="horse" allowAny="false" enabled="true">
+								<Sequence>
+									<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;garagePlace&apos;" prune="true" negprune="unknown" Parent="" Child="$garage" Data="" />
+									</GraphSearch>
+									<Success />
+									<Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="false" fastForwardIncludesMove="false" destinationSpecification="$garage" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+									<Callback_empty EventName="&apos;OnFinished&apos;" />
+								</Sequence>
+							</StanceElement>
+						</IfCondition>
+					</ContinuousSwitch>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<ExecuteLua code="local playerPos &#10;local targetPos &#10;local playerDir &#10;local a &#10;local vectorPlayer2Target2D = {x=0,y=0} &#10;local b &#10;local dist &#10;local blindAngleRad &#10;local blindAngleDeg &#10;playerPos = player:GetPos() &#10;playerDir = player:GetDirectionVector() &#10;a = playerDir &#10;targetPos = System.GetEntityByName(&quot;targ11&quot;):GetPos() &#10; &#10;Dump(&quot;playerPos: &quot; .. playerPos.x .. &quot;, &quot; .. playerPos.y) &#10;Dump(&quot;targetPos: &quot; .. targetPos.x .. &quot;, &quot; .. targetPos.y) &#10; &#10;vectorPlayer2Target2D.x = targetPos.x - playerPos.x &#10;vectorPlayer2Target2D.y = targetPos.y - playerPos.y &#10;b = vectorPlayer2Target2D &#10; &#10;Dump(&quot;playerDir: &quot; .. a.x .. &quot;, &quot; .. a.y) &#10;Dump(&quot;toTargetVector: &quot; .. b.x .. &quot;, &quot; .. b.y) &#10; &#10;dist = math.sqrt(b.x^2 + b.y^2) &#10; &#10;Dump(&quot;targetDist: &quot; .. dist) &#10; &#10;blindAngleRad = math.acos((a.x*b.x + a.y*b.y)/((math.sqrt(a.x^2 + a.y^2))*(math.sqrt(b.x^2 + b.y^2)))) &#10;blindAngleDeg = ((blindAngleRad)*180)/math.pi &#10; &#10; &#10;Dump(&quot;BlindRad: &quot; .. blindAngleRad .. &quot; &quot;) &#10;Dump(&quot;BlindDeg: &quot; .. blindAngleDeg .. &quot;deg&quot;) &#10; &#10;-- AB == 0,0 a.x,a.y &#10;-- AM == 0,0 c.x,c.y &#10; &#10;local leftOrRight = ((a.x)*(b.y)-(a.y)*(b.x)) &#10;Dump(&quot;determinant: &quot; .. leftOrRight) &#10;if leftOrRight &gt; 0 then &#10;leftOrRight = 1  &#10;elseif leftOrRight &lt; 0 then &#10;leftOrRight = -1 end &#10; &#10;Dump(&quot;normalized: &quot; .. leftOrRight) &#10;if leftOrRight == -1 then &#10;blindAngleDeg = -blindAngleDeg &#10;end &#10; &#10;Dump(&quot;Deg: &quot; .. blindAngleDeg .. &quot;deg&quot;)" />
+			<ExecuteLua code="local target &#10;local npcDir &#10;local a &#10;local vectorToTarget = {x=0,y=0} &#10;local b &#10;local vectorAngleDeg &#10;local vectorDeterminant &#10; &#10;npcDir = entity:GetDirectionVector() &#10;a = playerDir &#10; &#10;target = System.GetEntityByName(&quot;targ11&quot;) &#10;vectorToTarget.x = target:GetPos().x - player:GetPos().x &#10;vectorToTarget.y = target:GetPos().y - player:GetPos().y &#10;b = vectorToTarget &#10; &#10;vectorAngleDeg = ((math.acos((a.x*b.x + a.y*b.y)/((math.sqrt(a.x^2 + a.y^2))*(math.sqrt(b.x^2 + b.y^2)))))*180)/math.pi &#10; &#10;--left-hand angle or right-hand angle? &#10;vectorDeterminant = ((a.x)*(b.y)-(a.y)*(b.x)) &#10; &#10;if vectorDeterminant &lt; 0 then &#10;vectorAngleDeg = -vectorAngleDeg end" />
+		</ForestContainer>
+		<EditorData Signature="horseArcheryNpcRider" EventSet="syncCallback">
+			<Variables>
+				<Variable name="arrowsCount" comment="" />
+				<Variable name="bow" comment="" />
+				<Variable name="garage" comment="" />
+				<Variable name="hitData" comment="" />
+				<Variable name="horse" comment="" />
+				<Variable name="i" comment="" />
+				<Variable name="lastPoint" comment="" />
+				<Variable name="maxTargetArrayIndex" comment="" />
+				<Variable name="nextPoint" comment="" />
+				<Variable name="nextTargetCandidate" comment="" />
+				<Variable name="stopShooting" comment="" />
+				<Variable name="targetAngle" comment="" />
+				<Variable name="targetAreas" comment="" />
+				<Variable name="targetIndex" comment="" />
+				<Variable name="targets" comment="" />
+				<Variable name="parkingMode" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="20" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+						</GraphSearch>
+						<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Callback_empty>
+									<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</LinkTagFilter>
+										<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+										</Nodalyzer>
+									</GraphSearch>
+									<IfCondition hasInputBreakpoint="0" comment="start point" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+									</IfCondition>
+									<GetItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetItem>
+									<GetItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetItem>
+									<EquipItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</EquipItem>
+									<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Child>
+											<StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<EntityContextPreset hasInputBreakpoint="0" comment="HOTFIX for a crime issue with inspecting your own arrow hits! should not be unresponsive ever" comment_box="hotfix_for_NPCs_reacting_to_own_shooting_OMG" comment_box_color="216,38,38,255" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+															</EntityContextPreset>
+															<HandContentElement hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Search>
+																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Success>
+																</Search>
+																<Exec>
+																	<Loop hasInputBreakpoint="0" comment="riding in loop" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="riding" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IfCondition hasInputBreakpoint="0" comment="ready to find next point?" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<EntityClassFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</EntityClassFilter>
+																				</GraphSearch>
+																			</IfCondition>
+																			<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</WaitAction>
+																			<Success hasInputBreakpoint="0" comment="CYRIL_TODO: Tady byl DrawWeapon, WeaponSet=Secondary" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Success>
+																			<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Move>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Sequence>
+																	</Loop>
+																</Exec>
+															</HandContentElement>
+															<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<ProcessMessage hasInputBreakpoint="0" comment="reclaculate arrows after each shot" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GetItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetItem>
+																</ProcessMessage>
+															</Loop>
+															<Loop hasInputBreakpoint="0" comment="target evaluation and shooting" breakpointFlags="0">
+																<OutputBreakpoints />
+																<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Child>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IfCondition hasInputBreakpoint="0" comment="-1 indicates being outside all areas" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Parallel hasInputBreakpoint="0" comment="static number of areas is a problem!! either AreaPresenceGate should support array of area OR we could send the actual area data from Skald where areaTrigger can work with array of area" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</AreaPresenceGate>
+																					<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</AreaPresenceGate>
+																					<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</AreaPresenceGate>
+																					<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</AreaPresenceGate>
+																					<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</AreaPresenceGate>
+																					<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</AreaPresenceGate>
+																					<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</AreaPresenceGate>
+																					<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</AreaPresenceGate>
+																				</Parallel>
+																			</IfCondition>
+																			<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<AnyLinkFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</AnyLinkFilter>
+																				<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Child0>
+																						<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</RangeSorter>
+																					</Child0>
+																				</Nodalyzer>
+																			</GraphSearch>
+																			<IfElseCondition hasInputBreakpoint="0" comment="index initialization" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Then>
+																				<Else>
+																					<IfCondition hasInputBreakpoint="0" comment="no target chosen yet? save/load support" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																							<OutputBreakpoints />
+																							<Then>
+																								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																									<OutputBreakpoints />
+																									<Then>
+																										<Expression hasInputBreakpoint="0" comment="2nd target out of 2" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Expression>
+																									</Then>
+																									<Else>
+																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Expression>
+																											<GenerateRandomInteger hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</GenerateRandomInteger>
+																										</Sequence>
+																									</Else>
+																								</IfElseCondition>
+																							</Then>
+																							<Else>
+																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																							</Else>
+																						</RandomGate>
+																					</IfCondition>
+																				</Else>
+																			</IfElseCondition>
+																			<InstantSetTarget hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</InstantSetTarget>
+																			<Parallel hasInputBreakpoint="0" comment="ends only when leaving area" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<DistanceGate hasInputBreakpoint="0" comment="" comment_box="gate_maybe_useless" comment_box_color="216,38,38,255" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Wait hasInputBreakpoint="0" comment="CYRIL_TODO: Tady byl obsolete MeleeOffenseAutomation, nahradit ho za nove krabicky az se dostanu k konskymZavodum" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																				</DistanceGate>
+																				<Loop hasInputBreakpoint="0" comment="loop calculation of horse to current target angle" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</ExecuteLua>
+																						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Wait>
+																					</Sequence>
+																				</Loop>
+																				<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<IfGate hasInputBreakpoint="0" comment="current target outside shootable angle range" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</ReinitVariable>
+																								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Sequence hasInputBreakpoint="0" comment="try next target if there is any" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Expression>
+																										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Expression>
+																												<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Fail>
+																											</Sequence>
+																										</IfCondition>
+																										<ExecuteLua hasInputBreakpoint="0" comment="" comment_box="maybe_one_day_add_testing_of_target_distance_along_the_horse_direction_axis" comment_box_color="140,25,242,255" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</ExecuteLua>
+																									</Sequence>
+																								</While>
+																							</Sequence>
+																						</IfGate>
+																						<Sequence hasInputBreakpoint="0" comment="no target found" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<ClearTarget hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</ClearTarget>
+																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Wait>
+																						</Sequence>
+																					</Selector>
+																				</Loop>
+																				<AreaPresenceListener hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</AreaPresenceListener>
+																				<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</ReinitVariable>
+																				</IfGate>
+																			</Parallel>
+																		</Sequence>
+																	</Child>
+																	<OnSuccess>
+																		<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</ReinitVariable>
+																				<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</ReinitVariable>
+																				<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</ReinitVariable>
+																				<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</ReinitVariable>
+																				<ClearTarget hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</ClearTarget>
+																			</Sequence>
+																		</AtomicDecorator>
+																	</OnSuccess>
+																</FuseBox>
+															</Loop>
+														</Parallel>
+													</Loop>
+												</IfGate>
+											</StanceElement>
+										</Child>
+										<OnSuccess>
+											<ClearTarget hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</ClearTarget>
+										</OnSuccess>
+									</FuseBox>
+								</Sequence>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="go home spot" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+										<Success hasInputBreakpoint="0" comment="CYRIL_TODO: Tady byl HolsterWeapon" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Success>
+										<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Move>
+										<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Callback_empty>
+									</Sequence>
+								</StanceElement>
+							</IfCondition>
+						</ContinuousSwitch>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest>
+				<ExecuteLua editorPosX="-840" editorPosY="170" hasInputBreakpoint="0" comment="original test code" breakpointFlags="0">
+					<OutputBreakpoints />
+				</ExecuteLua>
+				<ExecuteLua editorPosX="-300" editorPosY="170" hasInputBreakpoint="0" comment="original reduced" breakpointFlags="0">
+					<OutputBreakpoints />
+				</ExecuteLua>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="npcRider_goHome" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2" />
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="npcRider_cleanup" is_function="0">
+		<Variables>
+			<Variable name="cleanupPoint" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="horse" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;npcRiderHorse&apos;" prune="true" negprune="unknown" Parent="" Child="$horse" Data="" />
+					</GraphSearch>
+					<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;cleanupPoint_npcRider&apos;" prune="true" negprune="unknown" Parent="" Child="$cleanupPoint" Data="" />
+					</GraphSearch>
+					<StanceElement smartObject="$horse" stance="horse" allowAny="false">
+						<TeleportAction Position="$cleanupPoint" />
+					</StanceElement>
+					<Callback_empty EventName="&apos;OnFinished&apos;" />
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="endNotification">
+			<Variables>
+				<Variable name="cleanupPoint" comment="" />
+				<Variable name="horse" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-150" editorPosY="-20" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+						</GraphSearch>
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+						</GraphSearch>
+						<StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<TeleportAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</TeleportAction>
+						</StanceElement>
+						<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Callback_empty>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="player_forceMountAndDrawWeapon" is_function="0">
+		<Variables>
+			<Variable name="horse" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="teleportDest" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;startPoint&apos;" prune="true" negprune="unknown" Parent="" Child="$teleportDest" Data="" />
+					</GraphSearch>
+					<GetPlayerHorse HorseWuid="$horse" />
+					<StanceElement smartObject="$horse" stance="horse" allowAny="false" enabled="true">
+						<Sequence>
+							<TeleportAction Position="$teleportDest" EndInterruptOnActionStart="false" />
+							<SuppressFailure>
+								<DrawAction WeaponSet="Secondary" fullBody="false" tags="" useSelectedWeaponSet="false" />
+							</SuppressFailure>
+							<Callback_empty EventName="&apos;OnFinished&apos;" />
+						</Sequence>
+					</StanceElement>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<HandContentElement hand="Left" item="$leftHand" allowAny="false" allowHomeSlotAutoReturn="false" decisionLabel="Label1" useDecision="false" enabled="true" saveVersion="2">
+				<Search canSkip="1">
+					<GetWeaponsFromWeaponSet WeaponSet="Secondary" LeftHand="$leftHand" RightHand="$rightHand" UseTorchWhenAppropriate="true" />
+				</Search>
+			</HandContentElement>
+		</ForestContainer>
+		<EditorData EventSet="endNotification">
+			<Variables>
+				<Variable name="horse" comment="" />
+				<Variable name="teleportDest" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-40" editorPosY="20" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+						</GraphSearch>
+						<GetPlayerHorse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetPlayerHorse>
+						<StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<TeleportAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</TeleportAction>
+								<SuppressFailure hasInputBreakpoint="0" comment="Player can open inventory during draw and unequip bow" breakpointFlags="0">
+									<OutputBreakpoints />
+									<DrawAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</DrawAction>
+								</SuppressFailure>
+								<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Callback_empty>
+							</Sequence>
+						</StanceElement>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest>
+				<HandContentElement editorPosX="990" editorPosY="-110" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+					<OutputBreakpoints />
+					<Search>
+						<GetWeaponsFromWeaponSet hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetWeaponsFromWeaponSet>
+					</Search>
+				</HandContentElement>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="showRunner_basic" is_function="0">
+		<Variables />
+		<Parameters>
+			<Variable name="data" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="true" destinationSpecification="$data" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="wuidData" EventSet="">
+			<Variables>
+				<Variable name="data" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Move>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="showRunner_barkAndHorn" is_function="0">
+		<Variables>
+			<Variable name="hornAndBark" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="spot" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="bool" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="string" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;showRunnerSpot&apos;" prune="true" negprune="unknown" Parent="" Child="$spot" Data="" />
+					</GraphSearch>
+					<Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="true" destinationSpecification="$spot" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+					<EntityContext context="speech_greyOutE" target="">
+						<Sequence>
+							<UnstanceAction unstance="konskeZavody_TournamentBlowhorn" locationObject="" slaveObject="" />
+							<IfCondition failOnCondition="false" condition="!$bool">
+								<SuppressFailure>
+									<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" metarole="$string" subtitlesDown="false" nodeLabel="66840772" />
+								</SuppressFailure>
+							</IfCondition>
+							<Parallel successMode="All" failureMode="Any">
+								<UrgencyDecorator Urgency="Slow">
+									<WaitAction />
+								</UrgencyDecorator>
+								<Sequence>
+									<Wait duration="&apos;1000ms&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+									<ExecuteSoundTrigger entity="$this.id" triggerName="&apos;f_ge_crosscountry_horn&apos;" stop="false" />
+									<IfCondition failOnCondition="false" condition="!$bool">
+										<Callback_empty EventName="&apos;OnFinished&apos;" />
+									</IfCondition>
+								</Sequence>
+							</Parallel>
+						</Sequence>
+					</EntityContext>
+					<IfCondition failOnCondition="false" condition="$bool">
+						<Sequence>
+							<SuppressFailure>
+								<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" metarole="$string" subtitlesDown="false" nodeLabel="11235686" />
+							</SuppressFailure>
+							<Callback_empty EventName="&apos;OnFinished&apos;" />
+						</Sequence>
+					</IfCondition>
+					<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="stringBool" EventSet="endNotification">
+			<Variables>
+				<Variable name="hornAndBark" comment="" />
+				<Variable name="spot" comment="" />
+				<Variable name="bool" comment="" />
+				<Variable name="string" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+						</GraphSearch>
+						<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Move>
+						<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</UnstanceAction>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_speech_schedulerMonolog>
+									</SuppressFailure>
+								</IfCondition>
+								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</WaitAction>
+									</UrgencyDecorator>
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+										<ExecuteSoundTrigger hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ExecuteSoundTrigger>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Callback_empty>
+										</IfCondition>
+									</Sequence>
+								</Parallel>
+							</Sequence>
+						</EntityContext>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_speech_schedulerMonolog>
+								</SuppressFailure>
+								<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Callback_empty>
+							</Sequence>
+						</IfCondition>
+						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Wait>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="obsolete_showRunner_commentPlayerNotMoving" is_function="0">
+		<Variables />
+		<Parameters>
+			<Variable name="data" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Parallel successMode="Any" failureMode="Any">
+						<SuppressFailure>
+							<Function_speech_schedulerMonolog alias="$data" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" metarole="" subtitlesDown="false" nodeLabel="22594136" />
+						</SuppressFailure>
+						<Loop count="-1">
+							<ForceLook LookTarget="$__player" DisableVariations="false">
+								<Sequence>
+									<Turn target="$__player" align="false" />
+									<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+								</Sequence>
+							</ForceLook>
+						</Loop>
+					</Parallel>
+					<Callback_empty EventName="&apos;OnFinished&apos;" />
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="stringData" EventSet="endNotification">
+			<Variables>
+				<Variable name="data" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_speech_schedulerMonolog>
+							</SuppressFailure>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Turn>
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</Sequence>
+								</ForceLook>
+							</Loop>
+						</Parallel>
+						<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Callback_empty>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="showRunner_watchPlayer" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Loop count="-1">
+					<ForceLook LookTarget="$__player" DisableVariations="false">
+						<Sequence>
+							<Turn target="$__player" align="false" />
+							<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+						</Sequence>
+					</ForceLook>
+				</Loop>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Turn>
+								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Wait>
+							</Sequence>
+						</ForceLook>
+					</Loop>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="showrunner_takeMoneyFromStash" is_function="0">
+		<Variables />
+		<Parameters>
+			<Variable name="data" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<UnstanceAction unstance="SearchingChest" locationObject="$data" slaveObject="$data" />
+					</Child>
+					<OnSuccess canSkip="1">
+						<Callback_empty EventName="&apos;OnFinished&apos;" />
+					</OnSuccess>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Sequence>
+				<LuaGate code="local stash = XGenAIModule.GetEntityByWUID(data.data) &#10; &#10;return stash.inventory:GetMoney() &gt; 0" saveVersion="2">
+					<Then canSkip="1">
+						<Success />
+					</Then>
+					<Else canSkip="1">
+						<Sequence>
+							<UnstanceAction unstance="AngryIdle" locationObject="" slaveObject="" />
+							<WaitAction />
+						</Sequence>
+					</Else>
+				</LuaGate>
+			</Sequence>
+		</ForestContainer>
+		<EditorData Signature="wuidData" EventSet="endNotification">
+			<Variables>
+				<Variable name="data" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</UnstanceAction>
+						</Child>
+						<OnSuccess>
+							<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Callback_empty>
+						</OnSuccess>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Sequence editorPosX="1140" editorPosY="-170" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<LuaGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Then>
+							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Success>
+						</Then>
+						<Else>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</UnstanceAction>
+								<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</WaitAction>
+							</Sequence>
+						</Else>
+					</LuaGate>
+				</Sequence>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="showrunner_waitForPlayer" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<UnstanceAction unstance="LookingAround" locationObject="$__null" slaveObject="" />
+					<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</UnstanceAction>
+						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Wait>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="showrunner_reactToPlayerNotMoving" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<ForceLook LookTarget="$__player" DisableVariations="false">
+					<Sequence>
+						<Turn target="$__player" align="false" />
+						<Parallel successMode="All" failureMode="Any">
+							<AnimationAction fragment="&apos;CrimeGoAwayEasy&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+							<SuppressFailure>
+								<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" metarole="&apos;SHOWRUNNER_HRAC_NEJEDE&apos;" subtitlesDown="false" nodeLabel="11413712" />
+							</SuppressFailure>
+						</Parallel>
+						<Callback_empty EventName="&apos;OnFinished&apos;" />
+						<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+					</Sequence>
+				</ForceLook>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="endNotification">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Turn>
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</AnimationAction>
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_speech_schedulerMonolog>
+								</SuppressFailure>
+							</Parallel>
+							<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Callback_empty>
+							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Wait>
+						</Sequence>
+					</ForceLook>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

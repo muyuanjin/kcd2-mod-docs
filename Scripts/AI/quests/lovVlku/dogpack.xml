@@ -1,0 +1,1695 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="fight" is_function="0">
+    <Variables>
+      <Variable name="additionalParams" type="additionalMoveParams" values="destChangedThreshold(&apos;200ms&apos;)" isPersistent="0" form="single" />
+      <Variable name="dog" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="enemies" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="enemy" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="fight" type="_bool" values="true" isPersistent="0" form="single" />
+      <Variable name="isPackMember" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="isSheep" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="npc" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="npcs" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="pack" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="pathFindingParams" type="pathFindingParams" values="usePaths(false),useSmartObjects(false),useGeneratedNSO(false)" isPersistent="0" form="single" />
+      <Variable name="sheep" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="sheeps" type="_wuid" values="" isPersistent="0" form="array" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+            <Nodalyzer Quantifiers="ForAll" Parent="" Child="$pack" saveVersion="2" />
+            <LinkTagFilter tag="&apos;dog&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+          </GraphSearch>
+          <CircularSpatialQuery Radius="15.000000" Center="$this.id" ToFill="$npcs" Precision="Exact" Filter="NPCs" />
+          <ForEach startIndex="0" step="1" array="$npcs" iterator="" value="$npc" break="">
+            <LuaGate code="local ent = XGenAIModule.GetEntityByWUID(data.npc) &#10;if ent == nil then &#10; &#10;    return false &#10; &#10;end &#10; &#10;local soul = ent.soul &#10;if soul == nil then &#10; &#10;    return false &#10; &#10;end &#10; &#10;local name = soul:GetArchetype().Name &#10; &#10;return name == &apos;NPC&apos; or name == &apos;Hero&apos; or data.npc == data.__playerDog" saveVersion="2">
+              <Then canSkip="1">
+                <Sequence>
+                  <Expression expressions="$isPackMember = false" />
+                  <ForEach startIndex="0" step="1" array="$pack" iterator="" value="$dog" break="$isPackMember">
+                    <IfCondition failOnCondition="false" condition="$enemy == $dog">
+                      <Expression expressions="$isPackMember = true" />
+                    </IfCondition>
+                  </ForEach>
+                  <IfCondition failOnCondition="false" condition="!$isPackMember">
+                    <IsDeadCheck SoulWUID="$npc" FailSubtMissing="false" saveVersion="2">
+                      <Then canSkip="1">
+                        <Success />
+                      </Then>
+                      <Else canSkip="1">
+                        <EntityContextCheck context="switch_disabledHearingReaction" target="$npc" saveVersion="2">
+                          <Then canSkip="1">
+                            <Success />
+                          </Then>
+                          <Else canSkip="1">
+                            <PushToArray array="$enemies" value="$npc" direction="Back" />
+                          </Else>
+                        </EntityContextCheck>
+                      </Else>
+                    </IsDeadCheck>
+                  </IfCondition>
+                </Sequence>
+              </Then>
+              <Else canSkip="1">
+                <LuaGate code="local ent = XGenAIModule.GetEntityByWUID(data.npc) &#10;if ent == nil then &#10; &#10;    return false &#10; &#10;end &#10; &#10;local soul = ent.soul &#10;if soul == nil then &#10; &#10;    return false &#10; &#10;end &#10; &#10;local name = soul:GetArchetype().Name &#10; &#10;return name == &apos;Sheep&apos;" saveVersion="2">
+                  <Then canSkip="1">
+                    <IsDeadCheck SoulWUID="$npc" FailSubtMissing="false" saveVersion="2">
+                      <Then canSkip="1">
+                        <Success />
+                      </Then>
+                      <Else canSkip="1">
+                        <PushToArray array="$sheeps" value="$npc" direction="Back" />
+                      </Else>
+                    </IsDeadCheck>
+                  </Then>
+                  <Else canSkip="1">
+                    <Success />
+                  </Else>
+                </LuaGate>
+              </Else>
+            </LuaGate>
+          </ForEach>
+          <IfCondition failOnCondition="false" condition="#enemies &gt; #pack">
+            <InstantSendMessageToNPC target="$__object.id" type="&apos;npcDeathForward&apos;" values="npc($this.id)" />
+          </IfCondition>
+          <IfCondition failOnCondition="false" condition="#enemies&lt;1 &amp; #sheeps &gt;1">
+            <Sequence>
+              <RandomItem Array="$sheeps" Result="$sheep" Clamp="-1" />
+              <IsDeadCheck SoulWUID="$sheep" FailSubtMissing="false" saveVersion="2">
+                <Then canSkip="1">
+                  <Success />
+                </Then>
+                <Else canSkip="1">
+                  <Expression expressions="$isSheep = true" />
+                </Else>
+              </IsDeadCheck>
+            </Sequence>
+          </IfCondition>
+          <IfCondition failOnCondition="false" condition="#enemies&lt;1 &amp; !$isSheep">
+            <Expression expressions="$fight = false" />
+          </IfCondition>
+          <IfCondition failOnCondition="false" condition="$fight">
+            <IfElseCondition failOnCondition="false" condition="$isSheep" saveVersion="2">
+              <Then canSkip="1">
+                <Parallel successMode="Any" failureMode="Any">
+                  <DistanceGate Origin="" ReferencePt="$sheep" Low="2.000000" High="2.000000" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+                    <KillNPC KillTarget="$sheep" animation="" tags="" AnimationWUID="" Scream="false" />
+                  </DistanceGate>
+                  <Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$sheep" destinationSpecification2="" destinationSpecification3="" speed="Run" additionalParams="$additionalParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+                </Parallel>
+              </Then>
+              <Else canSkip="1">
+                <Sequence>
+                  <RandomItem Array="$enemies" Result="$enemy" Clamp="-1" />
+                  <Parallel successMode="Any" failureMode="Any">
+                    <AddToSkirmish TargetNPC="$enemy" RelationOverride="Hostile" />
+                    <MeleeOffenseAutomationDecorator active="true">
+                      <MeleeDefenseAutomationDecorator active="true">
+                        <MeleeGuardAutomationDecorator GuardMode="automate" active="true">
+                          <WeaponAutomationDecorator WeaponChange="none" active="true">
+                            <CombatFollowerDecorator ProbablisticDrivenSweetSpot="true" RPGSweetSpotArcDriver="true" active="true">
+                              <CombatAction TargetNPC="$enemy" RelationOverride="None" />
+                            </CombatFollowerDecorator>
+                          </WeaponAutomationDecorator>
+                        </MeleeGuardAutomationDecorator>
+                      </MeleeDefenseAutomationDecorator>
+                    </MeleeOffenseAutomationDecorator>
+                    <DistanceGate Origin="" ReferencePt="$enemy" Low="20.000000" High="20.000000" Negation="true" OpenInMiddle="false" RunLogic="KeepRunning">
+                      <Success />
+                    </DistanceGate>
+                    <DeadUnconsciousGate Who="$enemy" State="Any" Negation="false" RunLogic="KeepRunning">
+                      <Success />
+                    </DeadUnconsciousGate>
+                  </Parallel>
+                </Sequence>
+              </Else>
+            </IfElseCondition>
+          </IfCondition>
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="additionalParams" comment="" />
+        <Variable name="dog" comment="" />
+        <Variable name="enemies" comment="" />
+        <Variable name="enemy" comment="" />
+        <Variable name="fight" comment="" />
+        <Variable name="isPackMember" comment="" />
+        <Variable name="isSheep" comment="" />
+        <Variable name="npc" comment="" />
+        <Variable name="npcs" comment="" />
+        <Variable name="pack" comment="" />
+        <Variable name="pathFindingParams" comment="" />
+        <Variable name="sheep" comment="" />
+        <Variable name="sheeps" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+              </Nodalyzer>
+              <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+              </LinkTagFilter>
+            </GraphSearch>
+            <CircularSpatialQuery hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </CircularSpatialQuery>
+            <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <LuaGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+                <Then>
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                    <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                      </IfCondition>
+                    </ForEach>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                        <OutputBreakpoints />
+                        <Then>
+                          <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Success>
+                        </Then>
+                        <Else>
+                          <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                            <Then>
+                              <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Success>
+                            </Then>
+                            <Else>
+                              <PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </PushToArray>
+                            </Else>
+                          </EntityContextCheck>
+                        </Else>
+                      </IsDeadCheck>
+                    </IfCondition>
+                  </Sequence>
+                </Then>
+                <Else>
+                  <LuaGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                        <OutputBreakpoints />
+                        <Then>
+                          <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Success>
+                        </Then>
+                        <Else>
+                          <PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </PushToArray>
+                        </Else>
+                      </IsDeadCheck>
+                    </Then>
+                    <Else>
+                      <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Success>
+                    </Else>
+                  </LuaGate>
+                </Else>
+              </LuaGate>
+            </ForEach>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+              </InstantSendMessageToNPC>
+            </IfCondition>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <RandomItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </RandomItem>
+                <IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                  <OutputBreakpoints />
+                  <Then>
+                    <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Success>
+                  </Then>
+                  <Else>
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </Else>
+                </IsDeadCheck>
+              </Sequence>
+            </IfCondition>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+              </Expression>
+            </IfCondition>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+                <Then>
+                  <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <KillNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </KillNPC>
+                    </DistanceGate>
+                    <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Move>
+                  </Parallel>
+                </Then>
+                <Else>
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <RandomItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </RandomItem>
+                    <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <AddToSkirmish hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </AddToSkirmish>
+                      <MeleeOffenseAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <MeleeDefenseAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <MeleeGuardAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <WeaponAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <CombatFollowerDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <CombatAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </CombatAction>
+                              </CombatFollowerDecorator>
+                            </WeaponAutomationDecorator>
+                          </MeleeGuardAutomationDecorator>
+                        </MeleeDefenseAutomationDecorator>
+                      </MeleeOffenseAutomationDecorator>
+                      <DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Success>
+                      </DistanceGate>
+                      <DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Success>
+                      </DeadUnconsciousGate>
+                    </Parallel>
+                  </Sequence>
+                </Else>
+              </IfElseCondition>
+            </IfCondition>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+  <BehaviorTree name="flee" is_function="0">
+    <Variables>
+      <Variable name="exitNumber" type="_int" values="10" isPersistent="0" form="single" />
+      <Variable name="packExit" type="wuid" values="" isPersistent="0" form="single" />
+      <Variable name="packExits" type="wuid" values="" isPersistent="0" form="array" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <OnInit canSkip="1">
+        <GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+          <Nodalyzer Quantifiers="ForAll" Parent="" Child="$packExits" saveVersion="2">
+            <Child0 canSkip="1">
+              <RangeSorter point="$this.id" SortOrder="Descending" Source="Child" />
+            </Child0>
+          </Nodalyzer>
+          <LinkTagFilter tag="&apos;packExit&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+        </GraphSearch>
+      </OnInit>
+      <Behavior canSkip="1">
+        <Sequence>
+          <Parallel successMode="Any" failureMode="Any">
+            <Loop count="-1">
+              <Sequence>
+                <Expression expressions="$exitNumber = $exitNumber + 1" />
+                <IfCondition failOnCondition="false" condition="$exitNumber &gt; #packExits-1">
+                  <Expression expressions="$exitNumber = 0" />
+                </IfCondition>
+                <Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" destinationSpecification="$packExits[$exitNumber]" destinationSpecification2="" destinationSpecification3="" speed="Dash" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+              </Sequence>
+            </Loop>
+            <DistanceGate Origin="" ReferencePt="$__player" Low="60.000000" High="60.000000" Negation="true" OpenInMiddle="false" RunLogic="KeepRunning">
+              <Selector>
+                <InstantSendMessageToNPC target="$__object.id" type="&apos;animal:despawnRequest&apos;" values="killed(&apos;deathSignal.isDead&apos;)" />
+                <Despawn DeSpawnedEntity="$this.id" />
+              </Selector>
+            </DistanceGate>
+          </Parallel>
+          <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="exitNumber" comment="" />
+        <Variable name="packExit" comment="" />
+        <Variable name="packExits" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <OnInit>
+          <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Child0>
+                <RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </RangeSorter>
+              </Child0>
+            </Nodalyzer>
+            <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </LinkTagFilter>
+          </GraphSearch>
+        </OnInit>
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Expression>
+                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </IfCondition>
+                  <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Move>
+                </Sequence>
+              </Loop>
+              <DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </InstantSendMessageToNPC>
+                  <Despawn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Despawn>
+                </Selector>
+              </DistanceGate>
+            </Parallel>
+            <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Wait>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+  <BehaviorTree name="goTo" is_function="0">
+    <Variables>
+      <Variable name="position" type="vec3" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="tagpoint" type="wuid" values="" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <GetSpatialInfo In="$tagpoint" Out="$position" What="Position" />
+          <GetRandomPos StartPos="$position" PosExtentHor="1.000000" PosExtentVert="2.000000" MaxRange="4.000000" Precise="false" MaxIterantions="1" Target="$position" navAgentType="Automatic" pathFindingParams="" />
+          <Move stopWithinDistance="1.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" destinationSpecification="$position" destinationSpecification2="" destinationSpecification3="" speed="Run" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData Signature="goto" EventSet="">
+      <Variables>
+        <Variable name="position" comment="" />
+        <Variable name="tagpoint" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </GetSpatialInfo>
+            <GetRandomPos hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </GetRandomPos>
+            <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Move>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+  <BehaviorTree name="eat" is_function="0">
+    <Variables>
+      <Variable name="victim" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="victims" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="victimsFinal" type="_wuid" values="" isPersistent="0" form="array" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <VarOperation varName="$victimsFinal" targetVarName="" operation="Reinit" argument="" />
+          <VarOperation varName="$victims" targetVarName="" operation="Reinit" argument="" />
+          <CircularSpatialQuery Radius="12.000000" Center="$this.id" ToFill="$victims" Precision="Exact" Filter="NPCs" />
+          <ForEach startIndex="0" step="1" array="$victims" iterator="" value="$victim" break="">
+            <LuaGate code="local ent = XGenAIModule.GetEntityByWUID(data.victim) &#10;if ent == nil then &#10; &#10;    return false &#10; &#10;end &#10; &#10;local soul = ent.soul &#10;if soul == nil then &#10; &#10;    return false &#10; &#10;end &#10; &#10;local name = soul:GetArchetype().Name &#10; &#10;return name == &apos;Sheep&apos; or name == &apos;Hare&apos; or name == &apos;RoeBuck&apos; or name == &apos;Pig&apos; or name == &apos;Goat&apos;" saveVersion="2">
+              <Then canSkip="1">
+                <IsDeadCheck SoulWUID="$victim" FailSubtMissing="false" saveVersion="2">
+                  <Then canSkip="1">
+                    <VarOperation varName="$victimsFinal" targetVarName="" operation="PushBack" argument="($victim)" />
+                  </Then>
+                  <Else canSkip="1">
+                    <IsUnconsciousCheck SoulWUID="$victim" FailSubtMissing="false" saveVersion="2">
+                      <Then canSkip="1">
+                        <VarOperation varName="$victimsFinal" targetVarName="" operation="PushBack" argument="($victim)" />
+                      </Then>
+                    </IsUnconsciousCheck>
+                  </Else>
+                </IsDeadCheck>
+              </Then>
+              <Else canSkip="1">
+                <Success />
+              </Else>
+            </LuaGate>
+          </ForEach>
+          <IfCondition failOnCondition="false" condition="#victimsFinal &gt; 0">
+            <RandomItem Array="$victimsFinal" Result="$victim" Clamp="-1" />
+          </IfCondition>
+          <Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+          <FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+            <Child canSkip="1">
+              <Sequence>
+                <CheckWuidValid wuid="$victim" FailSubtMissing="false" saveVersion="2">
+                  <Then canSkip="1">
+                    <Move stopWithinDistance="0.600000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$victim" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+                  </Then>
+                </CheckWuidValid>
+                <CheckWuidValid wuid="$victim" FailSubtMissing="false" saveVersion="2">
+                  <Then canSkip="1">
+                    <Turn target="$victim" align="false" />
+                  </Then>
+                </CheckWuidValid>
+                <CheckWuidValid wuid="$victim" FailSubtMissing="false" saveVersion="2">
+                  <Then canSkip="1">
+                    <UnstanceAction unstance="dog_eatingStanding" locationObject="" slaveObject="" />
+                  </Then>
+                </CheckWuidValid>
+                <CheckWuidValid wuid="$victim" FailSubtMissing="false" saveVersion="2">
+                  <Then canSkip="1">
+                    <Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                  </Then>
+                </CheckWuidValid>
+              </Sequence>
+            </Child>
+          </FuseBox>
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="victim" comment="" />
+        <Variable name="victims" comment="" />
+        <Variable name="victimsFinal" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </VarOperation>
+            <VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </VarOperation>
+            <CircularSpatialQuery hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </CircularSpatialQuery>
+            <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <LuaGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+                <Then>
+                  <IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </VarOperation>
+                    </Then>
+                    <Else>
+                      <IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                        <OutputBreakpoints />
+                        <Then>
+                          <VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </VarOperation>
+                        </Then>
+                      </IsUnconsciousCheck>
+                    </Else>
+                  </IsDeadCheck>
+                </Then>
+                <Else>
+                  <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Success>
+                </Else>
+              </LuaGate>
+            </ForEach>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <RandomItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+              </RandomItem>
+            </IfCondition>
+            <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Wait>
+            <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Child>
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Move>
+                    </Then>
+                  </CheckWuidValid>
+                  <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Turn>
+                    </Then>
+                  </CheckWuidValid>
+                  <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <OutputBreakpoints />
+                      </UnstanceAction>
+                    </Then>
+                  </CheckWuidValid>
+                  <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Wait>
+                    </Then>
+                  </CheckWuidValid>
+                </Sequence>
+              </Child>
+            </FuseBox>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+  <BehaviorTree name="foolingAround" is_function="0">
+    <Variables>
+      <Variable name="destination" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="home" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="normalBehaviorOption" type="_int" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <GenerateRandomInteger lowerBoundary="1" upperBoundary="5" result="$normalBehaviorOption" />
+          <Switch>
+            <IfCondition failOnCondition="false" condition="$normalBehaviorOption == 1">
+              <Sequence>
+                <RandomGate opensWithChance="0.500000" saveVersion="2">
+                  <Then canSkip="1">
+                    <AnimationAction fragment="&apos;Sniff&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+                  </Then>
+                  <Else canSkip="1">
+                    <UnstanceAction unstance="dogBarking" locationObject="" slaveObject="" />
+                  </Else>
+                </RandomGate>
+                <Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="&apos;2s&apos;" skipInLOD="false" />
+              </Sequence>
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$normalBehaviorOption == 2">
+              <StanceElement smartObject="" stance="sitting" allowAny="false" enabled="true">
+                <Sequence>
+                  <WaitAction />
+                  <RandomGate opensWithChance="0.500000" saveVersion="2">
+                    <Then canSkip="1">
+                      <AnimationAction fragment="&apos;LickingBalls&apos;" tags="&apos;sit&apos;" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+                    </Then>
+                    <Else canSkip="1">
+                      <Success />
+                    </Else>
+                  </RandomGate>
+                  <Wait duration="&apos;8s&apos;" timeType="GameTime" doFail="false" variation="&apos;4s&apos;" skipInLOD="false" />
+                </Sequence>
+              </StanceElement>
+            </IfCondition>
+            <IfCondition failOnCondition="false" condition="$normalBehaviorOption == 3">
+              <StanceElement smartObject="" stance="lying" allowAny="false" enabled="true">
+                <Sequence>
+                  <WaitAction />
+                  <RandomGate opensWithChance="0.500000" saveVersion="2">
+                    <Then canSkip="1">
+                      <AnimationAction fragment="&apos;Yawn&apos;" tags="&apos;Lying&apos;" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+                    </Then>
+                    <Else canSkip="1">
+                      <Success />
+                    </Else>
+                  </RandomGate>
+                  <Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="&apos;5s&apos;" skipInLOD="false" />
+                </Sequence>
+              </StanceElement>
+            </IfCondition>
+            <DefaultBranch>
+              <Sequence>
+                <Selector>
+                  <GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                    <LinkTagFilter tag="&apos;home&apos;" prune="true" negprune="unknown" Parent="" Child="$home" Data="" />
+                  </GraphSearch>
+                  <Expression expressions="$home = $this.id" />
+                </Selector>
+                <GetRandomPos StartPos="$home" PosExtentHor="1.000000" PosExtentVert="2.000000" MaxRange="3.000000" Precise="false" MaxIterantions="1" Target="$destination" navAgentType="Automatic" pathFindingParams="" />
+                <Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$destination" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+                <Wait duration="&apos;6s&apos;" timeType="GameTime" doFail="false" variation="&apos;3s&apos;" skipInLOD="false" />
+              </Sequence>
+            </DefaultBranch>
+          </Switch>
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="destination" comment="" />
+        <Variable name="home" comment="" />
+        <Variable name="normalBehaviorOption" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <GenerateRandomInteger hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </GenerateRandomInteger>
+            <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <IfCondition hasInputBreakpoint="0" comment="just stand there" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </AnimationAction>
+                    </Then>
+                    <Else>
+                      <UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </UnstanceAction>
+                    </Else>
+                  </RandomGate>
+                  <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Wait>
+                </Sequence>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="sit down" breakpointFlags="0">
+                <OutputBreakpoints />
+                <StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </WaitAction>
+                    <RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Then>
+                        <AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </AnimationAction>
+                      </Then>
+                      <Else>
+                        <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Success>
+                      </Else>
+                    </RandomGate>
+                    <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Wait>
+                  </Sequence>
+                </StanceElement>
+              </IfCondition>
+              <IfCondition hasInputBreakpoint="0" comment="lie down" breakpointFlags="0">
+                <OutputBreakpoints />
+                <StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </WaitAction>
+                    <RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Then>
+                        <AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </AnimationAction>
+                      </Then>
+                      <Else>
+                        <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Success>
+                      </Else>
+                    </RandomGate>
+                    <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Wait>
+                  </Sequence>
+                </StanceElement>
+              </IfCondition>
+              <DefaultBranch>
+                <Sequence hasInputBreakpoint="0" comment="move" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </LinkTagFilter>
+                    </GraphSearch>
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </Selector>
+                  <GetRandomPos hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </GetRandomPos>
+                  <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Move>
+                  <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Wait>
+                </Sequence>
+              </DefaultBranch>
+            </Switch>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+  <BehaviorTree name="goEat" is_function="0">
+    <Variables>
+      <Variable name="distance" type="_int" values="25" isPersistent="0" form="single" />
+      <Variable name="eatMeat" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="foodName" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="importantSheep" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="itemType" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="meat" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="meats" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="pathFindingParams" type="pathFindingParams" values="usePaths(false),useSmartObjects(false),useGeneratedNSO(false)" isPersistent="0" form="single" />
+      <Variable name="queryArray" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="queryValue" type="_wuid" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="tagpoint" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <CircularSpatialQuery Radius="30.000000" Center="$this.id" ToFill="$queryArray" Precision="Exact" Filter="PerceivableItems" />
+          <ForEach startIndex="0" step="1" array="$queryArray" iterator="" value="$queryValue" break="">
+            <Sequence>
+              <GetItemType WUID="$queryValue" OutCategory="" OutType="$itemType" OutSubType="" />
+              <IfCondition failOnCondition="false" condition="$itemType == &apos;meat&apos;">
+                <PushToArray array="$meats" value="$queryValue" direction="Back" />
+              </IfCondition>
+            </Sequence>
+          </ForEach>
+          <Parallel successMode="Any" failureMode="Any">
+            <Sequence>
+              <IfCondition failOnCondition="false" condition="#meats &gt; 0">
+                <ForEach startIndex="0" step="1" array="$meats" iterator="" value="$meat" break="">
+                  <IfCondition failOnCondition="false" condition="$meat ~= $__null">
+                    <Sequence>
+                      <ExecuteLua code="data.foodName = XGenAIModule.GetEntityByWUID(data.meat):GetName()" />
+                      <SuppressFailure>
+                        <InstantSemaphore SemaphoreCount="1" LockManagerType="Local" SemaphoreName="&apos;$foodName&apos;">
+                          <Sequence>
+                            <Move stopWithinDistance="0.500000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$meat" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+                            <Turn target="$meat" align="false" />
+                            <UnstanceAction unstance="dog_eatingStanding" locationObject="" slaveObject="" />
+                            <Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                            <AtomicDecorator>
+                              <CheckWuidValid wuid="$meat" FailSubtMissing="false" saveVersion="2">
+                                <Then canSkip="1">
+                                  <Sequence>
+                                    <ExecuteLua code="entity.inventory:AddItem(data.meat)" />
+                                    <UseItem item="$meat" count="1" bodyPartId="-1" combineWithItem="" />
+                                  </Sequence>
+                                </Then>
+                              </CheckWuidValid>
+                            </AtomicDecorator>
+                          </Sequence>
+                        </InstantSemaphore>
+                      </SuppressFailure>
+                    </Sequence>
+                  </IfCondition>
+                </ForEach>
+              </IfCondition>
+              <Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="$distance" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$tagpoint" destinationSpecification2="" destinationSpecification3="" speed="AlertedWalk" additionalParams="" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+              <Callback_empty EventName="&apos;OnFinished&apos;" />
+            </Sequence>
+            <Selector>
+              <Sequence>
+                <GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                  <LinkTagFilter tag="&apos;importantSheep&apos;" prune="true" negprune="unknown" Parent="" Child="$importantSheep" Data="" />
+                </GraphSearch>
+                <DistanceGate Origin="$this.id" ReferencePt="$importantSheep" Low="$distance" High="$distance" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+                  <Callback_empty EventName="&apos;OnFinished&apos;" />
+                </DistanceGate>
+              </Sequence>
+              <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+            </Selector>
+          </Parallel>
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData Signature="goto" EventSet="endNotification">
+      <Variables>
+        <Variable name="distance" comment="" />
+        <Variable name="eatMeat" comment="" />
+        <Variable name="foodName" comment="" />
+        <Variable name="importantSheep" comment="" />
+        <Variable name="itemType" comment="" />
+        <Variable name="meat" comment="" />
+        <Variable name="meats" comment="" />
+        <Variable name="pathFindingParams" comment="" />
+        <Variable name="queryArray" comment="" />
+        <Variable name="queryValue" comment="" />
+        <Variable name="tagpoint" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <CircularSpatialQuery hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </CircularSpatialQuery>
+            <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <GetItemType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </GetItemType>
+                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </PushToArray>
+                </IfCondition>
+              </Sequence>
+            </ForEach>
+            <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </ExecuteLua>
+                        <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <InstantSemaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Move>
+                              <Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Turn>
+                              <UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </UnstanceAction>
+                              <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Wait>
+                              <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                  <OutputBreakpoints />
+                                  <Then>
+                                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </ExecuteLua>
+                                      <UseItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </UseItem>
+                                    </Sequence>
+                                  </Then>
+                                </CheckWuidValid>
+                              </AtomicDecorator>
+                            </Sequence>
+                          </InstantSemaphore>
+                        </SuppressFailure>
+                      </Sequence>
+                    </IfCondition>
+                  </ForEach>
+                </IfCondition>
+                <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Move>
+                <Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Callback_empty>
+              </Sequence>
+              <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </LinkTagFilter>
+                  </GraphSearch>
+                  <DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Callback_empty>
+                  </DistanceGate>
+                </Sequence>
+                <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Wait>
+              </Selector>
+            </Parallel>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+  <BehaviorTree name="killAnimal" is_function="0">
+    <Variables>
+      <Variable name="additionalParams" type="additionalMoveParams" values="destChangedThreshold(&apos;200ms&apos;)" isPersistent="0" form="single" />
+      <Variable name="animal" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="animals" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="npc" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="npcs" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="pathFindingParams" type="pathFindingParams" values="usePaths(false),useSmartObjects(false),useGeneratedNSO(false)" isPersistent="0" form="single" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <CircularSpatialQuery Radius="15.000000" Center="$this.id" ToFill="$npcs" Precision="Exact" Filter="NPCs" />
+          <ForEach startIndex="0" step="1" array="$npcs" iterator="" value="$npc" break="">
+            <LuaGate code="local name = XGenAIModule.GetEntityByWUID(data.npc).soul:GetArchetype().Name &#10; &#10;return name == &apos;Sheep&apos;" saveVersion="2">
+              <Then canSkip="1">
+                <VarOperation varName="$animals" targetVarName="" operation="PushBack" argument="($npc)" />
+              </Then>
+            </LuaGate>
+          </ForEach>
+          <IfElseCondition failOnCondition="false" condition="#animals &gt; 0" saveVersion="2">
+            <Then canSkip="1">
+              <Sequence>
+                <RandomItem Array="$animals" Result="$animal" Clamp="-1" />
+                <Parallel successMode="Any" failureMode="Any">
+                  <Loop count="-1">
+                    <Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animal" destinationSpecification2="" destinationSpecification3="" speed="Dash" additionalParams="$additionalParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+                  </Loop>
+                  <DistanceGate Origin="$this.id" ReferencePt="$animal" Low="2.000000" High="2.000000" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+                    <KillNPC KillTarget="$animal" animation="" tags="" AnimationWUID="" Scream="false" />
+                  </DistanceGate>
+                </Parallel>
+              </Sequence>
+            </Then>
+            <Else canSkip="1">
+              <GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                <LinkTagFilter tag="&apos;foodSpawner&apos;" prune="true" negprune="unknown" Parent="" Child="$animal" Data="" />
+              </GraphSearch>
+            </Else>
+          </IfElseCondition>
+          <CheckWuidValid wuid="$animal" FailSubtMissing="false" saveVersion="2">
+            <Then canSkip="1">
+              <Move stopWithinDistance="1.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animal" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+            </Then>
+          </CheckWuidValid>
+          <CheckWuidValid wuid="$animal" FailSubtMissing="false" saveVersion="2">
+            <Then canSkip="1">
+              <Turn target="$animal" align="false" />
+            </Then>
+          </CheckWuidValid>
+          <UnstanceAction unstance="dog_eatingStanding" locationObject="" slaveObject="" />
+          <Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+          <InstantCallback_empty EventName="&apos;OnFinished&apos;" />
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData Signature="empty" EventSet="endNotification">
+      <Variables>
+        <Variable name="additionalParams" comment="" />
+        <Variable name="animal" comment="" />
+        <Variable name="animals" comment="" />
+        <Variable name="npc" comment="" />
+        <Variable name="npcs" comment="" />
+        <Variable name="pathFindingParams" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root editorPosX="60" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <CircularSpatialQuery hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </CircularSpatialQuery>
+            <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <LuaGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+                <Then>
+                  <VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </VarOperation>
+                </Then>
+              </LuaGate>
+            </ForEach>
+            <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Then>
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <RandomItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </RandomItem>
+                  <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Move>
+                    </Loop>
+                    <DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <KillNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </KillNPC>
+                    </DistanceGate>
+                  </Parallel>
+                </Sequence>
+              </Then>
+              <Else>
+                <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </LinkTagFilter>
+                </GraphSearch>
+              </Else>
+            </IfElseCondition>
+            <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Then>
+                <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Move>
+              </Then>
+            </CheckWuidValid>
+            <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Then>
+                <Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Turn>
+              </Then>
+            </CheckWuidValid>
+            <UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <OutputBreakpoints />
+            </UnstanceAction>
+            <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Wait>
+            <InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </InstantCallback_empty>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+  <BehaviorTree name="goHome" is_function="0">
+    <Variables>
+      <Variable name="position" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="tagpoint" type="wuid" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <OnInit canSkip="1">
+        <GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+          <LinkTagFilter tag="&apos;home&apos;" prune="true" negprune="unknown" Parent="" Child="$tagpoint" Data="" />
+        </GraphSearch>
+      </OnInit>
+      <Behavior canSkip="1">
+        <Sequence>
+          <GetSpatialInfo In="$tagpoint" Out="$position" What="Position" />
+          <GetRandomPos StartPos="$position" PosExtentHor="1.000000" PosExtentVert="2.000000" MaxRange="2.000000" Precise="false" MaxIterantions="1" Target="$position" navAgentType="Automatic" pathFindingParams="" />
+          <Move stopWithinDistance="1.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" destinationSpecification="$position" destinationSpecification2="" destinationSpecification3="" speed="Run" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="position" comment="" />
+        <Variable name="tagpoint" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <OnInit>
+          <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </LinkTagFilter>
+          </GraphSearch>
+        </OnInit>
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </GetSpatialInfo>
+            <GetRandomPos hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </GetRandomPos>
+            <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Move>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+  <BehaviorTree name="killAndEat" is_function="0">
+    <Variables>
+      <Variable name="additionalParams" type="additionalMoveParams" values="destChangedThreshold(&apos;200ms&apos;)" isPersistent="0" form="single" />
+      <Variable name="animal" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="animalArchetype" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="animalArchetypes" type="_string" values="" isPersistent="0" form="array" />
+      <Variable name="animals" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="chosenAnimal" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="dogs" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="foodName" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="hungry" type="_bool" values="true" isPersistent="0" form="single" />
+      <Variable name="itemType" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="meat" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="meats" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="packSO" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="pathFindingParams" type="pathFindingParams" values="usePaths(false),useSmartObjects(false),useGeneratedNSO(false)" isPersistent="0" form="single" />
+      <Variable name="point" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="position" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="queryArray" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="queryValue" type="_wuid" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+            <LinkTagFilter tag="&apos;dog&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+            <Nodalyzer Quantifiers="ForAll" Parent="" Child="$dogs" saveVersion="2" />
+          </GraphSearch>
+          <GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+            <LinkTagFilter tag="&apos;foodSpawner&apos;" prune="true" negprune="unknown" Parent="" Child="$point" Data="" />
+          </GraphSearch>
+          <CircularSpatialQuery Radius="25.000000" Center="$point" ToFill="$queryArray" Precision="Exact" Filter="NonHumanNPCs" />
+          <ForEach startIndex="0" step="1" array="$queryArray" iterator="" value="$queryValue" break="">
+            <LuaGate code="local name = XGenAIModule.GetEntityByWUID(data.queryValue).soul:GetArchetype().Name &#10; &#10;return name == &apos;SheepRam&apos; or name == &apos;SheepEwe&apos; or name == &apos;Sheep&apos;" saveVersion="2">
+              <Then canSkip="1">
+                <PushToArray array="$animals" value="$queryValue" direction="Back" />
+              </Then>
+              <Else canSkip="1">
+                <Success />
+              </Else>
+            </LuaGate>
+          </ForEach>
+          <ReinitVariable variable="$queryArray" />
+          <CircularSpatialQuery Radius="25.000000" Center="$point" ToFill="$queryArray" Precision="Exact" Filter="PerceivableItems" />
+          <ForEach startIndex="0" step="1" array="$queryArray" iterator="" value="$queryValue" break="">
+            <Sequence>
+              <GetItemType WUID="$queryValue" OutCategory="" OutType="$itemType" OutSubType="" />
+              <IfCondition failOnCondition="false" condition="$itemType == &apos;meat&apos;">
+                <PushToArray array="$meats" value="$queryValue" direction="Back" />
+              </IfCondition>
+            </Sequence>
+          </ForEach>
+          <IfCondition failOnCondition="false" condition="#animals &gt; 0">
+            <ForEach startIndex="0" step="1" array="$animals" iterator="" value="$animal" break="">
+              <Sequence>
+                <ExecuteLua code="data.foodName = XGenAIModule.GetEntityByWUID(data.animal):GetName()" />
+                <SuppressFailure>
+                  <InstantSemaphore SemaphoreCount="1" LockManagerType="Local" SemaphoreName="&apos;$foodName&apos;">
+                    <Sequence>
+                      <Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="15.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animal" destinationSpecification2="" destinationSpecification3="" speed="Sprint" additionalParams="$additionalParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+                      <IsDeadCheck SoulWUID="$animal" FailSubtMissing="false" saveVersion="2">
+                        <Then canSkip="1">
+                          <Success />
+                        </Then>
+                        <Else canSkip="1">
+                          <Parallel successMode="Any" failureMode="Any">
+                            <Loop count="-1">
+                              <Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animal" destinationSpecification2="" destinationSpecification3="" speed="Dash" additionalParams="$additionalParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+                            </Loop>
+                            <DistanceGate Origin="$this.id" ReferencePt="$animal" Low="3.000000" High="3.000000" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+                              <KillNPC KillTarget="$animal" Scream="false" />
+                            </DistanceGate>
+                          </Parallel>
+                        </Else>
+                      </IsDeadCheck>
+                      <Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                      <Move stopWithinDistance="0.500000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animal" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+                      <Turn target="$animal" align="false" />
+                      <UnstanceAction unstance="dog_eatingStanding" locationObject="" slaveObject="" />
+                      <Expression expressions="$hungry = false" />
+                      <Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                    </Sequence>
+                  </InstantSemaphore>
+                </SuppressFailure>
+              </Sequence>
+            </ForEach>
+          </IfCondition>
+          <IfCondition failOnCondition="false" condition="#meats &gt; 0">
+            <ForEach startIndex="0" step="1" array="$meats" iterator="" value="$meat" break="">
+              <IfCondition failOnCondition="false" condition="$meat ~= $__null">
+                <Sequence>
+                  <ExecuteLua code="data.foodName = XGenAIModule.GetEntityByWUID(data.meat):GetName()" />
+                  <SuppressFailure>
+                    <InstantSemaphore SemaphoreCount="1" LockManagerType="Local" SemaphoreName="&apos;$foodName&apos;">
+                      <Sequence>
+                        <Move stopWithinDistance="0.500000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$meat" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+                        <Turn target="$meat" align="false" />
+                        <UnstanceAction unstance="dog_eatingStanding" locationObject="" slaveObject="" />
+                        <Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                        <AtomicDecorator>
+                          <CheckWuidValid wuid="$meat" FailSubtMissing="false" saveVersion="2">
+                            <Then canSkip="1">
+                              <Sequence>
+                                <ExecuteLua code="entity.inventory:AddItem(data.meat)" />
+                                <UseItem item="$meat" count="1" bodyPartId="-1" combineWithItem="" />
+                              </Sequence>
+                            </Then>
+                          </CheckWuidValid>
+                        </AtomicDecorator>
+                        <Expression expressions="$hungry = false" />
+                      </Sequence>
+                    </InstantSemaphore>
+                  </SuppressFailure>
+                </Sequence>
+              </IfCondition>
+            </ForEach>
+          </IfCondition>
+          <IfCondition failOnCondition="false" condition="$hungry">
+            <IfElseCondition failOnCondition="false" condition="#animals &lt; #dogs &amp; #animals &gt; 0" saveVersion="2">
+              <Then canSkip="1">
+                <Sequence>
+                  <RandomItem Array="$animals" Result="$chosenAnimal" Clamp="-1" />
+                  <Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="3.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$chosenAnimal" destinationSpecification2="" destinationSpecification3="" speed="Sprint" additionalParams="$additionalParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+                </Sequence>
+              </Then>
+              <Else canSkip="1">
+                <Sequence>
+                  <GetRandomPos StartPos="$point" PosExtentHor="1.000000" PosExtentVert="2.000000" MaxRange="5.000000" Precise="false" MaxIterantions="1" Target="$position" navAgentType="Automatic" pathFindingParams="" />
+                  <Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$position" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+                </Sequence>
+              </Else>
+            </IfElseCondition>
+          </IfCondition>
+          <StanceElement smartObject="" stance="lying" allowAny="false" enabled="true">
+            <Sequence>
+              <WaitAction />
+              <Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+            </Sequence>
+          </StanceElement>
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="additionalParams" comment="" />
+        <Variable name="animal" comment="" />
+        <Variable name="animalArchetype" comment="" />
+        <Variable name="animalArchetypes" comment="" />
+        <Variable name="animals" comment="" />
+        <Variable name="chosenAnimal" comment="" />
+        <Variable name="dogs" comment="" />
+        <Variable name="foodName" comment="" />
+        <Variable name="hungry" comment="" />
+        <Variable name="itemType" comment="" />
+        <Variable name="meat" comment="" />
+        <Variable name="meats" comment="" />
+        <Variable name="packSO" comment="" />
+        <Variable name="pathFindingParams" comment="" />
+        <Variable name="point" comment="" />
+        <Variable name="position" comment="" />
+        <Variable name="queryArray" comment="" />
+        <Variable name="queryValue" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+              </LinkTagFilter>
+              <Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+              </Nodalyzer>
+            </GraphSearch>
+            <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+              </LinkTagFilter>
+            </GraphSearch>
+            <CircularSpatialQuery hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </CircularSpatialQuery>
+            <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <LuaGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+                <Then>
+                  <PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </PushToArray>
+                </Then>
+                <Else>
+                  <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Success>
+                </Else>
+              </LuaGate>
+            </ForEach>
+            <ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </ReinitVariable>
+            <CircularSpatialQuery hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </CircularSpatialQuery>
+            <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <GetItemType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </GetItemType>
+                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </PushToArray>
+                </IfCondition>
+              </Sequence>
+            </ForEach>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </ExecuteLua>
+                  <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <InstantSemaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Move>
+                        <IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                          <OutputBreakpoints />
+                          <Then>
+                            <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </Success>
+                          </Then>
+                          <Else>
+                            <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Move>
+                              </Loop>
+                              <DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <KillNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </KillNPC>
+                              </DistanceGate>
+                            </Parallel>
+                          </Else>
+                        </IsDeadCheck>
+                        <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Wait>
+                        <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Move>
+                        <Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Turn>
+                        <UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </UnstanceAction>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                        <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Wait>
+                      </Sequence>
+                    </InstantSemaphore>
+                  </SuppressFailure>
+                </Sequence>
+              </ForEach>
+            </IfCondition>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </ExecuteLua>
+                    <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <InstantSemaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Move>
+                          <Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Turn>
+                          <UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </UnstanceAction>
+                          <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Wait>
+                          <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                              <OutputBreakpoints />
+                              <Then>
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </ExecuteLua>
+                                  <UseItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </UseItem>
+                                </Sequence>
+                              </Then>
+                            </CheckWuidValid>
+                          </AtomicDecorator>
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                        </Sequence>
+                      </InstantSemaphore>
+                    </SuppressFailure>
+                  </Sequence>
+                </IfCondition>
+              </ForEach>
+            </IfCondition>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+                <Then>
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <RandomItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </RandomItem>
+                    <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Move>
+                  </Sequence>
+                </Then>
+                <Else>
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <GetRandomPos hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </GetRandomPos>
+                    <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Move>
+                  </Sequence>
+                </Else>
+              </IfElseCondition>
+            </IfCondition>
+            <StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </WaitAction>
+                <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Wait>
+              </Sequence>
+            </StanceElement>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_estimatePlayersPosition" is_function="1">
+		<Variables>
+			<Variable name="distanceSq" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="distanceSqForMaxLockingOutTImeout" type="_float" values="900" isPersistent="0" form="single" />
+			<Variable name="lockingOutTimeout" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="lockingOutTimeoutFloat" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="lockingOutTimeoutString" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="maxLockingOutTimeout" type="_int" values="6000" isPersistent="0" form="single" />
+			<Variable name="perceptionFocus" type="perceptionInfo" values="" isPersistent="0" form="single" />
+			<Variable name="state" type="enum:crime_chaseState" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="estimatePlayersPosition" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="estimationStartPos" type="vec3" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="positionShared" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<ContinuousSwitch>
+					<IfCondition failOnCondition="false" condition="$estimatePlayersPosition">
+						<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+							<Child canSkip="1">
+								<HasPerceptionEnabled WUID="$this.id" Type="Perceptor" FailSubtMissing="false" saveVersion="2">
+									<Then canSkip="1">
+										<Parallel successMode="Any" failureMode="Any">
+											<ContinuousSwitch>
+												<IfCondition failOnCondition="false" condition="$state == $enum:crime_chaseState.lockedOn">
+													<LogToLabel Name="&apos;pursue_state&apos;" Wuid="$this.id" Message="&apos;chase: locked-on&apos;">
+														<Sequence>
+															<SetEstimatedFollow EstimateTargetPosition="false" />
+															<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+														</Sequence>
+													</LogToLabel>
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$state == $enum:crime_chaseState.lockingOut">
+													<LogToLabel Name="&apos;pursue_state&apos;" Wuid="$this.id" Message="&apos;chase: locking out&apos;">
+														<Sequence>
+															<NumericalOperation In1VariableName="this.id" In2VariableName="__player" In3VariableName="" OutVariableName="$distanceSq" Operation="distance2dSq_wuid" />
+															<Expression expressions="$lockingOutTimeoutFloat = $maxLockingOutTimeout *  &#10;($distanceSq / $distanceSqForMaxLockingOutTImeout &lt; 1  &#10; ? $distanceSq / $distanceSqForMaxLockingOutTImeout  &#10; : 1 &#10;)" />
+															<NumericalOperation In1VariableName="lockingOutTimeoutFloat" In2VariableName="" In3VariableName="" OutVariableName="$lockingOutTimeoutFloat" Operation="round" />
+															<Expression expressions="$lockingOutTimeout = $lockingOutTimeoutFloat &#10;$lockingOutTimeoutString = concat($lockingOutTimeout,&apos;ms&apos;)" />
+															<Wait duration="$lockingOutTimeoutString" timeType="GameTime" doFail="false" variation="&apos;200ms&apos;" />
+															<Expression expressions="$state = $enum:crime_chaseState.lockedOut" />
+														</Sequence>
+													</LogToLabel>
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$state == $enum:crime_chaseState.lockedOut |  &#10;$state == $enum:crime_chaseState.none">
+													<LogToLabel Name="&apos;pursue_state&apos;" Wuid="$this.id" Message="&apos;chase: locked out&apos;">
+														<Sequence>
+															<GetSpatialInfo In="$this.id" Out="$estimationStartPos" What="Position" />
+															<SetEstimatedFollow EstimateTargetPosition="true" />
+															<EntityContext context="combat_disableOffenseAutomation" target="$this.id">
+																<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+															</EntityContext>
+														</Sequence>
+													</LogToLabel>
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$state == $enum:crime_chaseState.lockingOn">
+													<LogToLabel Name="&apos;pursue_state&apos;" Wuid="$this.id" Message="&apos;chase: locking on&apos;">
+														<Sequence>
+															<Wait duration="&apos;400ms&apos;" timeType="GameTime" doFail="false" variation="" />
+															<Expression expressions="$state = $enum:crime_chaseState.lockedOn" />
+														</Sequence>
+													</LogToLabel>
+												</IfCondition>
+											</ContinuousSwitch>
+											<Loop count="-1">
+												<Sequence>
+													<EntityContextCheck context="combat_disableEstimatedFollow" target="$this.id" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$state = $enum:crime_chaseState.lockedOn" />
+														</Then>
+														<Else canSkip="1">
+															<IfElseCondition failOnCondition="false" condition="$positionShared" saveVersion="2">
+																<Then canSkip="1">
+																	<Expression expressions="$state = $enum:crime_chaseState.lockedOn &#10;$positionShared = false" />
+																</Then>
+																<Else canSkip="1">
+																	<HasSeenPlayer NPC="$this.id" FullyAwareOnly="true" saveVersion="2">
+																		<Then canSkip="1">
+																			<Expression expressions="$state = $state == $enum:crime_chaseState.lockedOut  &#10;? $enum:crime_chaseState.lockingOn  &#10;: $enum:crime_chaseState.lockedOn" />
+																		</Then>
+																		<Else canSkip="1">
+																			<Sequence>
+																				<CancelPerceptionIgnore PerceptorObject="$this.id" PerceptibleObject="$__player" WasIgnoredAtLeastFor="&apos;0s&apos;" />
+																				<GetCurrentPerceptionFocus PerceptionNfo="$perceptionFocus" />
+																				<IfElseCondition failOnCondition="false" condition="$perceptionFocus.perceptible==$__player" saveVersion="2">
+																					<Then canSkip="1">
+																						<Expression expressions="$state = $state == $enum:crime_chaseState.lockedOut  &#10;? $enum:crime_chaseState.lockingOn  &#10;: $enum:crime_chaseState.lockedOn" />
+																					</Then>
+																					<Else canSkip="1">
+																						<IfCondition failOnCondition="false" condition="$state == $enum:crime_chaseState.lockedOn | &#10;$state == $enum:crime_chaseState.lockingOn">
+																							<Expression expressions="$state = $enum:crime_chaseState.lockingOut" />
+																						</IfCondition>
+																					</Else>
+																				</IfElseCondition>
+																				<Wait duration="&apos;200ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																			</Sequence>
+																		</Else>
+																	</HasSeenPlayer>
+																</Else>
+															</IfElseCondition>
+														</Else>
+													</EntityContextCheck>
+													<Wait duration="&apos;200ms&apos;" timeType="GameTime" doFail="false" variation="" />
+												</Sequence>
+											</Loop>
+										</Parallel>
+									</Then>
+									<Else canSkip="1">
+										<Sequence>
+											<SetEstimatedFollow EstimateTargetPosition="false" />
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+									</Else>
+								</HasPerceptionEnabled>
+							</Child>
+							<OnSuccess canSkip="1">
+								<SetEstimatedFollow EstimateTargetPosition="false" />
+							</OnSuccess>
+						</FuseBox>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="~$estimatePlayersPosition">
+						<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+					</IfCondition>
+				</ContinuousSwitch>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="distanceSq" comment="" />
+				<Variable name="distanceSqForMaxLockingOutTImeout" comment="" />
+				<Variable name="lockingOutTimeout" comment="" />
+				<Variable name="lockingOutTimeoutFloat" comment="" />
+				<Variable name="lockingOutTimeoutString" comment="" />
+				<Variable name="maxLockingOutTimeout" comment="" />
+				<Variable name="perceptionFocus" comment="" />
+				<Variable name="state" comment="" />
+				<Variable name="estimatePlayersPosition" comment="" />
+				<Variable name="estimationStartPos" comment="" />
+				<Variable name="positionShared" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-440" editorPosY="60" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Child>
+									<HasPerceptionEnabled hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfCondition hasInputBreakpoint="0" comment="Locked-on" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<SetEstimatedFollow hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</SetEstimatedFollow>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+															</Sequence>
+														</LogToLabel>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="Locking out" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</NumericalOperation>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</NumericalOperation>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Sequence>
+														</LogToLabel>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="Locked-out" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetSpatialInfo>
+																<SetEstimatedFollow hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</SetEstimatedFollow>
+																<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Wait>
+																</EntityContext>
+															</Sequence>
+														</LogToLabel>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="Locking on" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Sequence>
+														</LogToLabel>
+													</IfCondition>
+												</ContinuousSwitch>
+												<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="See player -&gt; lock on" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+															<Else>
+																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Expression hasInputBreakpoint="0" comment="See player -&gt; lock on" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</Then>
+																	<Else>
+																		<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Expression hasInputBreakpoint="0" comment="See player -&gt; lock on" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Then>
+																			<Else>
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<CancelPerceptionIgnore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</CancelPerceptionIgnore>
+																					<GetCurrentPerceptionFocus hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GetCurrentPerceptionFocus>
+																					<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Then>
+																							<Expression hasInputBreakpoint="0" comment="See player -&gt; lock on" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</Then>
+																						<Else>
+																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Expression hasInputBreakpoint="0" comment="Lost player -&gt; start locking out timeout" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																							</IfCondition>
+																						</Else>
+																					</IfElseCondition>
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																				</Sequence>
+																			</Else>
+																		</HasSeenPlayer>
+																	</Else>
+																</IfElseCondition>
+															</Else>
+														</EntityContextCheck>
+														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Wait>
+													</Sequence>
+												</Loop>
+											</Parallel>
+										</Then>
+										<Else>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<SetEstimatedFollow hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</SetEstimatedFollow>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+										</Else>
+									</HasPerceptionEnabled>
+								</Child>
+								<OnSuccess>
+									<SetEstimatedFollow hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</SetEstimatedFollow>
+								</OnSuccess>
+							</FuseBox>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Wait>
+						</IfCondition>
+					</ContinuousSwitch>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

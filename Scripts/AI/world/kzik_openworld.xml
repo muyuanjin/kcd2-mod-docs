@@ -1,0 +1,1156 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="kzik_followPlayerAndForceChat" is_function="0">
+		<Variables>
+			<Variable name="moveParams" type="additionalMoveParams" values="destChangedThreshold(&apos;1s&apos;)" isPersistent="0" form="single" />
+			<Variable name="movementSpeed" type="enum:movementSpeed" values="$enum:movementSpeed.run" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="data" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Parallel successMode="Any" failureMode="Any">
+					<Function_crime_continuouslyFollowPlayer moveParams="$moveParams" movementSpeed="$movementSpeed" pathFindingParams="" playerCloseDistance="" stopWithinDistance="" nodeLabel="60896462" />
+					<Function_speech_dialogInitiator alias="$data" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="" preset="$enum:dialogPreset.chat" recipient="$__player" recipientMetaroles="" nodeLabel="86759774" />
+				</Parallel>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="stringData" EventSet="">
+			<Variables>
+				<Variable name="moveParams" comment="" />
+				<Variable name="movementSpeed" comment="" />
+				<Variable name="data" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Function_crime_continuouslyFollowPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_crime_continuouslyFollowPlayer>
+						<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_speech_dialogInitiator>
+					</Parallel>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="kzik_gateGuardBehavior" is_function="0">
+		<Variables>
+			<Variable name="actionRequest" type="kzik:actionRequest" values="" isPersistent="0" form="single" />
+			<Variable name="attackArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="campArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="canForceChat" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="context" type="_float" values="" isPersistent="0" form="associative" />
+			<Variable name="gateArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="kzik_CampArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="moveParams" type="additionalMoveParams" values="destChangedThreshold(&apos;1s&apos;)" isPersistent="0" form="single" />
+			<Variable name="movementSpeed" type="enum:movementSpeed" values="$enum:movementSpeed.run" isPersistent="0" form="single" />
+			<Variable name="otherGuards" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="shouldExitBehaviour" type="_bool" values="true" isPersistent="0" form="single" />
+			<Variable name="stimulusEscalatedTrespass" type="switch:stimulus:escalatedTrespass" values="" isPersistent="0" form="single" />
+			<Variable name="urgingPriority" type="enum:crime_playerUrgingPriority" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="state" type="enum:kzik_gateGuardState" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<Expression expressions="// concept doesnt like me, so I need to contain the thing in 1 variable &#10;// insideCamp == 1 - player is inside camp &#10;// insideCamp == 2 - player is outside camp &#10; &#10;$context[&apos;insideCamp&apos;] = 0 &#10;$shouldExitBehaviour = false &#10; &#10;$urgingPriority = $enum:crime_playerUrgingPriority.kzik_openworldGate" />
+					<Selector>
+						<GraphSearch Origin="$__land" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+							<LinkTagFilter tag="&apos;kzik_campArea&apos;" prune="true" negprune="unknown" Parent="" Child="$kzik_CampArea" Data="" />
+						</GraphSearch>
+						<ErrorNode Message="&apos;[$this.name;] link &quot;land -&gt; kzik_campArea&quot; not found&apos;" />
+					</Selector>
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<AnyDecorator preset="crime_keepStateAndItems" enabled="true">
+							<LogToLabel Name="&apos;interrupt&apos;" Wuid="" Message="&apos;kzik_gateGuardBehavior&apos;">
+								<GameContextCheck context="crime_kzik_playerHasAccessToTheCamp" saveVersion="2">
+									<Else canSkip="1">
+										<EntityContextElement context="teleport_crime_keepItems" enabled="true">
+											<GameContextBarrier context="crime_kzik_playerHasAccessToTheCamp" Negation="true" RunLogic="Halt">
+												<Sequence>
+													<AddLink From="$__player" To="$this.id" Tag="&apos;kzik_gateGuardBehaviour&apos;" Data="" LinkOpHandleMode="OverWrite" />
+													<IfGate atomic="false" condition="~$shouldExitBehaviour" RunLogic="Halt">
+														<Parallel successMode="Any" failureMode="Any">
+															<Loop count="-1">
+																<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$actionRequest" senderInfo="" inbox="&apos;kzik_actionRequest&apos;" condition="" answerVar="">
+																	<Sequence>
+																		<Switch>
+																			<IfCondition failOnCondition="false" condition="$actionRequest.action == $enum:kzik_actionRequest.Escalate">
+																				<Expression expressions="$state = $enum:kzik_gateGuardState.Escalate" />
+																			</IfCondition>
+																			<IfCondition failOnCondition="false" condition="$actionRequest.action == $enum:kzik_actionRequest.MindPlayer">
+																				<Expression expressions="$state = $enum:kzik_gateGuardState.MindPlayer" />
+																			</IfCondition>
+																			<IfCondition failOnCondition="false" condition="$actionRequest.action == $enum:kzik_actionRequest.GivePlayerAccess">
+																				<Expression expressions="$shouldExitBehaviour = true" />
+																			</IfCondition>
+																			<DefaultBranch>
+																				<Success />
+																			</DefaultBranch>
+																		</Switch>
+																		<IfCondition failOnCondition="false" condition="~$actionRequest.forwarded">
+																			<SuppressFailure>
+																				<Sequence>
+																					<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																						<LinkTagFilter tag="&apos;kzik_gateGuardBehaviour&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																						<Nodalyzer Quantifiers="ForAll" Parent="" Child="$otherGuards" saveVersion="2" />
+																						<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+																							<Child0 canSkip="1">
+																								<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																							</Child0>
+																						</NegationOp>
+																					</GraphSearch>
+																					<Expression expressions="$actionRequest.forwarded = true" />
+																					<InstantMultiSendMessageToNPC targets="$otherGuards" successMode="Any" failureMode="Any" variable="$actionRequest" />
+																				</Sequence>
+																			</SuppressFailure>
+																		</IfCondition>
+																	</Sequence>
+																</ProcessMessage>
+															</Loop>
+															<ContinuousSwitch>
+																<IfCondition failOnCondition="false" condition="$state == $enum:kzik_gateGuardState.SeePlayerApproaching">
+																	<IsInsideAreaWithLabel Position="$__player" Label="&apos;kzik_camp&apos;" Area="$campArea" FailSubtMissing="false" saveVersion="2">
+																		<Then canSkip="1">
+																			<LogToLabel Name="&apos;subType&apos;" Wuid="" Message="&apos;Inside camp&apos;">
+																				<ForceLook LookTarget="$__player" DisableVariations="false">
+																					<Sequence>
+																						<Expression expressions="$context[&apos;insideCamp&apos;] = 1" />
+																						<Parallel successMode="Any" failureMode="Any">
+																							<Parallel successMode="Any" failureMode="Any">
+																								<Function_crime_managePlayerUrging canUrge="$canForceChat" priority="$urgingPriority" nodeLabel="80214243" />
+																								<Loop count="-1">
+																									<IfGate atomic="false" condition="$canForceChat" RunLogic="Halt">
+																										<Function_speech_dialogInitiator alias="&apos;gateguardChatNaHraca_strazeTaboraKriciNaJindruPredVstupem&apos;" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="$context" customParameters="" metarole="" preset="$enum:dialogPreset.chat" recipient="$__player" recipientMetaroles="" nodeLabel="22189760" />
+																									</IfGate>
+																								</Loop>
+																							</Parallel>
+																							<Sequence>
+																								<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" />
+																								<Expression expressions="$state = $enum:kzik_gateGuardState.Escalate" />
+																							</Sequence>
+																							<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;kzik_camp&apos;" Negation="true" RunLogic="KeepRunning">
+																								<Expression expressions="$state = $enum:kzik_gateGuardState.MindPlayer" />
+																							</IsInsideAreaWithLabelBarrier>
+																							<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;kzik_camp&apos;" Negation="false" RunLogic="Halt">
+																								<CrimeFollower Target="$__player" Mode="Default" Role="Main" RelativeSpeedLimit="Dash" DisableGhosting="false" />
+																							</IsInsideAreaWithLabelBarrier>
+																						</Parallel>
+																					</Sequence>
+																				</ForceLook>
+																			</LogToLabel>
+																		</Then>
+																		<Else canSkip="1">
+																			<LogToLabel Name="&apos;subType&apos;" Wuid="" Message="&apos;Outside camp&apos;">
+																				<ForceLook LookTarget="$__player" DisableVariations="false">
+																					<Sequence>
+																						<Expression expressions="$context[&apos;insideCamp&apos;] = 2" />
+																						<Parallel successMode="Any" failureMode="Any">
+																							<Loop count="-1">
+																								<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="10.000000" High="10.000000" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+																									<Parallel successMode="Any" failureMode="Any">
+																										<Function_crime_managePlayerUrging canUrge="$canForceChat" priority="$urgingPriority" nodeLabel="34744537" />
+																										<Loop count="-1">
+																											<IfGate atomic="false" condition="$canForceChat" RunLogic="Halt">
+																												<Sequence>
+																													<Function_speech_dialogInitiator alias="&apos;gateguardChatNaHraca_strazeTaboraKriciNaJindruPredVstupem&apos;" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="$context" customParameters="" metarole="" preset="$enum:dialogPreset.chat" recipient="$__player" recipientMetaroles="" nodeLabel="90400308" />
+																													<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" />
+																												</Sequence>
+																											</IfGate>
+																										</Loop>
+																									</Parallel>
+																								</DistanceGate>
+																							</Loop>
+																							<Loop count="-1">
+																								<Sequence>
+																									<Turn target="$__player" align="false" />
+																									<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+																								</Sequence>
+																							</Loop>
+																							<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;kzik_camp&apos;" Negation="false" RunLogic="KeepRunning">
+																								<Expression expressions="$state = $enum:kzik_gateGuardState.Escalate" />
+																							</IsInsideAreaWithLabelBarrier>
+																							<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="15.000000" High="15.000000" Negation="true" OpenInMiddle="false" RunLogic="KeepRunning">
+																								<Expression expressions="$shouldExitBehaviour = true" />
+																							</DistanceGate>
+																						</Parallel>
+																					</Sequence>
+																				</ForceLook>
+																			</LogToLabel>
+																		</Else>
+																	</IsInsideAreaWithLabel>
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="$state == $enum:kzik_gateGuardState.MindPlayer">
+																	<LogToLabel Name="&apos;subType&apos;" Wuid="" Message="&apos;MindPlayer&apos;">
+																		<ForceLook LookTarget="$__player" DisableVariations="false">
+																			<Parallel successMode="Any" failureMode="Any">
+																				<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;kzik_camp&apos;" Negation="true" RunLogic="KeepRunning">
+																					<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="15.000000" High="15.000000" Negation="true" OpenInMiddle="false" RunLogic="KeepRunning">
+																						<Expression expressions="$shouldExitBehaviour = true" />
+																					</DistanceGate>
+																				</IsInsideAreaWithLabelBarrier>
+																				<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;kzik_camp&apos;" Negation="true" RunLogic="KeepRunning">
+																					<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;kzik_camp&apos;" Negation="false" RunLogic="KeepRunning">
+																						<Expression expressions="$state = $enum:kzik_gateGuardState.Escalate" />
+																					</IsInsideAreaWithLabelBarrier>
+																				</IsInsideAreaWithLabelBarrier>
+																				<IsInsideAreaWithLabelBarrier Who="$this.id" Label="&apos;kzik_camp&apos;" Negation="false" RunLogic="Halt">
+																					<CrimeFollower Target="$__player" Mode="Default" Role="Assist" RelativeSpeedLimit="Dash" DisableGhosting="false" />
+																				</IsInsideAreaWithLabelBarrier>
+																				<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;kzik_camp&apos;" Negation="false" RunLogic="Halt">
+																					<Sequence>
+																						<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" />
+																						<Expression expressions="$state = $enum:kzik_gateGuardState.Escalate" />
+																					</Sequence>
+																				</IsInsideAreaWithLabelBarrier>
+																				<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;kzik_camp&apos;" Negation="true" RunLogic="Halt">
+																					<Sequence>
+																						<AnimationAction fragment="&apos;CrimeGoAwayEasy&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																						<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																					</Sequence>
+																				</IsInsideAreaWithLabelBarrier>
+																				<Loop count="-1">
+																					<Sequence>
+																						<Function_speech_monolog alias="&apos;gateDesign_BarkyStrazi&apos;" canBeDelayed="false" context="" dramaticBark="false" lookAtId="$__player" metarole="" target="$this.id" wait="true" nodeLabel="46581955" />
+																						<Wait duration="&apos;3s&apos;" timeType="GameTime" doFail="false" variation="" />
+																					</Sequence>
+																				</Loop>
+																			</Parallel>
+																		</ForceLook>
+																	</LogToLabel>
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="$state == $enum:kzik_gateGuardState.Escalate">
+																	<LogToLabel Name="&apos;subType&apos;" Wuid="" Message="&apos;Escalate&apos;">
+																		<EntityContext context="crime_stimulusInitiatedByScheduler" target="">
+																			<Sequence>
+																				<Expression expressions="$stimulusEscalatedTrespass.isKzikTrespass = true &#10;$stimulusEscalatedTrespass.trespassArea = $kzik_CampArea &#10;$stimulusEscalatedTrespass.wuidType = $enum:crime_trespassInformationWuid.homeArea &#10;$stimulusEscalatedTrespass.stimulusKind = $enum:crime_stimulusKind.trespass" />
+																				<Function_switch_handleStimulusEscalatedTrespass stimulus="$stimulusEscalatedTrespass" nodeLabel="48396880" />
+																			</Sequence>
+																		</EntityContext>
+																	</LogToLabel>
+																</IfCondition>
+															</ContinuousSwitch>
+														</Parallel>
+													</IfGate>
+												</Sequence>
+											</GameContextBarrier>
+										</EntityContextElement>
+									</Else>
+								</GameContextCheck>
+							</LogToLabel>
+						</AnyDecorator>
+					</Child>
+					<OnFail canSkip="1">
+						<RemoveLink From="$__player" To="$this.id" Tag="&apos;kzik_gateGuardBehaviour&apos;" LinkOpHandleMode="OverWrite" />
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="kzik_gateGuardBehavior" EventSet="">
+			<Variables>
+				<Variable name="actionRequest" comment="" />
+				<Variable name="attackArea" comment="" />
+				<Variable name="campArea" comment="" />
+				<Variable name="canForceChat" comment="" />
+				<Variable name="context" comment="" />
+				<Variable name="gateArea" comment="" />
+				<Variable name="kzik_CampArea" comment="" />
+				<Variable name="moveParams" comment="" />
+				<Variable name="movementSpeed" comment="" />
+				<Variable name="otherGuards" comment="" />
+				<Variable name="shouldExitBehaviour" comment="" />
+				<Variable name="stimulusEscalatedTrespass" comment="" />
+				<Variable name="urgingPriority" comment="" />
+				<Variable name="state" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-10" editorPosY="20" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</LinkTagFilter>
+							</GraphSearch>
+							<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</ErrorNode>
+						</Selector>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Else>
+											<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</AddLink>
+														<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</IfCondition>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</IfCondition>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</IfCondition>
+																				<DefaultBranch>
+																					<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Success>
+																				</DefaultBranch>
+																			</Switch>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="Forward to others" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</LinkTagFilter>
+																							<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																								<OutputBreakpoints />
+																							</Nodalyzer>
+																							<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																								<OutputBreakpoints />
+																								<Child0>
+																									<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</WUIDFilter>
+																								</Child0>
+																							</NegationOp>
+																						</GraphSearch>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																						<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</InstantMultiSendMessageToNPC>
+																					</Sequence>
+																				</SuppressFailure>
+																			</IfCondition>
+																		</Sequence>
+																	</ProcessMessage>
+																</Loop>
+																<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Function_crime_managePlayerUrging hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Function_crime_managePlayerUrging>
+																									<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Function_speech_dialogInitiator>
+																										</IfGate>
+																									</Loop>
+																								</Parallel>
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Wait>
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																								</Sequence>
+																								<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																								</IsInsideAreaWithLabelBarrier>
+																								<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<CrimeFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</CrimeFollower>
+																								</IsInsideAreaWithLabelBarrier>
+																							</Parallel>
+																						</Sequence>
+																					</ForceLook>
+																				</LogToLabel>
+																			</Then>
+																			<Else>
+																				<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<DistanceGate hasInputBreakpoint="0" comment="Below 10 meters -&gt; chat" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Function_crime_managePlayerUrging hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Function_crime_managePlayerUrging>
+																											<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Function_speech_dialogInitiator>
+																														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Wait>
+																													</Sequence>
+																												</IfGate>
+																											</Loop>
+																										</Parallel>
+																									</DistanceGate>
+																								</Loop>
+																								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Turn>
+																										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Wait>
+																									</Sequence>
+																								</Loop>
+																								<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																								</IsInsideAreaWithLabelBarrier>
+																								<DistanceGate hasInputBreakpoint="0" comment="Above 15 meters -&gt; exit" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																								</DistanceGate>
+																							</Parallel>
+																						</Sequence>
+																					</ForceLook>
+																				</LogToLabel>
+																			</Else>
+																		</IsInsideAreaWithLabel>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</DistanceGate>
+																					</IsInsideAreaWithLabelBarrier>
+																					<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</IsInsideAreaWithLabelBarrier>
+																					</IsInsideAreaWithLabelBarrier>
+																					<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<CrimeFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</CrimeFollower>
+																					</IsInsideAreaWithLabelBarrier>
+																					<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Wait>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</Sequence>
+																					</IsInsideAreaWithLabelBarrier>
+																					<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</AnimationAction>
+																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Wait>
+																						</Sequence>
+																					</IsInsideAreaWithLabelBarrier>
+																					<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Function_speech_monolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_speech_monolog>
+																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Wait>
+																						</Sequence>
+																					</Loop>
+																				</Parallel>
+																			</ForceLook>
+																		</LogToLabel>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<Function_switch_handleStimulusEscalatedTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_switch_handleStimulusEscalatedTrespass>
+																				</Sequence>
+																			</EntityContext>
+																		</LogToLabel>
+																	</IfCondition>
+																</ContinuousSwitch>
+															</Parallel>
+														</IfGate>
+													</Sequence>
+												</GameContextBarrier>
+											</EntityContextElement>
+										</Else>
+									</GameContextCheck>
+								</LogToLabel>
+							</AnyDecorator>
+						</Child>
+						<OnFail>
+							<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</RemoveLink>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="kzik_customGateGuardSwitch" is_function="0">
+		<Variables>
+			<Variable name="area_inside" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="areas_gate" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="perceptionInfo" type="perceptionInfo" values="" isPersistent="0" form="single" />
+			<Variable name="playerInsideGateArea" type="_bool" values="false" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<EntityContext context="teleport_crime_keepItems" target="">
+					<Loop count="-1">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$perceptionInfo" senderInfo="" inbox="&apos;perceptionInfo&apos;" condition="" answerVar="">
+							<IfCondition failOnCondition="false" condition="$perceptionInfo.perceptible == $__player &amp; &#10;$perceptionInfo.threshold == 1">
+								<AddInterrupt_kzik_gateGuardBehavior state="$enum:kzik_gateGuardState.SeePlayerApproaching" Target="$this.id" Host="$QSO" Behavior="&apos;kzik_gateGuardBehavior&apos;" Priority="81" IgnorePriorityOnPreviousInterrupt="false" urgency="Fast" Aliveness="Alive" Privileged="false" FastForward="false" />
+							</IfCondition>
+						</ProcessMessage>
+					</Loop>
+				</EntityContext>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="area_inside" comment="" />
+				<Variable name="areas_gate" comment="" />
+				<Variable name="perceptionInfo" comment="" />
+				<Variable name="playerInsideGateArea" comment="" />
+				<Variable name="QSO" comment="" />
+			</Variables>
+			<ForwardDeclarations>
+				<Variable name="QSO" type="_wuid" values="" isPersistent="0" form="single" requirementType="ForwardDeclaration" />
+			</ForwardDeclarations>
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AddInterrupt_kzik_gateGuardBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddInterrupt_kzik_gateGuardBehavior>
+								</IfCondition>
+							</ProcessMessage>
+						</Loop>
+					</EntityContext>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="kzik_customRatSwitch" is_function="0">
+		<Variables>
+			<Variable name="perceptionInfo" type="perceptionInfo" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Loop count="-1">
+					<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$perceptionInfo" senderInfo="" inbox="&apos;perceptionInfo&apos;" condition="" answerVar="">
+						<IfCondition failOnCondition="false" condition="$perceptionInfo.perceptible == $__player &amp; &#10;$perceptionInfo.threshold == 1">
+							<AddInterrupt_kzik_ratBehavior Target="$this.id" Host="$QSO" Behavior="&apos;kzik_ratBehavior&apos;" Priority="29" IgnorePriorityOnPreviousInterrupt="false" urgency="Fast" Aliveness="Alive" Privileged="false" FastForward="false" />
+						</IfCondition>
+					</ProcessMessage>
+				</Loop>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="perceptionInfo" comment="" />
+				<Variable name="QSO" comment="" />
+			</Variables>
+			<ForwardDeclarations>
+				<Variable name="QSO" type="_wuid" values="" isPersistent="0" form="single" requirementType="ForwardDeclaration" />
+			</ForwardDeclarations>
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Loop hasInputBreakpoint="0" comment="PerceptionTrigger" breakpointFlags="0">
+						<OutputBreakpoints />
+						<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AddInterrupt_kzik_ratBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</AddInterrupt_kzik_ratBehavior>
+							</IfCondition>
+						</ProcessMessage>
+					</Loop>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="kzik_ratBehaviour" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<LogToLabel Name="&apos;interrupt&apos;" Wuid="" Message="&apos;kzik_ratBehavior&apos;">
+					<Parallel successMode="Any" failureMode="Any">
+						<CrimeFollower Target="$__player" Role="Main" />
+						<Function_speech_dialogInitiator alias="&apos;bonzakDesign_bonzakForcujeChat&apos;" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="" preset="$enum:dialogPreset.chat" recipient="$__player" recipientMetaroles="" nodeLabel="42158864" />
+					</Parallel>
+				</LogToLabel>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="kzik_ratBehavior" EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root editorPosX="50" editorPosY="100" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<CrimeFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</CrimeFollower>
+							<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_speech_dialogInitiator>
+						</Parallel>
+					</LogToLabel>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="kzik_player_teleportOutsideCamp" is_function="0">
+		<Variables>
+			<Variable name="outsideCampPoints" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Selector>
+						<Sequence>
+							<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<LinkTagFilter tag="&apos;outsideCampTeleportPoint&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+								<Nodalyzer Quantifiers="ForAll" Parent="" Child="$outsideCampPoints" saveVersion="2">
+									<Child0 canSkip="1">
+										<RangeSorter point="$__player" SortOrder="Ascending" Source="Child" />
+									</Child0>
+								</Nodalyzer>
+							</GraphSearch>
+							<TeleportAction Position="$outsideCampPoints[0]" />
+							<Turn target="$outsideCampPoints[0]" align="true" />
+						</Sequence>
+						<ErrorNode Message="&apos;[kzik_player_teleportOutsideCamp] Can\&apos;t find points to teleport&apos;" />
+					</Selector>
+					<Callback_empty EventName="&apos;OnFinished&apos;" />
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="endNotification">
+			<Variables>
+				<Variable name="outsideCampPoints" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkTagFilter>
+									<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Child0>
+											<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RangeSorter>
+										</Child0>
+									</Nodalyzer>
+								</GraphSearch>
+								<TeleportAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</TeleportAction>
+								<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Turn>
+							</Sequence>
+							<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</ErrorNode>
+						</Selector>
+						<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Callback_empty>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="kzik_arrestOverridePredicate" is_function="0">
+		<Variables>
+			<Variable name="information_val" type="information" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<ForEach startIndex="0" step="1" array="$information" iterator="" value="$information_val" break="">
+					<IfCondition failOnCondition="false" condition="$information_val.label == &apos;trespass&apos;">
+						<Expression expressions="$shouldOverride = true" />
+					</IfCondition>
+				</ForEach>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="information_val" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="overrideEntity" comment="" />
+				<Variable name="shouldOverride" comment="" />
+			</Variables>
+			<ForwardDeclarations>
+				<Variable name="information" type="information" values="" isPersistent="0" form="array" requirementType="ForwardDeclaration" />
+				<Variable name="overrideEntity" type="_wuid" values="" isPersistent="0" form="single" requirementType="ForwardDeclaration" />
+				<Variable name="shouldOverride" type="_bool" values="" isPersistent="0" form="single" requirementType="ForwardDeclaration" />
+			</ForwardDeclarations>
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</IfCondition>
+					</ForEach>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="interrupt_kzik_guardTeleport" is_function="0">
+		<Variables>
+			<Variable name="outsideCampPoints" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Parameters>
+			<Variable name="qso" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<AnyDecorator preset="crime_keepItems" enabled="true">
+					<Selector>
+						<Sequence>
+							<GraphSearch Origin="$qso" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<LinkTagFilter tag="&apos;outsideCampTeleportGuardPoint&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+								<Nodalyzer Quantifiers="ForAll" Parent="" Child="$outsideCampPoints" saveVersion="2">
+									<Child0 canSkip="1">
+										<RangeSorter point="$__player" SortOrder="Ascending" Source="Child" />
+									</Child0>
+								</Nodalyzer>
+							</GraphSearch>
+							<TeleportAction Position="$outsideCampPoints[0]" EndInterruptOnActionStart="false" />
+							<Turn target="$outsideCampPoints[0]" align="true" />
+						</Sequence>
+						<ErrorNode Message="&apos;[kzik_player_teleportOutsideCamp] Can\&apos;t find points to teleport&apos;" />
+					</Selector>
+				</AnyDecorator>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="interrupt_kzik_guardTeleport" EventSet="">
+			<Variables>
+				<Variable name="outsideCampPoints" comment="" />
+				<Variable name="qso" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-80" editorPosY="30" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<AnyDecorator hasInputBreakpoint="0" comment="We use teleport from sa_land" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkTagFilter>
+									<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Child0>
+											<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RangeSorter>
+										</Child0>
+									</Nodalyzer>
+								</GraphSearch>
+								<TeleportAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</TeleportAction>
+								<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Turn>
+							</Sequence>
+							<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</ErrorNode>
+						</Selector>
+					</AnyDecorator>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="kzik_prepareArrest" is_function="1">
+		<Variables>
+			<Variable name="faderCH" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="guardSpot" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="outsideCampPoints" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="qso" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="reactor" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="wuids" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="wuids_val" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="reactors" type="_wuid" values="" isPersistent="0" form="array" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<SuppressFailure>
+					<AtomicDecorator>
+						<Sequence>
+							<Sequence>
+								<GraphSearch Origin="$__land" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+									<LinkTagFilter tag="&apos;kzik_openworld&apos;" prune="true" negprune="unknown" Parent="" Child="$qso" Data="" />
+								</GraphSearch>
+								<GraphSearch Origin="$qso" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+									<Nodalyzer Quantifiers="Exists" Parent="" Child="$faderCH" saveVersion="2" />
+									<LinkDataFilter tag="&apos;asset&apos;" condition="$__link_asset == &apos;kzik_faderCH&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+								</GraphSearch>
+								<GraphSearch Origin="$qso" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+									<LinkTagFilter tag="&apos;outsideCampTeleportPoint&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+									<Nodalyzer Quantifiers="ForAll" Parent="" Child="$outsideCampPoints" saveVersion="2">
+										<Child0 canSkip="1">
+											<RangeSorter point="$__player" SortOrder="Ascending" Source="Child" />
+										</Child0>
+									</Nodalyzer>
+								</GraphSearch>
+								<GraphSearch Origin="$outsideCampPoints[0]" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+									<LinkTagFilter tag="&apos;guardSpot&apos;" prune="true" negprune="unknown" Parent="" Child="$guardSpot" Data="" />
+								</GraphSearch>
+							</Sequence>
+							<Sequence>
+								<Function_crime_removeLinksByName linkName="&apos;fastForward&apos;" sourceEntity="$faderCH" nodeLabel="17061700" />
+								<Function_crime_removeLinksByName linkName="&apos;teleport&apos;" sourceEntity="$faderCH" nodeLabel="35722626" />
+								<SuppressFailure>
+									<Sequence>
+										<GraphSearch Origin="$guardSpot" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;setting&apos;" prune="true" negprune="unknown" Parent="" Child="$wuids_val" Data="" />
+										</GraphSearch>
+										<RemoveLink From="$guardSpot" To="$wuids_val" Tag="&apos;setting&apos;" LinkOpHandleMode="OverWrite" />
+									</Sequence>
+								</SuppressFailure>
+							</Sequence>
+							<Sequence>
+								<ForEach startIndex="0" step="1" array="$reactors" iterator="" value="$reactor" break="">
+									<IfCondition failOnCondition="false" condition="$reactor ~= $this.id &amp; &#10;$reactor ~= $__player">
+										<AddLink From="$faderCH" To="$reactor" Tag="&apos;fastForward&apos;" Data="" LinkOpHandleMode="OverWrite" />
+									</IfCondition>
+								</ForEach>
+								<Sequence>
+									<AddLink From="$faderCH" To="$guardSpot" Tag="&apos;teleport&apos;" Data="" LinkOpHandleMode="OverWrite" />
+									<AddLink From="$guardSpot" To="$this.id" Tag="&apos;setting&apos;" Data="" LinkOpHandleMode="OverWrite" />
+								</Sequence>
+								<AddLink From="$faderCH" To="$outsideCampPoints[0]" Tag="&apos;teleport&apos;" Data="" LinkOpHandleMode="OverWrite" />
+							</Sequence>
+						</Sequence>
+					</AtomicDecorator>
+				</SuppressFailure>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="faderCH" comment="" />
+				<Variable name="guardSpot" comment="" />
+				<Variable name="outsideCampPoints" comment="" />
+				<Variable name="qso" comment="" />
+				<Variable name="reactor" comment="" />
+				<Variable name="wuids" comment="" />
+				<Variable name="wuids_val" comment="" />
+				<Variable name="reactors" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GraphSearch hasInputBreakpoint="0" comment="Get QSO" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</LinkTagFilter>
+									</GraphSearch>
+									<GraphSearch hasInputBreakpoint="0" comment="Get Fader cutscene" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+										</Nodalyzer>
+										<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</LinkDataFilter>
+									</GraphSearch>
+									<GraphSearch hasInputBreakpoint="0" comment="Get Player teleport position" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</LinkTagFilter>
+										<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Child0>
+												<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</RangeSorter>
+											</Child0>
+										</Nodalyzer>
+									</GraphSearch>
+									<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</LinkTagFilter>
+									</GraphSearch>
+								</Sequence>
+								<Sequence hasInputBreakpoint="0" comment="Cleanup everything" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_removeLinksByName hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_removeLinksByName>
+									<Function_crime_removeLinksByName hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_removeLinksByName>
+									<SuppressFailure hasInputBreakpoint="0" comment="Cleanup setting from guardSpot" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+											<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RemoveLink>
+										</Sequence>
+									</SuppressFailure>
+								</Sequence>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ForEach hasInputBreakpoint="0" comment="Fast forwards" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</AddLink>
+										</IfCondition>
+									</ForEach>
+									<Sequence hasInputBreakpoint="0" comment="Teleport guard" breakpointFlags="0">
+										<OutputBreakpoints />
+										<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</AddLink>
+										<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</AddLink>
+									</Sequence>
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+								</Sequence>
+							</Sequence>
+						</AtomicDecorator>
+					</SuppressFailure>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

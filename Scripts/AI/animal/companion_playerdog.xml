@@ -1,0 +1,544 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="onUpdate" is_function="0">
+		<Variables>
+			<Variable name="companionMode" type="enum:dogCompanionMode" values="" isPersistent="0" form="single" />
+			<Variable name="continuousObjective" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="firstTimeMode" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="initMaster" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="objectiveChange" type="dog:objectiveChangeRequestSkald" values="" isPersistent="0" form="single" />
+			<Variable name="objectiveChangeRequest" type="dog:objectiveChangeRequest" values="" isPersistent="0" form="single" />
+			<Variable name="objectiveChangeRequestSkald" type="dog:objectiveChangeRequestSkald" values="" isPersistent="0" form="single" />
+			<Variable name="objectiveInterrupt" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="objectiveStart" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="objectiveTime" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="playerMaster" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<While doFail="false" propagateChildFail="false" condition="true">
+					<Parallel successMode="Any" failureMode="Any">
+						<Loop count="-1">
+							<Sequence>
+								<Expression expressions="$playerMaster = false &#10;$objectiveInterrupt = true" />
+								<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+									<LinkTagFilter tag="&apos;initMaster&apos;" prune="true" negprune="unknown" Parent="" Child="$initMaster" Data="" />
+								</GraphSearch>
+								<IfCondition failOnCondition="false" condition="$initMaster == $__null">
+									<Expression expressions="$initMaster = $__player &#10;$playerMaster = true" />
+								</IfCondition>
+								<IfElseCondition failOnCondition="false" condition="$initMaster == $__player" saveVersion="2">
+									<Then canSkip="1">
+										<Sequence>
+											<AddLink From="$this.id" To="$this.id" Tag="&apos;isPlayerDog&apos;" Data="" LinkOpHandleMode="OverWrite" />
+											<EnablePerception Perceptor="true" Perceptible="true" ToWhom="$this.id" />
+										</Sequence>
+									</Then>
+									<Else canSkip="1">
+										<Sequence>
+											<RemoveLink From="$this.id" To="$this.id" Tag="&apos;isPlayerDog&apos;" LinkOpHandleMode="Success" />
+											<DisablePerception Perceptor="true" Perceptible="true" ToWhom="$this.id" />
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+								<SetCompanion Master="$initMaster" Companion="$this.id" Action="Add" />
+								<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+									<LinkTagFilter tag="&apos;firstTimeMode&apos;" prune="true" negprune="unknown" Parent="" Child="$firstTimeMode" Data="" />
+								</GraphSearch>
+								<IfCondition failOnCondition="false" condition="$firstTimeMode == $__null">
+									<Sequence>
+										<SetDogCompanionMode Companion="$this.id" Mode="Free" />
+										<AddLink From="$this.id" To="$this.id" Tag="&apos;firstTimeMode&apos;" Data="" LinkOpHandleMode="Error" />
+									</Sequence>
+								</IfCondition>
+								<IfElseCondition failOnCondition="false" condition="$playerMaster" saveVersion="2">
+									<Then canSkip="1">
+										<LinkGate from="$this.id" to="" tag="&apos;initMaster&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+											<SetDogCompanionMode Companion="$this.id" Mode="Free" />
+										</LinkGate>
+									</Then>
+									<Else canSkip="1">
+										<LinkGate from="$this.id" to="$initMaster" tag="&apos;initMaster&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="KeepRunning">
+											<SetDogCompanionMode Companion="$this.id" Mode="Free" />
+										</LinkGate>
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+						</Loop>
+						<Loop count="-1">
+							<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$objectiveChangeRequest" senderInfo="" inbox="&apos;dogCompanionObjectiveRequest&apos;" condition="" answerVar="">
+								<Parallel successMode="Any" failureMode="Any">
+									<RequestDogObjective Companion="$this.id" Objective="$objectiveChangeRequest.objective" Priority="$objectiveChangeRequest.priority" ParamPosition="$objectiveChangeRequest.position" ParamDirection="$objectiveChangeRequest.direction" ParamTarget="$objectiveChangeRequest.target" />
+									<Wait duration="$objectiveChangeRequest.time" timeType="GameTime" doFail="false" variation="" />
+								</Parallel>
+							</ProcessMessage>
+						</Loop>
+						<Loop count="-1">
+							<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$objectiveChangeRequestSkald" senderInfo="" inbox="&apos;dogCompanionObjectiveRequestSkald&apos;" condition="" answerVar="">
+								<IfCondition failOnCondition="false" condition="$objectiveChangeRequestSkald.priority &gt;= $objectiveChange.priority">
+									<Expression expressions="$objectiveInterrupt = true &#10;$objectiveStart = true" />
+								</IfCondition>
+							</ProcessMessage>
+						</Loop>
+						<Loop count="-1">
+							<IfGate atomic="false" condition="$objectiveStart" RunLogic="KeepRunning">
+								<Sequence>
+									<Expression expressions="$objectiveStart = false &#10;$objectiveInterrupt = false &#10;$continuousObjective = false &#10;$objectiveChange = $objectiveChangeRequestSkald" />
+									<IfCondition failOnCondition="false" condition="$objectiveChange.objective == $enum:dogObjective.bark | &#10;$objectiveChange.objective == $enum:dogObjective.dig | &#10;$objectiveChange.objective == $enum:dogObjective.shakeOut | &#10;$objectiveChange.objective == $enum:dogObjective.fail">
+										<Expression expressions="$continuousObjective = true" />
+									</IfCondition>
+									<Parallel successMode="Any" failureMode="Any">
+										<IfElseCondition failOnCondition="false" condition="$continuousObjective" saveVersion="2">
+											<Then canSkip="1">
+												<Loop count="-1">
+													<RequestDogObjective Companion="$this.id" Objective="$objectiveChange.objective" Priority="$objectiveChange.priority" ParamPosition="" ParamDirection="" ParamTarget="$objectiveChange.target" />
+												</Loop>
+											</Then>
+											<Else canSkip="1">
+												<IfElseCondition failOnCondition="false" condition="$objectiveChange.objective == $enum:dogObjective.teleport &amp; &#10;$objectiveChange.target ~= $__null" saveVersion="2">
+													<Then canSkip="1">
+														<LoopUntil until="Success" attemptCount="0">
+															<RequestDogObjective Companion="$this.id" Objective="$objectiveChange.objective" Priority="$objectiveChange.priority" ParamPosition="" ParamDirection="" ParamTarget="$objectiveChange.target" />
+														</LoopUntil>
+													</Then>
+													<Else canSkip="1">
+														<IfElseCondition failOnCondition="false" condition="$objectiveChange.objective == $enum:dogObjective.meleeCombat" saveVersion="2">
+															<Then canSkip="1">
+																<RequestDogObjective Companion="$this.id" Objective="$objectiveChange.objective" Priority="$objectiveChange.priority" ParamPosition="" ParamDirection="" ParamTarget="$objectiveChange.target" />
+															</Then>
+															<Else canSkip="1">
+																<RequestDogObjective Companion="$this.id" Objective="$objectiveChange.objective" Priority="$objectiveChange.priority" ParamPosition="$objectiveChange.position" ParamDirection="$objectiveChange.direction" ParamTarget="$objectiveChange.target" />
+															</Else>
+														</IfElseCondition>
+													</Else>
+												</IfElseCondition>
+											</Else>
+										</IfElseCondition>
+										<Sequence>
+											<IfElseCondition failOnCondition="false" condition="$objectiveChange.time == &apos;&apos;" saveVersion="2">
+												<Then canSkip="1">
+													<Expression expressions="$objectiveTime = &apos;-1&apos;" />
+												</Then>
+												<Else canSkip="1">
+													<Expression expressions="$objectiveTime = $objectiveChange.time" />
+												</Else>
+											</IfElseCondition>
+											<Wait duration="$objectiveTime" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+										<IfGate atomic="false" condition="$objectiveInterrupt" RunLogic="KeepRunning">
+											<Success />
+										</IfGate>
+									</Parallel>
+									<Expression expressions="$objectiveInterrupt = false" />
+									<ReinitVariable variable="$objectiveChange" />
+								</Sequence>
+							</IfGate>
+						</Loop>
+						<Loop count="-1">
+							<CompanionObjectiveGate Companion="$this.id" Objective="MeleeCombat" RunLogic="Halt">
+								<EntityContext context="dog_meleeCombat" target="$this.id">
+									<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+								</EntityContext>
+							</CompanionObjectiveGate>
+						</Loop>
+						<Loop count="-1">
+							<EntityContextBarrier context="dog_eatObjective" target="" Negation="false" RunLogic="KeepRunning">
+								<CompanionObjectiveGate Companion="$this.id" Objective="Eat" RunLogic="Halt">
+									<Sequence>
+										<SendAIConceptSignal_companionDog_startsEat />
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</CompanionObjectiveGate>
+							</EntityContextBarrier>
+						</Loop>
+						<Loop count="-1">
+							<EntityContextBarrier context="dog_barkObjective" target="" Negation="false" RunLogic="KeepRunning">
+								<IfGate atomic="false" condition="$objectiveChange.objective == $enum:dogObjective.bark" RunLogic="Halt">
+									<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+										<Child canSkip="1">
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Child>
+										<OnSuccess canSkip="1">
+											<SendAIConceptSignal_companionDog_endsBark />
+										</OnSuccess>
+									</FuseBox>
+								</IfGate>
+							</EntityContextBarrier>
+						</Loop>
+						<Loop count="-1">
+							<DialogGate Who="$this.id" Negation="false" EndDialogInRoot="false" Condition="InAny" RunLogic="Halt">
+								<CompanionObjectiveCondition Companion="$this.id" Objective="Wait" FailSubtMissing="false" saveVersion="2">
+									<Then canSkip="1">
+										<Sequence>
+											<RequestDogObjective Companion="$this.id" Objective="Wait" Priority="Follow" ParamPosition="" ParamDirection="" ParamTarget="$__player" />
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+									</Then>
+									<Else canSkip="1">
+										<Sequence>
+											<Switch>
+												<DistanceCondition Origin="$this.id" ReferencePt="$__player" Low="3.000000" High="3.000000" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+													<Success />
+												</DistanceCondition>
+												<DefaultBranch>
+													<Parallel successMode="Any" failureMode="Any">
+														<RequestDogObjective Companion="$this.id" Objective="FollowHeel" Priority="BestFun" ParamPosition="" ParamDirection="" ParamTarget="$__player" />
+														<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="2.000000" High="2.000000" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+															<Success />
+														</DistanceGate>
+													</Parallel>
+												</DefaultBranch>
+											</Switch>
+											<RequestDogObjective Companion="$this.id" Objective="Wait" Priority="BestFun" ParamPosition="" ParamDirection="" ParamTarget="$__player" />
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+									</Else>
+								</CompanionObjectiveCondition>
+							</DialogGate>
+						</Loop>
+					</Parallel>
+				</While>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="companionMode" comment="" />
+				<Variable name="continuousObjective" comment="" />
+				<Variable name="firstTimeMode" comment="" />
+				<Variable name="initMaster" comment="" />
+				<Variable name="objectiveChange" comment="" />
+				<Variable name="objectiveChangeRequest" comment="" />
+				<Variable name="objectiveChangeRequestSkald" comment="" />
+				<Variable name="objectiveInterrupt" comment="" />
+				<Variable name="objectiveStart" comment="" />
+				<Variable name="objectiveTime" comment="" />
+				<Variable name="playerMaster" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-250" editorPosY="-400" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</LinkTagFilter>
+									</GraphSearch>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</IfCondition>
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</AddLink>
+												<EnablePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</EnablePerception>
+											</Sequence>
+										</Then>
+										<Else>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</RemoveLink>
+												<DisablePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</DisablePerception>
+											</Sequence>
+										</Else>
+									</IfElseCondition>
+									<SetCompanion hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</SetCompanion>
+									<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</LinkTagFilter>
+									</GraphSearch>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<SetDogCompanionMode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</SetDogCompanionMode>
+											<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</AddLink>
+										</Sequence>
+									</IfCondition>
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<SetDogCompanionMode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</SetDogCompanionMode>
+											</LinkGate>
+										</Then>
+										<Else>
+											<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<SetDogCompanionMode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</SetDogCompanionMode>
+											</LinkGate>
+										</Else>
+									</IfElseCondition>
+								</Sequence>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<RequestDogObjective hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</RequestDogObjective>
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</Parallel>
+								</ProcessMessage>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</IfCondition>
+								</ProcessMessage>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</IfCondition>
+										<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<RequestDogObjective hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</RequestDogObjective>
+													</Loop>
+												</Then>
+												<Else>
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<RequestDogObjective hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</RequestDogObjective>
+															</LoopUntil>
+														</Then>
+														<Else>
+															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<RequestDogObjective hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</RequestDogObjective>
+																</Then>
+																<Else>
+																	<RequestDogObjective hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</RequestDogObjective>
+																</Else>
+															</IfElseCondition>
+														</Else>
+													</IfElseCondition>
+												</Else>
+											</IfElseCondition>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Then>
+													<Else>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Else>
+												</IfElseCondition>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+											<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</IfGate>
+										</Parallel>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ReinitVariable>
+									</Sequence>
+								</IfGate>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<CompanionObjectiveGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</EntityContext>
+								</CompanionObjectiveGate>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<CompanionObjectiveGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<SendAIConceptSignal_companionDog_startsEat hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</SendAIConceptSignal_companionDog_startsEat>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</CompanionObjectiveGate>
+								</EntityContextBarrier>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Child>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Child>
+											<OnSuccess>
+												<SendAIConceptSignal_companionDog_endsBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</SendAIConceptSignal_companionDog_endsBark>
+											</OnSuccess>
+										</FuseBox>
+									</IfGate>
+								</EntityContextBarrier>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<DialogGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<CompanionObjectiveCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<RequestDogObjective hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</RequestDogObjective>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+										</Then>
+										<Else>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Success>
+													</DistanceCondition>
+													<DefaultBranch>
+														<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<RequestDogObjective hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</RequestDogObjective>
+															<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Success>
+															</DistanceGate>
+														</Parallel>
+													</DefaultBranch>
+												</Switch>
+												<RequestDogObjective hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</RequestDogObjective>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+										</Else>
+									</CompanionObjectiveCondition>
+								</DialogGate>
+							</Loop>
+						</Parallel>
+					</While>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

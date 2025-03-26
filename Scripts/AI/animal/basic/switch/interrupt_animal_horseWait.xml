@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_animal_horseWait" is_function="0">
+		<Variables>
+			<Variable name="blockedLock" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="blockedReturnReservation" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="lockName" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="shouldExit" type="_bool" values="false" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="isHorseBuyingSpecialWait" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="length" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<Concatenation OutString="$lockName" Pattern="&apos;horseWaitLock_$this.id;&apos;" />
+					<SetExternalLock LockManagerType="Global" Locked="true" LockName="&apos;$lockName&apos;" />
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<EntityContext context="crime_animal_interruptHorseWait" target="$this.id">
+							<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+								<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:animal:horseWait&apos;">
+									<DecoratorBuff BuffId="&apos;0ba907a9-780f-4427-ba8a-a3b2a788d0bc&apos;" SoulWUID="$this.id">
+										<IfGate atomic="false" condition="~($shouldExit &amp; ~$blockedLock &amp; ~$blockedReturnReservation)" RunLogic="Halt">
+											<Sequence>
+												<Function_crime_animal_confirmReactionLink reactionKind="$enum:crime_animal_reactionKind.horseWait" target="" nodeLabel="37430052" />
+												<StopMovement waitUntilStopped="false" />
+												<Parallel successMode="Any" failureMode="Any">
+													<Sequence>
+														<IfElseCondition failOnCondition="false" condition="$isHorseBuyingSpecialWait" saveVersion="2">
+															<Then canSkip="1">
+																<LogToLabel Name="&apos;waitType&apos;" Wuid="$this.id" Message="&apos;SpecialWait&apos;">
+																	<DecoratorBuff BuffId="&apos;730503bf-735a-4f47-baae-c2d84ee77524&apos;" SoulWUID="$this.id">
+																		<Sequence>
+																			<UrgencyDecorator Urgency="Fast">
+																				<WaitAction />
+																			</UrgencyDecorator>
+																			<DialogGate Who="$__player" Negation="true" EndDialogInRoot="false" Condition="InNormalDialog" RunLogic="Halt">
+																				<Success />
+																			</DialogGate>
+																			<Wait duration="$length" timeType="GameTime" doFail="false" variation="" />
+																			<Expression expressions="$shouldExit = true" />
+																		</Sequence>
+																	</DecoratorBuff>
+																</LogToLabel>
+															</Then>
+															<Else canSkip="1">
+																<LogToLabel Name="&apos;waitType&apos;" Wuid="$this.id" Message="&apos;Normal wait, length &quot;$length;&quot;&apos;">
+																	<Sequence>
+																		<Wait duration="$length" timeType="GameTime" doFail="false" variation="" />
+																		<Expression expressions="$shouldExit = true" />
+																	</Sequence>
+																</LogToLabel>
+															</Else>
+														</IfElseCondition>
+														<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+													</Sequence>
+													<Loop count="-1">
+														<Sequence>
+															<Expression expressions="$blockedLock = false" />
+															<ExternalLock atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;$lockName&apos;" RunLogic="Halt">
+																<LogToLabel Name="&apos;blockedLock&apos;" Wuid="$this.id" Message="&apos;Blocked by Lock&apos;">
+																	<Sequence>
+																		<Expression expressions="$blockedLock = true" />
+																		<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																	</Sequence>
+																</LogToLabel>
+															</ExternalLock>
+														</Sequence>
+													</Loop>
+													<Loop count="-1">
+														<Sequence>
+															<Expression expressions="$blockedReturnReservation = false" />
+															<LinkGate from="" to="$this.id" tag="&apos;crime_followUpBehavior_returnStartledAnimal&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																<LogToLabel Name="&apos;blockedReservation&apos;" Wuid="$this.id" Message="&apos;Blocked by ReturnReservation&apos;">
+																	<Sequence>
+																		<Expression expressions="$blockedReturnReservation = true" />
+																		<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																	</Sequence>
+																</LogToLabel>
+															</LinkGate>
+														</Sequence>
+													</Loop>
+												</Parallel>
+											</Sequence>
+										</IfGate>
+									</DecoratorBuff>
+								</LogToLabel>
+							</AddPerceivableState>
+						</EntityContext>
+					</Child>
+					<OnFail canSkip="1">
+						<Sequence>
+							<SetExternalLock LockManagerType="Global" Locked="false" LockName="&apos;$lockName&apos;" />
+							<Function_crime_animal_removeReactionLink reactionKind="$enum:crime_animal_reactionKind.horseWait" target="" nodeLabel="41507826" />
+						</Sequence>
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="animal_horseWait" EventSet="">
+			<Variables>
+				<Variable name="blockedLock" comment="" />
+				<Variable name="blockedReturnReservation" comment="" />
+				<Variable name="lockName" comment="" />
+				<Variable name="shouldExit" comment="" />
+				<Variable name="isHorseBuyingSpecialWait" comment="" />
+				<Variable name="length" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Concatenation>
+						<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</SetExternalLock>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<DecoratorBuff hasInputBreakpoint="0" comment="don&apos;t unstream" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_crime_animal_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_animal_confirmReactionLink>
+													<StopMovement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</StopMovement>
+													<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<DecoratorBuff hasInputBreakpoint="0" comment="What if horse dies during dialog" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</WaitAction>
+																				</UrgencyDecorator>
+																				<DialogGate hasInputBreakpoint="0" comment="Wait in here until dialog ends" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Success>
+																				</DialogGate>
+																				<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Wait>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Sequence>
+																		</DecoratorBuff>
+																	</LogToLabel>
+																</Then>
+																<Else>
+																	<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Wait>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Sequence>
+																	</LogToLabel>
+																</Else>
+															</IfElseCondition>
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</Sequence>
+														<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<ExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Wait>
+																		</Sequence>
+																	</LogToLabel>
+																</ExternalLock>
+															</Sequence>
+														</Loop>
+														<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Wait>
+																		</Sequence>
+																	</LogToLabel>
+																</LinkGate>
+															</Sequence>
+														</Loop>
+													</Parallel>
+												</Sequence>
+											</IfGate>
+										</DecoratorBuff>
+									</LogToLabel>
+								</AddPerceivableState>
+							</EntityContext>
+						</Child>
+						<OnFail>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</SetExternalLock>
+								<Function_crime_animal_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_animal_removeReactionLink>
+							</Sequence>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

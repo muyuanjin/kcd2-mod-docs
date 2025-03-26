@@ -1,0 +1,960 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="onUpdate" is_function="0">
+		<Variables>
+			<Variable name="areaInhabitants" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="areaInhabitants_type" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="areaInhabitants_val" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="cooldownTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="distance" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="dummy_int" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="extraGuardsData" type="crime:extraGuardsData" values="" isPersistent="0" form="single" />
+			<Variable name="guards" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="guards_guard" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="highAngriness" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="inhabitantsArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="isOnCooldown" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="isSpawned" type="_bool" values="false" isPersistent="1" form="single" />
+			<Variable name="minDistancePlayerToGuards" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="scheduleDespawn" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="scheduleSpawn" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="validInhabitants" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<LinkGate from="$this.id" to="$this.id" tag="&apos;extraGuards_location&apos;" amount="AtLeastOne" presence="Present" RunLogic="Halt">
+					<Sequence>
+						<Selector>
+							<Sequence>
+								<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+									<LinkTagFilter tag="&apos;extraGuards_location&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$extraGuardsData" />
+								</GraphSearch>
+								<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+									<LinkTagFilter tag="&apos;inhabitantsArea&apos;" prune="true" negprune="unknown" Parent="" Child="$inhabitantsArea" Data="" />
+								</GraphSearch>
+							</Sequence>
+							<ErrorNode Message="&apos;[ExtraGuards] unable to retrieve extraGuardsData or inhabitantsArea from SO [$this.id;]&apos;" />
+							<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+						</Selector>
+						<Loop count="-1">
+							<Sequence>
+								<LinkGate from="$this.id" to="$this.id" tag="&apos;extraGuards_disable&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="Halt">
+									<Parallel successMode="Any" failureMode="Any">
+										<Loop count="-1">
+											<Sequence>
+												<AtomicDecorator>
+													<Sequence>
+														<Expression expressions="$highAngriness = false &#10;$isOnCooldown = false &#10;$scheduleSpawn = false &#10;$scheduleDespawn = false" />
+														<CheckAngrinessInterval type="Violence" Faction="$extraGuardsData.faction" Flag="extraGuardsSpawn" saveVersion="2">
+															<Then canSkip="1">
+																<Expression expressions="$highAngriness = true" />
+															</Then>
+															<Else canSkip="1">
+																<Expression expressions="$highAngriness = false" />
+															</Else>
+														</CheckAngrinessInterval>
+														<SuppressFailure>
+															<Sequence>
+																<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																	<LinkTagFilter tag="&apos;extraGuards_cooldown&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$cooldownTime" />
+																</GraphSearch>
+																<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+																<IfElseCondition failOnCondition="false" condition="$cooldownTime &lt; $currentTime" saveVersion="2">
+																	<Then canSkip="1">
+																		<RemoveLink From="$this.id" To="$this.id" Tag="&apos;extraGuards_cooldown&apos;" LinkOpHandleMode="OverWrite" />
+																	</Then>
+																	<Else canSkip="1">
+																		<Expression expressions="$isOnCooldown = true" />
+																	</Else>
+																</IfElseCondition>
+															</Sequence>
+														</SuppressFailure>
+														<IfElseCondition failOnCondition="false" condition="$isSpawned" saveVersion="2">
+															<Then canSkip="1">
+																<IfCondition failOnCondition="false" condition="~$highAngriness">
+																	<Expression expressions="$scheduleSpawn = false &#10;$scheduleDespawn = true" />
+																</IfCondition>
+															</Then>
+															<Else canSkip="1">
+																<IfCondition failOnCondition="false" condition="$highAngriness &amp; ~$isOnCooldown">
+																	<Expression expressions="$scheduleSpawn = true &#10;$scheduleDespawn = false" />
+																</IfCondition>
+															</Else>
+														</IfElseCondition>
+													</Sequence>
+												</AtomicDecorator>
+												<Wait duration="&apos;1m&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Sequence>
+										</Loop>
+										<Loop count="-1">
+											<IfGate atomic="false" condition="$scheduleSpawn" RunLogic="Halt">
+												<AtomicDecorator>
+													<Sequence>
+														<Function_extraGuards_linkSpawnPoints smartObject="$this.id" nodeLabel="33825950" />
+														<SendAIConceptSignal_extraGuards_notification location="$extraGuardsData.location" operation="$enum:extraGuards_operation.Spawn" />
+														<LogToConsole LogLevel="Info" Message="&apos;[ExtraGuards] Spawning extraGuards for faction \&apos;$extraGuardsData.faction;\&apos;&apos;" />
+														<Expression expressions="$isSpawned = true &#10;$scheduleSpawn = false" />
+														<GameContextCheck context="crime_extraGuards_debugEnabled" saveVersion="2">
+															<Then canSkip="1">
+																<ExecuteLua code="Game.SendInfoText(&apos;DEBUG___extraGuards, spawning guards for faction \&apos;&apos; .. data.faction .. &apos;\&apos;&apos;,false)" />
+															</Then>
+														</GameContextCheck>
+													</Sequence>
+												</AtomicDecorator>
+											</IfGate>
+										</Loop>
+										<Loop count="-1">
+											<IfGate atomic="false" condition="$scheduleDespawn" RunLogic="Halt">
+												<Loop count="-1">
+													<Sequence>
+														<AtomicDecorator>
+															<SuppressFailure>
+																<Sequence>
+																	<ReinitVariable variable="$guards" />
+																	<Selector>
+																		<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																			<LinkTagFilter tag="&apos;extraGuard&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																			<Nodalyzer Quantifiers="ForAll" Parent="" Child="$guards" saveVersion="2" />
+																		</GraphSearch>
+																		<ErrorNode Message="&apos;[ExtraGuards] unable to get spawned guards, maybe some kind of linking issue?&apos;" />
+																	</Selector>
+																	<Sequence>
+																		<Sequence>
+																			<Expression expressions="$minDistancePlayerToGuards = 1000" />
+																			<ForEach startIndex="0" step="1" array="$guards" iterator="" value="$guards_guard" break="">
+																				<Sequence>
+																					<MeasureDistance position1="$__player" position2="$guards_guard" mode="ThreeDimensions" result="$distance" />
+																					<Expression expressions="$minDistancePlayerToGuards = ($distance &lt; $minDistancePlayerToGuards) ? $distance : $minDistancePlayerToGuards" />
+																				</Sequence>
+																			</ForEach>
+																		</Sequence>
+																		<IfCondition failOnCondition="false" condition="$minDistancePlayerToGuards &gt; $data:script_param[&apos;crime_extraGuards_distanceThreshold&apos;].value">
+																			<Sequence>
+																				<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+																				<Expression expressions="$currentTime = $currentTime + $data:script_param[&apos;crime_extraGuards_cooldown&apos;].value * 1000" />
+																				<AddLink From="$this.id" To="$this.id" Tag="&apos;extraGuards_cooldown&apos;" Data="$currentTime" LinkOpHandleMode="OverWrite" />
+																				<SendAIConceptSignal_extraGuards_notification location="$extraGuardsData.location" operation="$enum:extraGuards_operation.Despawn" />
+																				<Expression expressions="$isSpawned = false &#10;$scheduleDespawn = false" />
+																			</Sequence>
+																		</IfCondition>
+																	</Sequence>
+																</Sequence>
+															</SuppressFailure>
+														</AtomicDecorator>
+														<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+													</Sequence>
+												</Loop>
+											</IfGate>
+										</Loop>
+										<Loop count="-1">
+											<LinkGate from="$this.id" to="" tag="&apos;extraGuard&apos;" amount="AtLeastOne" presence="Present" RunLogic="Halt">
+												<Sequence>
+													<AtomicDecorator>
+														<IfCondition failOnCondition="false" condition="$inhabitantsArea ~= $__null">
+															<Sequence>
+																<GetAreaInhabitants area="$inhabitantsArea" targetVar="$areaInhabitants" />
+																<ForEach startIndex="0" step="1" array="$areaInhabitants" iterator="" value="$areaInhabitants_val" break="">
+																	<Sequence>
+																		<GetType WUID="$areaInhabitants_val" OutString="$areaInhabitants_type" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+																		<IfCondition failOnCondition="false" condition="$areaInhabitants_type == &apos;NPC&apos;">
+																			<IsPublicEnemy Soul="$areaInhabitants_val" FailOnSubtreeMissing="false" saveVersion="2">
+																				<Else canSkip="1">
+																					<Expression expressions="$validInhabitants[#validInhabitants] = $areaInhabitants_val" />
+																				</Else>
+																			</IsPublicEnemy>
+																		</IfCondition>
+																	</Sequence>
+																</ForEach>
+																<Sequence>
+																	<Selector>
+																		<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																			<LinkTagFilter tag="&apos;extraGuard&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																			<Nodalyzer Quantifiers="ForAll" Parent="" Child="$guards" saveVersion="2" />
+																		</GraphSearch>
+																		<ErrorNode Message="&apos;[ExtraGuards] unable to get spawned guards, maybe some kind of linking issue?&apos;" />
+																	</Selector>
+																	<ForEach startIndex="0" step="1" array="$guards" iterator="" value="$guards_guard" break="">
+																		<Selector>
+																			<FindInArray array="$validInhabitants" keyOut="$dummy_int" condition="$__value == $guards_guard" />
+																			<Expression expressions="$validInhabitants[#validInhabitants] = $guards_guard" />
+																		</Selector>
+																	</ForEach>
+																</Sequence>
+																<SpreadInformation WuidArray="$validInhabitants" />
+																<Sequence>
+																	<ReinitVariable variable="$areaInhabitants" />
+																	<ReinitVariable variable="$validInhabitants" />
+																	<ReinitVariable variable="$guards" />
+																</Sequence>
+															</Sequence>
+														</IfCondition>
+													</AtomicDecorator>
+													<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+												</Sequence>
+											</LinkGate>
+										</Loop>
+									</Parallel>
+								</LinkGate>
+								<AtomicDecorator>
+									<Sequence>
+										<IfCondition failOnCondition="false" condition="$isSpawned">
+											<Sequence>
+												<SendAIConceptSignal_extraGuards_notification location="$extraGuardsData.location" operation="$enum:extraGuards_operation.Despawn" />
+												<Expression expressions="$isSpawned = false" />
+											</Sequence>
+										</IfCondition>
+										<Expression expressions="$scheduleSpawn = false &#10;$scheduleDespawn = false" />
+									</Sequence>
+								</AtomicDecorator>
+							</Sequence>
+						</Loop>
+					</Sequence>
+				</LinkGate>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="areaInhabitants" comment="" />
+				<Variable name="areaInhabitants_type" comment="" />
+				<Variable name="areaInhabitants_val" comment="" />
+				<Variable name="cooldownTime" comment="" />
+				<Variable name="currentTime" comment="" />
+				<Variable name="distance" comment="" />
+				<Variable name="dummy_int" comment="" />
+				<Variable name="extraGuardsData" comment="" />
+				<Variable name="guards" comment="" />
+				<Variable name="guards_guard" comment="" />
+				<Variable name="highAngriness" comment="" />
+				<Variable name="inhabitantsArea" comment="" />
+				<Variable name="isOnCooldown" comment="" />
+				<Variable name="isSpawned" comment="" />
+				<Variable name="minDistancePlayerToGuards" comment="" />
+				<Variable name="scheduleDespawn" comment="" />
+				<Variable name="scheduleSpawn" comment="" />
+				<Variable name="validInhabitants" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</LinkTagFilter>
+									</GraphSearch>
+									<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</LinkTagFilter>
+									</GraphSearch>
+								</Sequence>
+								<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</ErrorNode>
+								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Wait>
+							</Selector>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="Loop reset" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<CheckAngrinessInterval hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Then>
+																<Else>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Else>
+															</CheckAngrinessInterval>
+															<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</LinkTagFilter>
+																	</GraphSearch>
+																	<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetTime>
+																	<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</RemoveLink>
+																		</Then>
+																		<Else>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Else>
+																	</IfElseCondition>
+																</Sequence>
+															</SuppressFailure>
+															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																</Then>
+																<Else>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																</Else>
+															</IfElseCondition>
+														</Sequence>
+													</AtomicDecorator>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Sequence>
+											</Loop>
+											<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_extraGuards_linkSpawnPoints hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_extraGuards_linkSpawnPoints>
+															<SendAIConceptSignal_extraGuards_notification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</SendAIConceptSignal_extraGuards_notification>
+															<LogToConsole hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</LogToConsole>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</ExecuteLua>
+																</Then>
+															</GameContextCheck>
+														</Sequence>
+													</AtomicDecorator>
+												</IfGate>
+											</Loop>
+											<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</ReinitVariable>
+																		<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</LinkTagFilter>
+																				<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																				</Nodalyzer>
+																			</GraphSearch>
+																			<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</ErrorNode>
+																		</Selector>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="Get distance from the closest guard" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</MeasureDistance>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Sequence>
+																				</ForEach>
+																			</Sequence>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GetTime>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</AddLink>
+																					<SendAIConceptSignal_extraGuards_notification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</SendAIConceptSignal_extraGuards_notification>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Sequence>
+																			</IfCondition>
+																		</Sequence>
+																	</Sequence>
+																</SuppressFailure>
+															</AtomicDecorator>
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</Sequence>
+													</Loop>
+												</IfGate>
+											</Loop>
+											<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GetAreaInhabitants hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetAreaInhabitants>
+																	<ForEach hasInputBreakpoint="0" comment="Filter out animals and publicEnemies" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</GetType>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<IsPublicEnemy hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Else>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Else>
+																				</IsPublicEnemy>
+																			</IfCondition>
+																		</Sequence>
+																	</ForEach>
+																	<Sequence hasInputBreakpoint="0" comment="ExtraGuards might spawn outside of the area, add them" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</LinkTagFilter>
+																				<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																				</Nodalyzer>
+																			</GraphSearch>
+																			<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</ErrorNode>
+																		</Selector>
+																		<ForEach hasInputBreakpoint="0" comment="ExtraGuards might spawn outside of the area, add them" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</FindInArray>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Selector>
+																		</ForEach>
+																	</Sequence>
+																	<SpreadInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</SpreadInformation>
+																	<Sequence hasInputBreakpoint="0" comment="cleanup" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</ReinitVariable>
+																		<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</ReinitVariable>
+																		<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</ReinitVariable>
+																	</Sequence>
+																</Sequence>
+															</IfCondition>
+														</AtomicDecorator>
+														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Wait>
+													</Sequence>
+												</LinkGate>
+											</Loop>
+										</Parallel>
+									</LinkGate>
+									<AtomicDecorator hasInputBreakpoint="0" comment="Force unconditional despawn" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<SendAIConceptSignal_extraGuards_notification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</SendAIConceptSignal_extraGuards_notification>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Sequence>
+											</IfCondition>
+											<Expression hasInputBreakpoint="0" comment="cleanup" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+									</AtomicDecorator>
+								</Sequence>
+							</Loop>
+						</Sequence>
+					</LinkGate>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="extraGuards_getFactionFromLocation" is_function="1">
+		<Variables />
+		<Parameters>
+			<Variable name="extraGuardsEntry" type="crime:extraGuardsEntry" values="" isPersistent="0" form="single" requirementType="Out" />
+			<Variable name="location" type="enum:extraGuards_location" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Switch>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.tr_SlatejovFarma">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;trosecko_settlements_slatejov_commonFolk_krenovyFarm&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.tr_ZdarFarmaZapad">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;trosecko_outskirts_farms_zdar_west&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.tr_ZdarFarmaVychod">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;trosecko_outskirts_farms_zdar_east&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.tr_ZelejovHospoda">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;trosecko_settlements_zelejov_commonFolk_tavern&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.tr_ApolenaOvcak">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;trosecko_outskirts_herdsmen_apolena&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.tr_VidlakLovec">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;trosecko_outskirts_gamekeepers_vidlak&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="false">
+							<Success />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.kh_PritokyHospoda">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;kutnohorsko_settlements_pritoky_commonFolk_inn_staff&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.kh_StaraKutnaHospoda">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;kutnohorsko_settlements_staraKutna_commonFolk&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.kh_DanemarkMlyn">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;kutnohorsko_millers_danemark_millerAndFamily&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.kh_HoranskoMines">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;kutnohorsko_settlements_horany_commonFolk_peasants&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.kh_RabstejnskoLogging">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;kutnohorsko_outskirts_woodcutters_campRabstejnsko&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.kh_RabstejnskoMlyn">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;kutnohorsko_millers_rabstejnka&apos;" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$location == $enum:extraGuards_location.kh_MalesovStudFarm">
+							<Expression expressions="$extraGuardsEntry.faction = &apos;kutnohorsko_outskirts_farms_malesovStudFarm&apos;" />
+						</IfCondition>
+						<DefaultBranch>
+							<ErrorNode Message="&apos;[$this.name;] GetFactionFromLocation no faction found for location $location;&apos;" />
+						</DefaultBranch>
+					</Switch>
+					<SuppressFailure>
+						<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+							<LinkTagFilter tag="&apos;inhabitantsArea&apos;" prune="true" negprune="unknown" Parent="" Child="$extraGuardsEntry.inhabitantsArea" Data="" />
+						</GraphSearch>
+					</SuppressFailure>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="extraGuardsEntry" comment="" />
+				<Variable name="location" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="Divider" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<DefaultBranch>
+								<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</ErrorNode>
+							</DefaultBranch>
+						</Switch>
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</LinkTagFilter>
+							</GraphSearch>
+						</SuppressFailure>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="extraGuards_linkSpawnPoints" is_function="1">
+		<Variables>
+			<Variable name="assets_wuid" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="assets_wuid_val" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="chosenBundle" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="extraGuards_bundles" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="extraGuards_proxy" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="mrkev" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="spawnPoints" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="spawnPoints_val" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="smartObject" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Sequence>
+						<SuppressFailure>
+							<GraphSearch Origin="$smartObject" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<Nodalyzer Quantifiers="ForAll" Parent="" Child="$assets_wuid" saveVersion="2" />
+								<LinkDataFilter tag="&apos;asset&apos;" condition="$__link_asset == &apos;spawnPoint&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+							</GraphSearch>
+						</SuppressFailure>
+						<ForEach startIndex="0" step="1" array="$assets_wuid" iterator="" value="$assets_wuid_val" break="">
+							<RemoveLink From="$smartObject" To="$assets_wuid_val" Tag="&apos;asset&apos;" LinkOpHandleMode="Error" />
+						</ForEach>
+					</Sequence>
+					<Sequence>
+						<Selector>
+							<Sequence>
+								<Function_crime_getMrkev mrkev="$mrkev" nodeLabel="26475623" />
+								<GraphSearch Origin="$mrkev" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+									<LinkTagFilter tag="&apos;extraGuards_proxy&apos;" prune="true" negprune="unknown" Parent="" Child="$extraGuards_proxy" Data="" />
+								</GraphSearch>
+							</Sequence>
+							<ErrorNode Message="&apos;[$smartObject;] Unable to find linked extraGuards_proxy&apos;" />
+						</Selector>
+						<IfCondition failOnCondition="false" condition="$extraGuards_proxy ~= $__null">
+							<GraphSearch Origin="$extraGuards_proxy" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<LinkTagFilter tag="&apos;extraGuards_bundle&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+								<RangeFilter min="100.000000" max="340282346638528859811704183484516925440.000000" point="$__player" excludeRef="true" Source="Child" prune="false" negprune="unknown" Parent="" Child="" />
+								<Nodalyzer Quantifiers="ForAll" Parent="" Child="$extraGuards_bundles" saveVersion="2">
+									<Child0 canSkip="1">
+										<RangeSorter point="$smartObject" SortOrder="Ascending" Source="Child" />
+									</Child0>
+								</Nodalyzer>
+							</GraphSearch>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="#extraGuards_bundles &gt; 0">
+							<Sequence>
+								<Expression expressions="$chosenBundle = $extraGuards_bundles[0]" />
+								<Sequence>
+									<GraphSearch Origin="$chosenBundle" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;point&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+										<Nodalyzer Quantifiers="ForAll" Parent="" Child="$spawnPoints" saveVersion="2" />
+									</GraphSearch>
+									<ForEach startIndex="0" step="1" array="$spawnPoints" iterator="" value="$spawnPoints_val" break="">
+										<AddLink From="$smartObject" To="$spawnPoints_val" Tag="&apos;asset&apos;" Data="&apos;spawnPoint&apos;" LinkOpHandleMode="OverWrite" />
+									</ForEach>
+								</Sequence>
+							</Sequence>
+						</IfCondition>
+					</Sequence>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="assets_wuid" comment="" />
+				<Variable name="assets_wuid_val" comment="" />
+				<Variable name="chosenBundle" comment="" />
+				<Variable name="extraGuards_bundles" comment="" />
+				<Variable name="extraGuards_proxy" comment="" />
+				<Variable name="mrkev" comment="" />
+				<Variable name="spawnPoints" comment="" />
+				<Variable name="spawnPoints_val" comment="" />
+				<Variable name="smartObject" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="Cleanup previous spawnpoints" breakpointFlags="0">
+							<OutputBreakpoints />
+							<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+									</Nodalyzer>
+									<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkDataFilter>
+								</GraphSearch>
+							</SuppressFailure>
+							<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</RemoveLink>
+							</ForEach>
+						</Sequence>
+						<Sequence hasInputBreakpoint="0" comment="Link new spawn points" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Selector hasInputBreakpoint="0" comment="Get proxy" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_getMrkev hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_getMrkev>
+									<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</LinkTagFilter>
+									</GraphSearch>
+								</Sequence>
+								<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</ErrorNode>
+							</Selector>
+							<IfCondition hasInputBreakpoint="0" comment="Get extaGuards_bundle" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkTagFilter>
+									<RangeFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RangeFilter>
+									<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Child0>
+											<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RangeSorter>
+										</Child0>
+									</Nodalyzer>
+								</GraphSearch>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+											<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+											</Nodalyzer>
+										</GraphSearch>
+										<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</AddLink>
+										</ForEach>
+									</Sequence>
+								</Sequence>
+							</IfCondition>
+						</Sequence>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_mourn" is_function="0">
+		<Variables>
+			<Variable name="area" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="benches" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="benches_value" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="break" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="gsBench" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="insideBenches" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="isRaining" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="mournContext" type="_float" values="" isPersistent="0" form="associative" />
+			<Variable name="outsideBenches" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="pathFindingParams" type="pathFindingParams" values="" isPersistent="0" form="single" />
+			<Variable name="stopMourning" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="mournData" type="switch:interruptData:mourn" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<EntityContextElement context="crime_interrupt" enabled="true">
+					<EntityContext context="crime_interruptMourn" target="">
+						<EntityContext context="soliloquy_disable" target="">
+							<EntityContextPreset preset="crime_dontCommentOnPlayer" target="">
+								<AnyDecorator preset="crime_keepState" enabled="true">
+									<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+										<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:mourn&apos;">
+											<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$mournData.stimulusKind&apos;">
+												<Sequence>
+													<Function_crime_addCorpseLink corpse="$mournData.corpse" corpseState="$enum:corpseState.undiscovered" mateReacting="true" resolve="false" storeTime="false" nodeLabel="35526318" />
+													<SuppressFailure>
+														<GraphSearch Origin="" Borders="" depth="3" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;home,home_area,home_equipment,area_union_member&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+															<LinkTagFilter tag="&apos;home_equipment&apos;" prune="true" negprune="unknown" Parent="" Child="$gsBench" Data="" />
+															<CategoryFilter categories="&apos;Seat&apos;" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+															<Nodalyzer Quantifiers="ForAll" Parent="" Child="$benches" saveVersion="2">
+																<Child0 canSkip="1">
+																	<RangeSorter point="$this.id" SortOrder="Ascending" Source="Child" />
+																</Child0>
+															</Nodalyzer>
+															<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+																<Child0 canSkip="1">
+																	<ExistPath Origin="$gsBench" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																		<LinkTagFilter tag="&apos;withTable&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																	</ExistPath>
+																</Child0>
+															</NegationOp>
+														</GraphSearch>
+													</SuppressFailure>
+													<HasGenderCheck Gender="Female" SoulWUID="$mournData.corpse" FailSubtMissing="false" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$mournContext[&apos;isMan&apos;] = 0" />
+														</Then>
+														<Else canSkip="1">
+															<Expression expressions="$mournContext[&apos;isMan&apos;] = 1" />
+														</Else>
+													</HasGenderCheck>
+													<ForEach startIndex="0" step="1" array="$benches" iterator="" value="$benches_value" break="$break">
+														<IsInsideAreaWithLabel Position="$benches_value" Label="&apos;interior&apos;" Area="$area" FailSubtMissing="false" saveVersion="2">
+															<Then canSkip="1">
+																<PushToArray array="$insideBenches" value="$benches_value" direction="Back" />
+															</Then>
+															<Else canSkip="1">
+																<PushToArray array="$outsideBenches" value="$benches_value" direction="Back" />
+															</Else>
+														</IsInsideAreaWithLabel>
+													</ForEach>
+													<WeatherCondition failOnCondition="false" condition="$weather.rainIntensity &gt; $data:script_param[&apos;crime_mournOutsideMaximumRainIntensity&apos;].value">
+														<Expression expressions="$isRaining = true" />
+													</WeatherCondition>
+													<Parallel successMode="Any" failureMode="Any">
+														<AddPerceivableState PerceivableLabel="&apos;crime_mourn&apos;">
+															<IfGate atomic="false" condition="~$stopMourning" RunLogic="Halt">
+																<ContinuousSwitch>
+																	<IfCondition failOnCondition="false" condition="~$isRaining &amp; #outsideBenches &gt; 0">
+																		<Function_crime_mournOnBench context="$mournContext" availableBenches="$outsideBenches" nodeLabel="87701534" />
+																	</IfCondition>
+																	<IfCondition failOnCondition="false" condition="#insideBenches &gt; 0">
+																		<IfElseCondition failOnCondition="false" condition="$isRaining" saveVersion="2">
+																			<Then canSkip="1">
+																				<UrgencyDecorator Urgency="Fast">
+																					<MoveParamsDecorator speed="Run" pathFindingParams="$pathFindingParams" doorClosingPolicy="LeaveClosed">
+																						<Function_crime_mournOnBench context="$mournContext" availableBenches="$insideBenches" nodeLabel="43946807" />
+																					</MoveParamsDecorator>
+																				</UrgencyDecorator>
+																			</Then>
+																			<Else canSkip="1">
+																				<Function_crime_mournOnBench context="$mournContext" availableBenches="$insideBenches" nodeLabel="27415363" />
+																			</Else>
+																		</IfElseCondition>
+																	</IfCondition>
+																	<IfCondition failOnCondition="false" condition="true">
+																		<Expression expressions="$stopMourning = true" />
+																	</IfCondition>
+																</ContinuousSwitch>
+															</IfGate>
+														</AddPerceivableState>
+														<Wait duration="&apos;5m&apos;" timeType="GameTime" doFail="false" variation="" />
+														<Loop count="-1">
+															<IfGate atomic="false" condition="~$isRaining" RunLogic="KeepRunning">
+																<RainGate RainThreshold="$data:script_param[&apos;crime_mournOutsideMaximumRainIntensity&apos;].value" RunLogic="KeepRunning">
+																	<Expression expressions="$isRaining = true" />
+																</RainGate>
+															</IfGate>
+														</Loop>
+													</Parallel>
+													<RemoveLink From="$this.id" To="$mournData.corpse" Tag="&apos;crime_followUpBehavior_mourn&apos;" LinkOpHandleMode="Error" />
+													<Function_callFollowUpBehavior previousReaction="$enum:crime_reactionKind.mourn" nodeLabel="16315338" />
+												</Sequence>
+											</LogToLabel>
+										</LogToLabel>
+									</AddPerceivableState>
+								</AnyDecorator>
+							</EntityContextPreset>
+						</EntityContext>
+					</EntityContext>
+				</EntityContextElement>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="mourn" EventSet="">
+			<Variables>
+				<Variable name="area" comment="" />
+				<Variable name="benches" comment="" />
+				<Variable name="benches_value" comment="" />
+				<Variable name="break" comment="" />
+				<Variable name="gsBench" comment="" />
+				<Variable name="insideBenches" comment="" />
+				<Variable name="isRaining" comment="" />
+				<Variable name="mournContext" comment="" />
+				<Variable name="outsideBenches" comment="" />
+				<Variable name="pathFindingParams" comment="" />
+				<Variable name="stopMourning" comment="" />
+				<Variable name="mournData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_addCorpseLink>
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+																<CategoryFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</CategoryFilter>
+																<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Child0>
+																		<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</RangeSorter>
+																	</Child0>
+																</Nodalyzer>
+																<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Child0>
+																		<ExistPath hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</LinkTagFilter>
+																		</ExistPath>
+																	</Child0>
+																</NegationOp>
+															</GraphSearch>
+														</SuppressFailure>
+														<HasGenderCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+															<Else>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Else>
+														</HasGenderCheck>
+														<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</PushToArray>
+																</Then>
+																<Else>
+																	<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</PushToArray>
+																</Else>
+															</IsInsideAreaWithLabel>
+														</ForEach>
+														<WeatherCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</WeatherCondition>
+														<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Function_crime_mournOnBench hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_mournOnBench>
+																		</IfCondition>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Function_crime_mournOnBench hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_mournOnBench>
+																						</MoveParamsDecorator>
+																					</UrgencyDecorator>
+																				</Then>
+																				<Else>
+																					<Function_crime_mournOnBench hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_crime_mournOnBench>
+																				</Else>
+																			</IfElseCondition>
+																		</IfCondition>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</IfCondition>
+																	</ContinuousSwitch>
+																</IfGate>
+															</AddPerceivableState>
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+															<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<RainGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</RainGate>
+																</IfGate>
+															</Loop>
+														</Parallel>
+														<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</RemoveLink>
+														<Function_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_callFollowUpBehavior>
+													</Sequence>
+												</LogToLabel>
+											</LogToLabel>
+										</AddPerceivableState>
+									</AnyDecorator>
+								</EntityContextPreset>
+							</EntityContext>
+						</EntityContext>
+					</EntityContextElement>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

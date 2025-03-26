@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="crime_playerUnconsciousAfterSkirmishResolve" is_function="1">
+    <Variables>
+      <Variable name="closeEnough" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="crimesResolved" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="jailMessage" type="crime:jail:request" values="" isPersistent="0" form="single" />
+      <Variable name="knownInformations" type="information" values="" isPersistent="0" form="array" />
+      <Variable name="knownInformations_value" type="information" values="" isPersistent="0" form="single" />
+      <Variable name="playerIsCriminal" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="punishment" type="crime:punishment" values="" isPersistent="0" form="single" />
+      <Variable name="punishmentChanged" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="randomPos" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="reactionSuppressed" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="resolveData" type="switch:interruptData:resolve" values="" isPersistent="0" form="single" />
+      <Variable name="teleportAway" type="_bool" values="false" isPersistent="0" form="single" />
+      <Variable name="trespassArea" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="trespassSevereness" type="enum:trespassLevel" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="foughtAgainstPlayer" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <AtomicDecorator>
+          <IsUnconsciousCheck SoulWUID="$__player" FailSubtMissing="false" saveVersion="2">
+            <Then canSkip="1">
+              <Sequence>
+                <DistanceCondition Origin="$this.id" ReferencePt="$__player" Low="50.000000" High="50.000000" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+                  <Expression expressions="$closeEnough = true" />
+                </DistanceCondition>
+                <IfElseCondition failOnCondition="false" condition="$foughtAgainstPlayer | $closeEnough" saveVersion="2">
+                  <Then canSkip="1">
+                    <Sequence>
+                      <GetKnownInformations OutArray="$knownInformations" Holder="" />
+                      <EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+                        <Then canSkip="1">
+                          <Sequence>
+                            <PlayersCrimeInformationKnown Npc="$this.id" OnlyRelated="false" PlayersCrimeInformationKnown="$playerIsCriminal" />
+                            <IfCondition failOnCondition="false" condition="$playerIsCriminal">
+                              <Sequence>
+                                <Expression expressions="$resolveData.stimulusKind = $attackData.stimulusKind &#10;$resolveData.previousReaction = $attackData.previousReaction &#10;$resolveData.initiatedBy = $enum:switch_interruptInitiator.scheduler &#10;$resolveData.resolutionDialogIntroKind = $enum:crime_resolutionDialogIntroKind.resistingArrest_running" />
+                                <Function_crime_resolveCrimeDialogue postresolveSubscribers="" resolveData="$resolveData" crimesResolved="$crimesResolved" punishmentChanged="$punishmentChanged" nodeLabel="78924879" />
+                              </Sequence>
+                            </IfCondition>
+                          </Sequence>
+                        </Then>
+                        <Else canSkip="1">
+                          <EntityContextCheck context="crime_preventKillingUnconsciousHostilePlayer" target="" saveVersion="2">
+                            <Then canSkip="1">
+                              <DetermineTrespassReaction Observer="$this.id" Target="$__player" Position="" ForceSemipublicReaction="true" ShouldUseVec3Position="false" TrespassAreaSevereness="$trespassSevereness" TrespassArea="$trespassArea" Reaction="$teleportAway" ReactionSuppressed="$reactionSuppressed" />
+                            </Then>
+                            <Else canSkip="1">
+                              <CheckRelationshipInterval_SoulToSoul TargetSoul="$__player" Soul="$this.id" Flag="enemy" saveVersion="2">
+                                <Then canSkip="1">
+                                  <GameOver Reason="DiedWhileUnconscious" />
+                                </Then>
+                                <Else canSkip="1">
+                                  <DetermineTrespassReaction Observer="$this.id" Target="$__player" Position="" ForceSemipublicReaction="true" ShouldUseVec3Position="false" TrespassAreaSevereness="$trespassSevereness" TrespassArea="$trespassArea" Reaction="$teleportAway" ReactionSuppressed="$reactionSuppressed" />
+                                </Else>
+                              </CheckRelationshipInterval_SoulToSoul>
+                            </Else>
+                          </EntityContextCheck>
+                        </Else>
+                      </EntityContextCheck>
+                      <ForEach startIndex="0" step="1" array="$knownInformations" iterator="" value="$knownInformations_value" break="">
+                        <Function_crime_resolveCrimeInformation information="$knownInformations_value" resolutionKindIsSkillcheck="false" nodeLabel="52852725" />
+                      </ForEach>
+                      <IfCondition failOnCondition="false" condition="$teleportAway">
+                        <GameContextCheck context="crime_disabledThrowingOutUnconsciousPlayer" saveVersion="2">
+                          <Then canSkip="1">
+                            <Success />
+                          </Then>
+                          <Else canSkip="1">
+                            <Function_callInterrupt_throwOutUnconsciousPlayer ignorePriority="true" initiator="$enum:switch_interruptInitiator.scheduler" previousReaction="$enum:crime_reactionKind.attack" source="$enum:crime_source.direct" stimulusKind="$enum:crime_stimulusKind.trespass" nodeLabel="61696042" />
+                          </Else>
+                        </GameContextCheck>
+                      </IfCondition>
+                    </Sequence>
+                  </Then>
+                  <Else canSkip="1">
+                    <Success />
+                  </Else>
+                </IfElseCondition>
+              </Sequence>
+            </Then>
+          </IsUnconsciousCheck>
+        </AtomicDecorator>
+      </Behavior>
+    </Root>
+    <ForestContainer>
+      <Sequence>
+        <GetKnownInformations OutArray="$knownInformations" Holder="" />
+        <Function_crime_calculatePunishment informations="$knownInformations" punishment="$punishment" nodeLabel="41393524" />
+        <Expression expressions="$jailMessage.duration = $punishment.jail" />
+        <InstantSendMessageToNPC target="$__player" variable="$jailMessage" />
+      </Sequence>
+      <DetermineTrespassReaction Observer="$this.id" Target="$__player" Position="" ForceSemipublicReaction="false" ShouldUseVec3Position="false" TrespassAreaSevereness="$trespassAreaSevereness" TrespassArea="$trespassArea" Reaction="$playerInTrespass" ReactionSuppressed="$reactionSuppressed" />
+    </ForestContainer>
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="closeEnough" comment="" />
+        <Variable name="crimesResolved" comment="" />
+        <Variable name="jailMessage" comment="" />
+        <Variable name="knownInformations" comment="" />
+        <Variable name="knownInformations_value" comment="" />
+        <Variable name="playerIsCriminal" comment="" />
+        <Variable name="punishment" comment="" />
+        <Variable name="punishmentChanged" comment="" />
+        <Variable name="randomPos" comment="" />
+        <Variable name="reactionSuppressed" comment="" />
+        <Variable name="resolveData" comment="" />
+        <Variable name="teleportAway" comment="" />
+        <Variable name="trespassArea" comment="" />
+        <Variable name="trespassSevereness" comment="" />
+        <Variable name="foughtAgainstPlayer" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root editorPosX="-140" editorPosY="-180" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Then>
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </DistanceCondition>
+                  <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Then>
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <GetKnownInformations hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </GetKnownInformations>
+                        <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                          <OutputBreakpoints />
+                          <Then>
+                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <PlayersCrimeInformationKnown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </PlayersCrimeInformationKnown>
+                              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                  <Function_crime_resolveCrimeDialogue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Function_crime_resolveCrimeDialogue>
+                                </Sequence>
+                              </IfCondition>
+                            </Sequence>
+                          </Then>
+                          <Else>
+                            <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                              <OutputBreakpoints />
+                              <Then>
+                                <DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </DetermineTrespassReaction>
+                              </Then>
+                              <Else>
+                                <CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                  <OutputBreakpoints />
+                                  <Then>
+                                    <GameOver hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </GameOver>
+                                  </Then>
+                                  <Else>
+                                    <DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </DetermineTrespassReaction>
+                                  </Else>
+                                </CheckRelationshipInterval_SoulToSoul>
+                              </Else>
+                            </EntityContextCheck>
+                          </Else>
+                        </EntityContextCheck>
+                        <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Function_crime_resolveCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Function_crime_resolveCrimeInformation>
+                        </ForEach>
+                        <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                            <Then>
+                              <Success hasInputBreakpoint="0" comment="Ahoj Vitku" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Success>
+                            </Then>
+                            <Else>
+                              <Function_callInterrupt_throwOutUnconsciousPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Function_callInterrupt_throwOutUnconsciousPlayer>
+                            </Else>
+                          </GameContextCheck>
+                        </IfCondition>
+                      </Sequence>
+                    </Then>
+                    <Else>
+                      <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Success>
+                    </Else>
+                  </IfElseCondition>
+                </Sequence>
+              </Then>
+            </IsUnconsciousCheck>
+          </AtomicDecorator>
+        </Behavior>
+      </Root>
+      <Forest>
+        <Sequence editorPosX="1870" editorPosY="-810" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+          <OutputBreakpoints />
+          <GetKnownInformations hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+          </GetKnownInformations>
+          <Function_crime_calculatePunishment hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+          </Function_crime_calculatePunishment>
+          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+          </Expression>
+          <InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+          </InstantSendMessageToNPC>
+        </Sequence>
+        <DetermineTrespassReaction editorPosX="90" editorPosY="2340" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+          <OutputBreakpoints />
+        </DetermineTrespassReaction>
+      </Forest>
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

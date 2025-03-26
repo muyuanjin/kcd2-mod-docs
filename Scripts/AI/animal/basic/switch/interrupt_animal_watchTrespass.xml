@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_animal_watchTrespass" is_function="0">
+		<Variables>
+			<Variable name="additionalMoveParams" type="additionalMoveParams" values="" isPersistent="0" form="single" />
+			<Variable name="buffer" type="vec3" values="" isPersistent="1" form="array" />
+			<Variable name="buffer_nextIndex" type="_int" values="" isPersistent="1" form="single" />
+			<Variable name="closeDistance" type="_float" values="2" isPersistent="0" form="single" />
+			<Variable name="closeDistanceTheta" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="homeCooldowns" type="crime:homeCooldowns" values="" isPersistent="0" form="single" />
+			<Variable name="isPlayerInsideInterior" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="lastPositionFound" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="lastTrespassPosition" type="vec3" values="" isPersistent="1" form="single" />
+			<Variable name="movementSpeed" type="enum:movementSpeed" values="" isPersistent="0" form="single" />
+			<Variable name="playerClose" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerLeftTrespass" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="randomBarkCount" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="shouldBark" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="shouldBuffer" type="_bool" values="true" isPersistent="1" form="single" />
+			<Variable name="shouldFollowPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="stopBarkingRequest" type="animal:dog:stopBarkingRequest" values="" isPersistent="0" form="single" />
+			<Variable name="wantsToBark" type="_bool" values="true" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="animalWatchTrespassData" type="switch:animal_interruptData:watchTrespass" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Expression expressions="$additionalMoveParams.destChangedThreshold = &apos;250ms&apos; &#10;$additionalMoveParams.useStoppingDistanceForCuttingFromEnd = false" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<EntityContext context="crime_animal_interruptWatchTrespass" target="$this.id">
+							<EntityContext context="switch_disabledHearingReaction" target="">
+								<EntityContext context="crime_animal_ignoreAwarenessHuman" target="">
+									<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+										<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:animal:watchTrespass&apos;">
+											<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$animalWatchTrespassData.stimulusKind&apos;">
+												<ForceLook LookTarget="$__player" DisableVariations="false">
+													<Sequence>
+														<Sequence>
+															<Function_crime_animal_confirmReactionLink reactionKind="$enum:crime_animal_reactionKind.watchTrespass" target="$__player" nodeLabel="54498714" />
+															<Expression expressions="$closeDistanceTheta = $closeDistance - 0.25 &#10;$additionalMoveParams.destChangedThreshold = 150" />
+															<IfGate atomic="false" condition="~$playerLeftTrespass" RunLogic="Halt">
+																<Parallel successMode="Any" failureMode="Any">
+																	<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$stopBarkingRequest" senderInfo="" inbox="&apos;dog_stopBarkingRequest&apos;" condition="" answerVar="">
+																		<Sequence>
+																			<Function_crime_getHomeCooldowns home="" useHomeWuid="false" cooldownData="$homeCooldowns" nodeLabel="35995174" />
+																			<GetTime TimeType="GameTime" OutVar="$homeCooldowns.dogTrespassReaction" Delta="" />
+																			<Expression expressions="$homeCooldowns.dogTrespassReaction += $data:script_param[&apos;crime_homeCooldowns_dogBarkReaction&apos;].value" />
+																			<Function_crime_updateHomeCooldowns cooldownData="$homeCooldowns" home="$__null" useHomeWuid="false" nodeLabel="85610144" />
+																		</Sequence>
+																	</ProcessMessage>
+																	<Loop count="-1">
+																		<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;private&apos;" Negation="false" RunLogic="Halt">
+																			<Sequence>
+																				<Function_switch_animal_affectFeelings affectNervousness="true" affectReputation="false" token="&apos;watchTrespass_periodic&apos;" nodeLabel="39107826" />
+																				<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" />
+																			</Sequence>
+																		</IsInsideAreaWithLabelBarrier>
+																	</Loop>
+																	<Function_switch_animal_continuouslyCheckTrespass isPlayerInsideInterior="$isPlayerInsideInterior" shouldBark="$shouldBark" shouldFollowPlayer="$shouldFollowPlayer" nodeLabel="66274716" />
+																	<Function_switch_animal_playerPositionBuffer buffer_size="10" waitBetweenSamples="&apos;350ms&apos;" buffer="$buffer" buffer_nextIndex="$buffer_nextIndex" shouldBuffer="$shouldBuffer" nodeLabel="10573086" />
+																	<Loop count="-1">
+																		<Sequence>
+																			<Expression expressions="$playerClose = false" />
+																			<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="4.200000" High="4.200000" Negation="false" OpenInMiddle="false" RunLogic="Halt">
+																				<Sequence>
+																					<Expression expressions="$playerClose = true" />
+																					<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																				</Sequence>
+																			</DistanceGate>
+																		</Sequence>
+																	</Loop>
+																	<Sequence>
+																		<Wait duration="&apos;30s&apos;" timeType="GameTime" doFail="false" variation="" />
+																		<Function_crime_getHomeCooldowns home="" useHomeWuid="false" cooldownData="$homeCooldowns" nodeLabel="77185104" />
+																		<GetTime TimeType="GameTime" OutVar="$homeCooldowns.dogTrespassReaction" Delta="" />
+																		<Expression expressions="$homeCooldowns.dogTrespassReaction += $data:script_param[&apos;crime_homeCooldowns_dogBarkReaction&apos;].value" />
+																		<Function_crime_updateHomeCooldowns cooldownData="$homeCooldowns" home="$__null" useHomeWuid="false" nodeLabel="34100765" />
+																	</Sequence>
+																	<ContinuousSwitch>
+																		<IfCondition failOnCondition="false" condition="$wantsToBark">
+																			<Sequence>
+																				<GenerateRandomInteger lowerBoundary="2" upperBoundary="4" result="$randomBarkCount" />
+																				<Function_switch_animal_oneshotDogBark barkTarget="$__player" count="$randomBarkCount" shouldConsiderPerk="true" nodeLabel="42974584" />
+																				<Expression expressions="$wantsToBark = false" />
+																			</Sequence>
+																		</IfCondition>
+																		<IfCondition failOnCondition="false" condition="~$isPlayerInsideInterior &amp; $shouldFollowPlayer">
+																			<Parallel successMode="Any" failureMode="Any">
+																				<ContinuousSwitch>
+																					<IfCondition failOnCondition="false" condition="$playerClose">
+																						<CrimeFollower Target="$__player" Mode="NoMoveOnlyTurn" Role="Assist" RelativeSpeedLimit="Dash" DisableGhosting="false" />
+																					</IfCondition>
+																					<IfCondition failOnCondition="false" condition="~$playerClose">
+																						<CrimeFollower Target="$__player" Mode="DontBackOff" Role="Assist" RelativeSpeedLimit="Dash" DisableGhosting="false" />
+																					</IfCondition>
+																				</ContinuousSwitch>
+																				<Sequence>
+																					<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="&apos;4s&apos;" />
+																					<Expression expressions="$wantsToBark = $shouldBark" />
+																				</Sequence>
+																			</Parallel>
+																		</IfCondition>
+																		<IfCondition failOnCondition="false" condition="true">
+																			<Selector>
+																				<Sequence>
+																					<Function_switch_animal_getPointOutsideLabelFromBuffer buffer="$buffer" buffer_nextIndex="$buffer_nextIndex" buffer_size="10" label="&apos;interior&apos;" resultFound="$lastPositionFound" resultPoint="$lastTrespassPosition" nodeLabel="65997397" />
+																					<IfCondition failOnCondition="false" condition="$lastPositionFound">
+																						<Sequence>
+																							<Expression expressions="$shouldBuffer = false" />
+																							<Move stopWithinDistance="3.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$lastTrespassPosition" destinationSpecification2="" destinationSpecification3="" speed="$movementSpeed" additionalParams="$additionalMoveParams" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																							<IfElseCondition failOnCondition="false" condition="$isPlayerInsideInterior" saveVersion="2">
+																								<Then canSkip="1">
+																									<Sequence>
+																										<Function_switch_animal_oneshotDogBark barkTarget="$__player" count="1" shouldConsiderPerk="true" nodeLabel="83819945" />
+																										<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" />
+																									</Sequence>
+																								</Then>
+																								<Else canSkip="1">
+																									<Function_switch_animal_oneshotDogBark barkTarget="$__player" count="1" shouldConsiderPerk="true" nodeLabel="51256180" />
+																								</Else>
+																							</IfElseCondition>
+																						</Sequence>
+																					</IfCondition>
+																					<Expression expressions="$playerLeftTrespass = true" />
+																				</Sequence>
+																				<Sequence>
+																					<Function_switch_animal_oneshotDogBark barkTarget="$__player" count="1" shouldConsiderPerk="true" nodeLabel="44233334" />
+																					<Expression expressions="$playerLeftTrespass = true" />
+																				</Sequence>
+																			</Selector>
+																		</IfCondition>
+																	</ContinuousSwitch>
+																</Parallel>
+															</IfGate>
+														</Sequence>
+														<Function_switch_animal_callFollowUpBehavior previousReaction="$enum:crime_animal_reactionKind.watchTrespass" nodeLabel="90895487" />
+													</Sequence>
+												</ForceLook>
+											</LogToLabel>
+										</LogToLabel>
+									</AddPerceivableState>
+								</EntityContext>
+							</EntityContext>
+						</EntityContext>
+					</Child>
+					<OnFail canSkip="1">
+						<Function_crime_animal_removeReactionLink reactionKind="$enum:crime_animal_reactionKind.watchTrespass" target="$__player" nodeLabel="59323258" />
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="animal_watchTrespass" EventSet="">
+			<Variables>
+				<Variable name="additionalMoveParams" comment="" />
+				<Variable name="buffer" comment="" />
+				<Variable name="buffer_nextIndex" comment="" />
+				<Variable name="closeDistance" comment="" />
+				<Variable name="closeDistanceTheta" comment="" />
+				<Variable name="homeCooldowns" comment="" />
+				<Variable name="isPlayerInsideInterior" comment="" />
+				<Variable name="lastPositionFound" comment="" />
+				<Variable name="lastTrespassPosition" comment="" />
+				<Variable name="movementSpeed" comment="" />
+				<Variable name="playerClose" comment="" />
+				<Variable name="playerLeftTrespass" comment="" />
+				<Variable name="randomBarkCount" comment="" />
+				<Variable name="shouldBark" comment="" />
+				<Variable name="shouldBuffer" comment="" />
+				<Variable name="shouldFollowPlayer" comment="" />
+				<Variable name="stopBarkingRequest" comment="" />
+				<Variable name="wantsToBark" comment="" />
+				<Variable name="animalWatchTrespassData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-120" editorPosY="20" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+				</OnInit>
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContext hasInputBreakpoint="0" comment="Ignore sounds while in watchTrespass" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_crime_animal_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_animal_confirmReactionLink>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<IfGate hasInputBreakpoint="0" comment="Player inside trespass and dog following" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Function_crime_getHomeCooldowns hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_getHomeCooldowns>
+																				<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</GetTime>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<Function_crime_updateHomeCooldowns hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_updateHomeCooldowns>
+																			</Sequence>
+																		</ProcessMessage>
+																		<Loop hasInputBreakpoint="0" comment="Periodic nervousness" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Function_switch_animal_affectFeelings hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_switch_animal_affectFeelings>
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																				</Sequence>
+																			</IsInsideAreaWithLabelBarrier>
+																		</Loop>
+																		<Function_switch_animal_continuouslyCheckTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_switch_animal_continuouslyCheckTrespass>
+																		<Function_switch_animal_playerPositionBuffer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_switch_animal_playerPositionBuffer>
+																		<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Wait>
+																					</Sequence>
+																				</DistanceGate>
+																			</Sequence>
+																		</Loop>
+																		<Sequence hasInputBreakpoint="0" comment="Exit + cooldown" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Wait>
+																			<Function_crime_getHomeCooldowns hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_getHomeCooldowns>
+																			<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</GetTime>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<Function_crime_updateHomeCooldowns hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_updateHomeCooldowns>
+																		</Sequence>
+																		<ContinuousSwitch hasInputBreakpoint="0" comment="Continuously follow player" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IfCondition hasInputBreakpoint="0" comment="Cancel CrimeFollower to bark" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<GenerateRandomInteger hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GenerateRandomInteger>
+																					<Function_switch_animal_oneshotDogBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_switch_animal_oneshotDogBark>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Sequence>
+																			</IfCondition>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<CrimeFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</CrimeFollower>
+																						</IfCondition>
+																						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<CrimeFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</CrimeFollower>
+																						</IfCondition>
+																					</ContinuousSwitch>
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Wait>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Sequence>
+																				</Parallel>
+																			</IfCondition>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Function_switch_animal_getPointOutsideLabelFromBuffer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_switch_animal_getPointOutsideLabelFromBuffer>
+																						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																								<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Move>
+																								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																									<OutputBreakpoints />
+																									<Then>
+																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Function_switch_animal_oneshotDogBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Function_switch_animal_oneshotDogBark>
+																											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Wait>
+																										</Sequence>
+																									</Then>
+																									<Else>
+																										<Function_switch_animal_oneshotDogBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Function_switch_animal_oneshotDogBark>
+																									</Else>
+																								</IfElseCondition>
+																							</Sequence>
+																						</IfCondition>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Sequence>
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Function_switch_animal_oneshotDogBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_switch_animal_oneshotDogBark>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Sequence>
+																				</Selector>
+																			</IfCondition>
+																		</ContinuousSwitch>
+																	</Parallel>
+																</IfGate>
+															</Sequence>
+															<Function_switch_animal_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_animal_callFollowUpBehavior>
+														</Sequence>
+													</ForceLook>
+												</LogToLabel>
+											</LogToLabel>
+										</AddPerceivableState>
+									</EntityContext>
+								</EntityContext>
+							</EntityContext>
+						</Child>
+						<OnFail>
+							<Function_crime_animal_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_animal_removeReactionLink>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

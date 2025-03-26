@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_resolveSkirmishParticipants" is_function="1">
+		<Variables>
+			<Variable name="allParticipants" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="friendlyParticipants" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="informationData" type="crime:informationMetadata" values="" isPersistent="0" form="single" />
+			<Variable name="information_v" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="knownInformations" type="information" values="" isPersistent="0" form="array" />
+			<Variable name="participant" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="participantsAbleToReceiveSurrenderMessage" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="reportDestinationType" type="enum:crime_reportDestinationType" values="" isPersistent="0" form="single" />
+			<Variable name="responsibleSecurity" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="scrimParamToken" type="_string" values="&apos;combat_surrenderCooldownPublic&apos;" isPersistent="0" form="single" />
+			<Variable name="unconsciousParticipants" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Parameters>
+			<Variable name="bestSelfhelper" type="_wuid" values="" isPersistent="0" form="single" requirementType="Out" />
+			<Variable name="doResolve" type="_bool" values="" isPersistent="0" form="single" requirementType="Out" />
+			<Variable name="finalParticipants" type="_wuid" values="" isPersistent="0" form="array" requirementType="Out" />
+			<Variable name="knownMurderedFriend" type="_bool" values="" isPersistent="0" form="single" requirementType="Out" />
+			<Variable name="questSurrender" type="_bool" values="" isPersistent="0" form="single" requirementType="Out" />
+			<Variable name="referenceNPC" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="responsibleAuthority" type="_wuid" values="" isPersistent="0" form="single" requirementType="Out" />
+			<Variable name="unableToSurrender" type="_bool" values="" isPersistent="0" form="single" requirementType="Out" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<AtomicDecorator>
+					<Sequence>
+						<GetSkirmishParticipants ReferenceNPC="$referenceNPC" Active="true" Passive="true" Targets="true" HumanOnly="false" ParticipantsOutVar="$allParticipants" />
+						<EraseFromArray array="$allParticipants" condition="$__value == $__player" />
+						<Function_getFriendsFromArray NPCs="$allParticipants" onlyConsciousOrRecentlySkimished="false" friends="$friendlyParticipants" nodeLabel="60632635" />
+						<GetKnownInformationsFromGroup OutArray="$knownInformations" Holders="$friendlyParticipants" />
+						<Function_crime_reviseInformations informations="$knownInformations" nodeLabel="79593087" />
+						<GetKnownInformationsFromGroup OutArray="$knownInformations" Holders="$friendlyParticipants" />
+						<SpreadInformation WuidArray="$friendlyParticipants" />
+						<Function_crime_getNearbyUnconsciousParticipants unconsciousParticipants="$unconsciousParticipants" nodeLabel="27961843" />
+						<AppendArray baseArray="$allParticipants" appendix="$unconsciousParticipants" />
+						<ForEach startIndex="0" step="1" array="$allParticipants" iterator="" value="$participant" break="$questSurrender">
+							<Sequence>
+								<EntityContextCheck context="combat_ableToReceiveSurrenderMessage" target="$participant" saveVersion="2">
+									<Then canSkip="1">
+										<Sequence>
+											<EntityContextCheck context="crime_questSurrender" target="$participant" saveVersion="2">
+												<Then canSkip="1">
+													<Expression expressions="$questSurrender = true &#10;$responsibleAuthority = $participant" />
+												</Then>
+											</EntityContextCheck>
+											<DistanceCondition Origin="$participant" ReferencePt="$__player" Low="$data:script_param[&apos;crime_surrender_statement_maxDistance&apos;].value" High="$data:script_param[&apos;crime_surrender_statement_maxDistance&apos;].value" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+												<Sequence>
+													<IfCondition failOnCondition="false" condition="$responsibleAuthority == $__null">
+														<EntityContextCheck context="crime_isAuthority" target="$participant" saveVersion="2">
+															<Then canSkip="1">
+																<Expression expressions="$responsibleAuthority = $participant" />
+															</Then>
+															<Else canSkip="1">
+																<IfCondition failOnCondition="false" condition="$responsibleSecurity == $__null">
+																	<EntityContextCheck context="crime_isSecurity" target="$participant" saveVersion="2">
+																		<Then canSkip="1">
+																			<Expression expressions="$responsibleSecurity = $participant" />
+																		</Then>
+																	</EntityContextCheck>
+																</IfCondition>
+															</Else>
+														</EntityContextCheck>
+													</IfCondition>
+													<HasSeenPlayer NPC="$participant" FullyAwareOnly="true" saveVersion="2">
+														<Then canSkip="1">
+															<PushToArray array="$participantsAbleToReceiveSurrenderMessage" value="$participant" direction="Front" />
+														</Then>
+														<Else canSkip="1">
+															<Success />
+														</Else>
+													</HasSeenPlayer>
+												</Sequence>
+											</DistanceCondition>
+										</Sequence>
+									</Then>
+								</EntityContextCheck>
+								<CheckRelationshipInterval_SoulToSoul TargetSoul="$participant" Soul="$referenceNPC" Flag="enemy" saveVersion="2">
+									<Then canSkip="1">
+										<IfCondition failOnCondition="false" condition="$participant ~= $__player &amp; &#10;$participant ~= $__playerDog">
+											<Expression expressions="$unableToSurrender = true" />
+										</IfCondition>
+									</Then>
+									<Else canSkip="1">
+										<PushToArray array="$finalParticipants" value="$participant" direction="Front" />
+									</Else>
+								</CheckRelationshipInterval_SoulToSoul>
+								<IfCondition failOnCondition="false" condition="~$doResolve">
+									<EntityContextCheck context="crime_isAuthority" target="$participant" saveVersion="2">
+										<Then canSkip="1">
+											<IfElseCondition failOnCondition="false" condition="$responsibleAuthority ~= $__null" saveVersion="2">
+												<Then canSkip="1">
+													<PlayersCrimeInformationKnown Npc="$participant" OnlyRelated="false" PlayersCrimeInformationKnown="$doResolve" />
+												</Then>
+												<Else canSkip="1">
+													<PlayersCrimeInformationKnown Npc="$participant" OnlyRelated="true" PlayersCrimeInformationKnown="$doResolve" />
+												</Else>
+											</IfElseCondition>
+										</Then>
+										<Else canSkip="1">
+											<PlayersCrimeInformationKnown Npc="$participant" OnlyRelated="true" PlayersCrimeInformationKnown="$doResolve" />
+										</Else>
+									</EntityContextCheck>
+								</IfCondition>
+							</Sequence>
+						</ForEach>
+						<IfCondition failOnCondition="false" condition="$responsibleAuthority == $__null">
+							<IfElseCondition failOnCondition="false" condition="$responsibleSecurity ~= $__null" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$bestSelfhelper = $responsibleSecurity" />
+								</Then>
+								<Else canSkip="1">
+									<Sequence>
+										<GetReportDestinationType DestinationType="$reportDestinationType" />
+										<IfCondition failOnCondition="false" condition="$reportDestinationType ~= $enum:crime_reportDestinationType.authority &amp; &#10;$reportDestinationType ~= $enum:crime_reportDestinationType.security">
+											<ForEach startIndex="0" step="1" array="$knownInformations" iterator="" value="$information_v" break="$knownMurderedFriend">
+												<LockDynamicInformationValues Information="$information_v">
+													<IfCondition failOnCondition="false" condition="$information_v.label == &apos;murder&apos; | $information_v.label == &apos;murderByDog&apos;">
+														<Sequence>
+															<GetDynamicInformationValue Information="$information_v" Tag="&apos;metadata&apos;" Out="$informationData" />
+															<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+															<ReinitVariable variable="$scrimParamToken" />
+															<IsPublicEnemy Soul="$this.id" FailOnSubtreeMissing="false" saveVersion="2">
+																<Then canSkip="1">
+																	<Expression expressions="$scrimParamToken += &apos;Enemy&apos; &#10; &#10;$knownMurderedFriend =  &#10;($informationData.createdAt &gt; $currentTime - $data:script_param[$scrimParamToken].value)" />
+																</Then>
+																<Else canSkip="1">
+																	<Expression expressions="$scrimParamToken += &apos;Friend&apos; &#10; &#10;$knownMurderedFriend =  &#10;($informationData.createdAt &gt; $currentTime - $data:script_param[$scrimParamToken].value)" />
+																</Else>
+															</IsPublicEnemy>
+														</Sequence>
+													</IfCondition>
+												</LockDynamicInformationValues>
+											</ForEach>
+										</IfCondition>
+										<GetHighestStatusNpc Npcs="$participantsAbleToReceiveSurrenderMessage" HighestStatusNpc="$bestSelfhelper" />
+									</Sequence>
+								</Else>
+							</IfElseCondition>
+						</IfCondition>
+					</Sequence>
+				</AtomicDecorator>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="allParticipants" comment="" />
+				<Variable name="currentTime" comment="" />
+				<Variable name="friendlyParticipants" comment="" />
+				<Variable name="informationData" comment="" />
+				<Variable name="information_v" comment="" />
+				<Variable name="knownInformations" comment="" />
+				<Variable name="participant" comment="" />
+				<Variable name="participantsAbleToReceiveSurrenderMessage" comment="" />
+				<Variable name="reportDestinationType" comment="" />
+				<Variable name="responsibleSecurity" comment="" />
+				<Variable name="scrimParamToken" comment="" />
+				<Variable name="unconsciousParticipants" comment="" />
+				<Variable name="bestSelfhelper" comment="" />
+				<Variable name="doResolve" comment="" />
+				<Variable name="finalParticipants" comment="" />
+				<Variable name="knownMurderedFriend" comment="" />
+				<Variable name="questSurrender" comment="" />
+				<Variable name="referenceNPC" comment="" />
+				<Variable name="responsibleAuthority" comment="" />
+				<Variable name="unableToSurrender" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-20" editorPosY="-80" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GetSkirmishParticipants hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</GetSkirmishParticipants>
+							<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</EraseFromArray>
+							<Function_getFriendsFromArray hasInputBreakpoint="0" comment="always alive no need to check" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_getFriendsFromArray>
+							<GetKnownInformationsFromGroup hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</GetKnownInformationsFromGroup>
+							<Function_crime_reviseInformations hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_reviseInformations>
+							<GetKnownInformationsFromGroup hasInputBreakpoint="0" comment="again after revision" breakpointFlags="0">
+								<OutputBreakpoints />
+							</GetKnownInformationsFromGroup>
+							<SpreadInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</SpreadInformation>
+							<Function_crime_getNearbyUnconsciousParticipants hasInputBreakpoint="0" comment="KCD2-30812, but only after spread for KCD2-383622" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_getNearbyUnconsciousParticipants>
+							<AppendArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</AppendArray>
+							<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Then>
+												</EntityContextCheck>
+												<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Then>
+																<Else>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Then>
+																		</EntityContextCheck>
+																	</IfCondition>
+																</Else>
+															</EntityContextCheck>
+														</IfCondition>
+														<HasSeenPlayer hasInputBreakpoint="0" comment="KCD2-329488" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</PushToArray>
+															</Then>
+															<Else>
+																<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Success>
+															</Else>
+														</HasSeenPlayer>
+													</Sequence>
+												</DistanceCondition>
+											</Sequence>
+										</Then>
+									</EntityContextCheck>
+									<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</IfCondition>
+										</Then>
+										<Else>
+											<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</PushToArray>
+										</Else>
+									</CheckRelationshipInterval_SoulToSoul>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<IfElseCondition hasInputBreakpoint="0" comment="the guard might be in skirmish but not yet able to receive the resolve, in that case selfhelper would be stuck without relevant information" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<PlayersCrimeInformationKnown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</PlayersCrimeInformationKnown>
+													</Then>
+													<Else>
+														<PlayersCrimeInformationKnown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</PlayersCrimeInformationKnown>
+													</Else>
+												</IfElseCondition>
+											</Then>
+											<Else>
+												<PlayersCrimeInformationKnown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</PlayersCrimeInformationKnown>
+											</Else>
+										</EntityContextCheck>
+									</IfCondition>
+								</Sequence>
+							</ForEach>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+									<Else>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetReportDestinationType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetReportDestinationType>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetDynamicInformationValue>
+																<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetTime>
+																<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</ReinitVariable>
+																<IsPublicEnemy hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</Then>
+																	<Else>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</Else>
+																</IsPublicEnemy>
+															</Sequence>
+														</IfCondition>
+													</LockDynamicInformationValues>
+												</ForEach>
+											</IfCondition>
+											<GetHighestStatusNpc hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetHighestStatusNpc>
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+							</IfCondition>
+						</Sequence>
+					</AtomicDecorator>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

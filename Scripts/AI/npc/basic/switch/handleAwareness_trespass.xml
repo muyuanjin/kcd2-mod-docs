@@ -1,0 +1,584 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleAwareness_trespass" is_function="1">
+		<Variables>
+			<Variable name="banditOnCooldown" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="deadMateKnown" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="escalateImmediately" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="escalationPaused" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="home" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="homeEscalationCounter" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="isBandit" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="now" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="npcCooldowns" type="crime:npcCooldowns" values="" isPersistent="0" form="single" />
+			<Variable name="playerAlreadyEngaged" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerCrouchingAtNight" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerOnBed" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerWeaponDrawn" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="reaction" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="reactionSuppressed" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus" type="switch:stimulus:trespass" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusEscalated" type="switch:stimulus:escalatedTrespass" values="" isPersistent="0" form="single" />
+			<Variable name="trespassArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="trespassAreaSevereness" type="enum:trespassLevel" values="" isPersistent="0" form="single" />
+			<Variable name="trespassArea_triggerArea" type="cast:wuid_triggerArea" values="" isPersistent="0" form="single" />
+			<Variable name="who_soul" type="cast:wuid_soul" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="reactionIntermediateData" type="switch:reactionIntermediateData" values="" isPersistent="0" form="single" requirementType="Reference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<DetermineTrespassReaction Observer="$this.id" Target="$__player" Position="" ForceSemipublicReaction="false" ShouldUseVec3Position="false" TrespassAreaSevereness="$trespassAreaSevereness" TrespassArea="$trespassArea" Reaction="$reaction" ReactionSuppressed="$reactionSuppressed" />
+					<Expression expressions="$stimulus.severeness = $trespassAreaSevereness" />
+					<IfElseCondition failOnCondition="false" condition="$reaction" saveVersion="2">
+						<Then canSkip="1">
+							<Sequence>
+								<Sequence>
+									<Expression expressions="$who_soul.value = $this.id &#10;$trespassArea_triggerArea.value = $trespassArea" />
+									<SendAIConceptSignal_NPCSawPlayerInsideTrespassNotification who="$who_soul" trespassArea="$trespassArea_triggerArea" trespassAreaSevereness="$trespassAreaSevereness" />
+								</Sequence>
+								<IsBandit Npc="$this.id" IsBandit="$isBandit" />
+								<IfCondition failOnCondition="false" condition="$isBandit">
+									<Sequence>
+										<Expression expressions="$stimulus.isCampTrespass = true" />
+										<EntityContextCheck context="crime_interruptWatchCampTrespass" target="" saveVersion="2">
+											<Else canSkip="1">
+												<EntityContextCheck context="crime_interruptAttack" target="" saveVersion="2">
+													<Else canSkip="1">
+														<EntityContextCheck context="crime_inCrimeDialog" target="$__player" saveVersion="2">
+															<Else canSkip="1">
+																<Sequence>
+																	<SuppressFailure>
+																		<Sequence>
+																			<Invertor>
+																				<Sequence>
+																					<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																						<LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																						<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+																							<Child0 canSkip="1">
+																								<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																							</Child0>
+																						</NegationOp>
+																						<RangeFilter min="0.000000" max="100.000000" point="$this.id" excludeRef="true" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																						<LinkDataFilter tag="&apos;crime_reactor&apos;" condition="$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.watchCampTrespass" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																					</GraphSearch>
+																					<Expression expressions="$playerAlreadyEngaged = true" />
+																				</Sequence>
+																			</Invertor>
+																			<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																				<LinkTagFilter tag="&apos;crime_npcCooldowns&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																				<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																				<Datalyzer Tag="&apos;crime_npcCooldowns&apos;" Quantifiers="Exists" Parent="" Child="" Data="$npcCooldowns" saveVersion="2" />
+																			</GraphSearch>
+																			<GetTime TimeType="GameTime" OutVar="$now" Delta="" />
+																			<Expression expressions="$banditOnCooldown =  &#10;( &#10; $npcCooldowns.resolve_evade.time &gt; $now - $data:script_param[&apos;combat_surrenderCooldownPublicEnemy&apos;].value  &#10; &amp; $npcCooldowns.resolve_evade.time ~= 0 &#10;) | &#10;( &#10; $npcCooldowns.resolve_sucess.time &gt; $now - $data:script_param[&apos;combat_surrenderCooldownPublicEnemy&apos;].value  &#10; &amp; $npcCooldowns.resolve_sucess.time ~= 0 &#10;)" />
+																		</Sequence>
+																	</SuppressFailure>
+																	<Function_crime_hasWeaponDrawn checkingMethod="$enum:crime_weaponCheckingMethod.perceivableState" npc="$__player" result="$playerWeaponDrawn" nodeLabel="98772320" />
+																	<Function_crime_knowAboutDeadMate target="" deadMateKnown="$deadMateKnown" nodeLabel="87145679" />
+																	<IfCondition failOnCondition="false" condition="~$playerAlreadyEngaged">
+																		<ActorStateCheck Who="$__player" State="crouch" FailWithSubtreeMissing="false" saveVersion="2">
+																			<Then canSkip="1">
+																				<IsNightTimeOfDay saveVersion="2">
+																					<Then canSkip="1">
+																						<Expression expressions="$playerCrouchingAtNight = true" />
+																					</Then>
+																					<Else canSkip="1">
+																						<Success />
+																					</Else>
+																				</IsNightTimeOfDay>
+																			</Then>
+																		</ActorStateCheck>
+																	</IfCondition>
+																	<StanceCheck soul="$__player" stance="lying" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
+																		<Then canSkip="1">
+																			<Expression expressions="$playerOnBed = true" />
+																		</Then>
+																		<Else canSkip="1">
+																			<Success />
+																		</Else>
+																	</StanceCheck>
+																	<IfCondition failOnCondition="false" condition="$banditOnCooldown | $playerWeaponDrawn | $deadMateKnown | $playerCrouchingAtNight | $playerOnBed">
+																		<Expression expressions="$escalateImmediately = true" />
+																	</IfCondition>
+																</Sequence>
+															</Else>
+														</EntityContextCheck>
+													</Else>
+												</EntityContextCheck>
+											</Else>
+										</EntityContextCheck>
+									</Sequence>
+								</IfCondition>
+								<Function_crime_getHomeFromArea area="$trespassArea" home="$home" nodeLabel="60068906" />
+								<IfCondition failOnCondition="false" condition="$home ~= $__null">
+									<GetHomeTrespassEscalation Home="$home" Counter="$homeEscalationCounter" IsPaused="$escalationPaused" />
+								</IfCondition>
+								<IfElseCondition failOnCondition="false" condition="$trespassAreaSevereness &gt;= $enum:trespassLevel.prohibited &amp; &#10;~$escalationPaused" saveVersion="2">
+									<Then canSkip="1">
+										<Expression expressions="$escalateImmediately = true" />
+									</Then>
+									<Else canSkip="1">
+										<IfCondition failOnCondition="false" condition="$trespassAreaSevereness &gt;= $enum:trespassLevel.personal">
+											<StanceCheck soul="$__player" stance="lying" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
+												<Then canSkip="1">
+													<Expression expressions="$escalateImmediately = true" />
+												</Then>
+												<Else canSkip="1">
+													<Success />
+												</Else>
+											</StanceCheck>
+										</IfCondition>
+									</Else>
+								</IfElseCondition>
+								<IfCondition failOnCondition="false" condition="~$escalateImmediately">
+									<Expression expressions="$escalateImmediately =  &#10;($isBandit | $trespassAreaSevereness &gt;= $enum:trespassLevel.personal) &amp;  &#10;$homeEscalationCounter &gt; $data:script_param[&apos;crime_trespassEscalationThreshold&apos;].value" />
+								</IfCondition>
+								<IfElseCondition failOnCondition="false" condition="$escalateImmediately" saveVersion="2">
+									<Then canSkip="1">
+										<Sequence>
+											<Expression expressions="$stimulusEscalated.trespassArea = $trespassArea &#10;$stimulusEscalated.wuidType = $enum:crime_trespassInformationWuid.homeArea &#10;$stimulusEscalated.stimulusKind = $enum:crime_stimulusKind.escalatedTrespass" />
+											<Function_switch_handleStimulusEscalatedTrespass stimulus="$stimulusEscalated" nodeLabel="30692092" />
+										</Sequence>
+									</Then>
+									<Else canSkip="1">
+										<Sequence>
+											<Expression expressions="$stimulus.area = $trespassArea" />
+											<Function_switch_handleStimulusTrespass stimulus="$stimulus" nodeLabel="96174437" />
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+								<Switch>
+									<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+										<Then canSkip="1">
+											<Success />
+										</Then>
+									</EntityContextCheck>
+									<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+										<Then canSkip="1">
+											<Success />
+										</Then>
+									</EntityContextCheck>
+									<DefaultBranch>
+										<Sequence>
+											<GetHomeFromArea Area="$trespassArea" Home="$home" />
+											<IfCondition failOnCondition="false" condition="$home ~= $__null">
+												<Function_crime_addLongTermMemoryTrespass home="$home" nodeLabel="37403558" />
+											</IfCondition>
+										</Sequence>
+									</DefaultBranch>
+								</Switch>
+							</Sequence>
+						</Then>
+						<Else canSkip="1">
+							<Switch>
+								<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+									<Then canSkip="1">
+										<Success />
+									</Then>
+								</EntityContextCheck>
+								<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+									<Then canSkip="1">
+										<Success />
+									</Then>
+								</EntityContextCheck>
+								<DefaultBranch>
+									<IfCondition failOnCondition="false" condition="$trespassAreaSevereness == $enum:trespassLevel.semipublic &amp; &#10;~$reactionSuppressed">
+										<SuppressFailure>
+											<Sequence>
+												<GetHomeFromArea Area="$trespassArea" Home="$home" />
+												<IfCondition failOnCondition="false" condition="$home ~= $__null">
+													<Sequence>
+														<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+															<LinkTagFilter tag="&apos;home&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+															<WUIDFilter WUID="$home" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+														</GraphSearch>
+														<DetermineTrespassReaction Observer="$this.id" Target="$__player" Position="" ForceSemipublicReaction="true" ShouldUseVec3Position="false" TrespassAreaSevereness="$trespassAreaSevereness" TrespassArea="$trespassArea" Reaction="$reaction" ReactionSuppressed="$reactionSuppressed" />
+														<IfCondition failOnCondition="false" condition="$reaction">
+															<Function_crime_addLongTermMemoryTrespass home="$home" nodeLabel="79499283" />
+														</IfCondition>
+													</Sequence>
+												</IfCondition>
+											</Sequence>
+										</SuppressFailure>
+									</IfCondition>
+								</DefaultBranch>
+							</Switch>
+						</Else>
+					</IfElseCondition>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<IfCondition failOnCondition="false" condition="false">
+				<IfCondition failOnCondition="false" condition="$trespassAreaSevereness == $enum:trespassLevel.semipublic">
+					<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.priority &lt; $data:script_param[&apos;crime_barkReactionPriority_semipublicTrespass&apos;].value">
+						<Expression expressions="$reactionIntermediateData.barkData.metarole = &apos;NPC_VIDI_HRACE_V_TRESPASSU_BEZ_REAKCE&apos; &#10;$reactionIntermediateData.barkData.barkKind = $enum:crime_barkReactionKind.semipublicTrespass &#10;$reactionIntermediateData.barkData.priority = $data:script_param[&apos;crime_barkReactionPriority_semipublicTrespass&apos;].value &#10;$reactionIntermediateData.barkData.genderData.isGenderSpecific = false" />
+					</IfCondition>
+				</IfCondition>
+			</IfCondition>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="banditOnCooldown" comment="" />
+				<Variable name="deadMateKnown" comment="" />
+				<Variable name="escalateImmediately" comment="" />
+				<Variable name="escalationPaused" comment="" />
+				<Variable name="home" comment="" />
+				<Variable name="homeEscalationCounter" comment="" />
+				<Variable name="isBandit" comment="" />
+				<Variable name="now" comment="" />
+				<Variable name="npcCooldowns" comment="" />
+				<Variable name="playerAlreadyEngaged" comment="" />
+				<Variable name="playerCrouchingAtNight" comment="" />
+				<Variable name="playerOnBed" comment="" />
+				<Variable name="playerWeaponDrawn" comment="" />
+				<Variable name="reaction" comment="" />
+				<Variable name="reactionSuppressed" comment="" />
+				<Variable name="stimulus" comment="" />
+				<Variable name="stimulusEscalated" comment="" />
+				<Variable name="trespassArea" comment="" />
+				<Variable name="trespassAreaSevereness" comment="" />
+				<Variable name="trespassArea_triggerArea" comment="" />
+				<Variable name="who_soul" comment="" />
+				<Variable name="reactionIntermediateData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="50" editorPosY="-330" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</DetermineTrespassReaction>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<SendAIConceptSignal_NPCSawPlayerInsideTrespassNotification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</SendAIConceptSignal_NPCSawPlayerInsideTrespassNotification>
+									</Sequence>
+									<IsBandit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</IsBandit>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Else>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Else>
+															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Else>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Invertor hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</LinkTagFilter>
+																							<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																								<OutputBreakpoints />
+																								<Child0>
+																									<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</WUIDFilter>
+																								</Child0>
+																							</NegationOp>
+																							<RangeFilter hasInputBreakpoint="0" comment="just to be sure" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</RangeFilter>
+																							<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</LinkDataFilter>
+																						</GraphSearch>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Sequence>
+																				</Invertor>
+																				<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</LinkTagFilter>
+																					<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</WUIDFilter>
+																					<Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																					</Datalyzer>
+																				</GraphSearch>
+																				<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</GetTime>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Sequence>
+																		</SuppressFailure>
+																		<Function_crime_hasWeaponDrawn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_crime_hasWeaponDrawn>
+																		<Function_crime_knowAboutDeadMate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_crime_knowAboutDeadMate>
+																		<IfCondition hasInputBreakpoint="0" comment="only do this if player was initially found crouching, not when he crouches afterwards" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<ActorStateCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<IsNightTimeOfDay hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Then>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</Then>
+																						<Else>
+																							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Success>
+																						</Else>
+																					</IsNightTimeOfDay>
+																				</Then>
+																			</ActorStateCheck>
+																		</IfCondition>
+																		<StanceCheck hasInputBreakpoint="0" comment="escalate immediately on a sleeping player in trespass" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Then>
+																			<Else>
+																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Success>
+																			</Else>
+																		</StanceCheck>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</IfCondition>
+																	</Sequence>
+																</Else>
+															</EntityContextCheck>
+														</Else>
+													</EntityContextCheck>
+												</Else>
+											</EntityContextCheck>
+										</Sequence>
+									</IfCondition>
+									<Function_crime_getHomeFromArea hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_getHomeFromArea>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GetHomeTrespassEscalation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetHomeTrespassEscalation>
+									</IfCondition>
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Then>
+										<Else>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<StanceCheck hasInputBreakpoint="0" comment="escalate immediately on a sleeping player in trespass" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Then>
+													<Else>
+														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Success>
+													</Else>
+												</StanceCheck>
+											</IfCondition>
+										</Else>
+									</IfElseCondition>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</IfCondition>
+									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<Function_switch_handleStimulusEscalatedTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleStimulusEscalatedTrespass>
+											</Sequence>
+										</Then>
+										<Else>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<Function_switch_handleStimulusTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleStimulusTrespass>
+											</Sequence>
+										</Else>
+									</IfElseCondition>
+									<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Then>
+										</EntityContextCheck>
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Then>
+										</EntityContextCheck>
+										<DefaultBranch>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GetHomeFromArea hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetHomeFromArea>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_crime_addLongTermMemoryTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_addLongTermMemoryTrespass>
+												</IfCondition>
+											</Sequence>
+										</DefaultBranch>
+									</Switch>
+								</Sequence>
+							</Then>
+							<Else>
+								<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</Then>
+									</EntityContextCheck>
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</Then>
+									</EntityContextCheck>
+									<DefaultBranch>
+										<IfCondition hasInputBreakpoint="0" comment="if in semipublic and reaction is not suppressed we want to store, that player was seen in trespass" breakpointFlags="0">
+											<OutputBreakpoints />
+											<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<GetHomeFromArea hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</GetHomeFromArea>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GraphSearch hasInputBreakpoint="0" comment="if it isnt my home, do not add longTermMemory" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+																<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</WUIDFilter>
+															</GraphSearch>
+															<DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</DetermineTrespassReaction>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_crime_addLongTermMemoryTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_addLongTermMemoryTrespass>
+															</IfCondition>
+														</Sequence>
+													</IfCondition>
+												</Sequence>
+											</SuppressFailure>
+										</IfCondition>
+									</DefaultBranch>
+								</Switch>
+							</Else>
+						</IfElseCondition>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest>
+				<IfCondition editorPosX="770" editorPosY="1190" hasInputBreakpoint="0" comment="TODO: remove bark enum kind and everything else with it" breakpointFlags="0">
+					<OutputBreakpoints />
+					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</IfCondition>
+					</IfCondition>
+				</IfCondition>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

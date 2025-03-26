@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_animal_escape" is_function="0">
+		<Variables>
+			<Variable name="additionalMoveParams" type="additionalMoveParams" values="" isPersistent="0" form="single" />
+			<Variable name="animalAlarmInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="dummyWuid" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="pathFindingParams" type="pathFindingParams" values="useGeneratedNSO(true)" isPersistent="0" form="single" />
+			<Variable name="shouldExit" type="_bool" values="false" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="animalEscapeData" type="switch:animal_interruptData:escape" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Expression expressions="$additionalMoveParams.destChangedThreshold = &apos;1s&apos; &#10;$additionalMoveParams.useStoppingDistanceForCuttingFromEnd = false" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<DisableCollisionAvoidance>
+							<EntityContext context="crime_animal_interruptEscape" target="$this.id">
+								<EntityContext context="combat_flee" target="$this.id">
+									<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+										<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:animal:escape&apos;">
+											<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$animalEscapeData.stimulusKind&apos;">
+												<Sequence>
+													<IfCondition failOnCondition="false" condition="$animalEscapeData.shouldEmitInformation">
+														<Sequence>
+															<CreateInformationWrapper Label="&apos;animal_alarm&apos;" PerceivedWuid="$this.id" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$animalAlarmInformation" />
+															<LockDynamicInformationValues Information="$animalAlarmInformation">
+																<Sequence>
+																	<SetDynamicInformationValue Information="$animalAlarmInformation" Tag="&apos;useVec3ForEscape&apos;" Variable="$animalEscapeData.useVec3ForEscape" Type="" Value="" />
+																	<IfElseCondition failOnCondition="false" condition="$animalEscapeData.useVec3ForEscape" saveVersion="2">
+																		<Then canSkip="1">
+																			<SetDynamicInformationValue Information="$animalAlarmInformation" Tag="&apos;escapeFromVec3&apos;" Variable="$animalEscapeData.escapeFromVec3" Type="" Value="" />
+																		</Then>
+																		<Else canSkip="1">
+																			<SetDynamicInformationValue Information="$animalAlarmInformation" Tag="&apos;escapeFromWuid&apos;" Variable="$animalEscapeData.escapeFromWuid" Type="" Value="" />
+																		</Else>
+																	</IfElseCondition>
+																	<SetDynamicInformationValue Information="$animalAlarmInformation" Tag="&apos;stimulusKind&apos;" Variable="$animalEscapeData.stimulusKind" Type="" Value="" />
+																	<SetDynamicInformationValue Information="$animalAlarmInformation" Tag="&apos;reactionKind&apos;" Variable="$enum:crime_animal_reactionKind.escape" Type="" Value="" />
+																</Sequence>
+															</LockDynamicInformationValues>
+															<InformationEmittingStart Information="$animalAlarmInformation" Periodicity="&apos;1s&apos;" TimerType="GameTime" Radius="10.000000" />
+														</Sequence>
+													</IfCondition>
+													<StopMovement waitUntilStopped="false" />
+													<Parallel successMode="Any" failureMode="Any">
+														<IsInsideAreaWithLabel Position="$this.id" Label="&apos;interior&apos;" Area="$dummyWuid" FailSubtMissing="false" saveVersion="2">
+															<Then canSkip="1">
+																<IsInsideAreaWithLabelBarrier Who="$this.id" Label="&apos;interior&apos;" Negation="true" RunLogic="Halt">
+																	<IsInsideAreaWithLabelBarrier Who="$this.id" Label="&apos;interior&apos;" Negation="false" RunLogic="Halt">
+																		<Expression expressions="$shouldExit = true" />
+																	</IsInsideAreaWithLabelBarrier>
+																</IsInsideAreaWithLabelBarrier>
+															</Then>
+															<Else canSkip="1">
+																<IsInsideAreaWithLabelBarrier Who="$this.id" Label="&apos;interior&apos;" Negation="false" RunLogic="Halt">
+																	<Expression expressions="$shouldExit = true" />
+																</IsInsideAreaWithLabelBarrier>
+															</Else>
+														</IsInsideAreaWithLabel>
+														<IfGate atomic="false" condition="~$shouldExit" RunLogic="Halt">
+															<IfElseCondition failOnCondition="false" condition="$animalEscapeData.useVec3ForEscape" saveVersion="2">
+																<Then canSkip="1">
+																	<Move stopWithinDistance="5.000000" stopDistanceVariation="2.500000" rayCasteFlee="false" successDistance="1.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animalEscapeData.escapeFromVec3" destinationSpecification2="$animalEscapeData.distanceToFlee" destinationSpecification3="$animalEscapeData.keepMinimalDistance" speed="$animalEscapeData.movementSpeed" additionalParams="$additionalMoveParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+																</Then>
+																<Else canSkip="1">
+																	<Move stopWithinDistance="5.000000" stopDistanceVariation="2.500000" rayCasteFlee="false" successDistance="1.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animalEscapeData.escapeFromWuid" destinationSpecification2="$animalEscapeData.distanceToFlee" destinationSpecification3="$animalEscapeData.keepMinimalDistance" speed="$animalEscapeData.movementSpeed" additionalParams="$additionalMoveParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+																</Else>
+															</IfElseCondition>
+														</IfGate>
+													</Parallel>
+													<EntityContextCheck context="switch_isHare" target="" saveVersion="2">
+														<Then canSkip="1">
+															<Function_callInterrupt_animal_annoyance attackKind="$enum:crime_attackKind.unknown" ignorePriority="true" initiator="$enum:switch_interruptInitiator.scheduler" previousReaction="$enum:crime_animal_reactionKind.escape" stimulusKind="$enum:crime_animal_stimulusKind.sound" target="$__player" nodeLabel="90299693" />
+														</Then>
+														<Else canSkip="1">
+															<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+														</Else>
+													</EntityContextCheck>
+													<Function_switch_animal_callFollowUpBehavior previousReaction="$enum:crime_animal_reactionKind.escape" nodeLabel="75537397" />
+												</Sequence>
+											</LogToLabel>
+										</LogToLabel>
+									</AddPerceivableState>
+								</EntityContext>
+							</EntityContext>
+						</DisableCollisionAvoidance>
+					</Child>
+					<OnFail canSkip="1">
+						<IfCondition failOnCondition="false" condition="$animalEscapeData.shouldEmitInformation">
+							<AtomicDecorator>
+								<Sequence>
+									<InformationEmittingEnd Information="$animalAlarmInformation" />
+									<DestroyInformationCompletely Information="$animalAlarmInformation" />
+								</Sequence>
+							</AtomicDecorator>
+						</IfCondition>
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="animal_escape" EventSet="">
+			<Variables>
+				<Variable name="additionalMoveParams" comment="" />
+				<Variable name="animalAlarmInformation" comment="" />
+				<Variable name="dummyWuid" comment="" />
+				<Variable name="pathFindingParams" comment="" />
+				<Variable name="shouldExit" comment="" />
+				<Variable name="animalEscapeData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+				</OnInit>
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<DisableCollisionAvoidance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</CreateInformationWrapper>
+																<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</SetDynamicInformationValue>
+																		<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</SetDynamicInformationValue>
+																			</Then>
+																			<Else>
+																				<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</SetDynamicInformationValue>
+																			</Else>
+																		</IfElseCondition>
+																		<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</SetDynamicInformationValue>
+																		<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</SetDynamicInformationValue>
+																	</Sequence>
+																</LockDynamicInformationValues>
+																<InformationEmittingStart hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</InformationEmittingStart>
+															</Sequence>
+														</IfCondition>
+														<StopMovement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</StopMovement>
+														<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</IsInsideAreaWithLabelBarrier>
+																	</IsInsideAreaWithLabelBarrier>
+																</Then>
+																<Else>
+																	<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IsInsideAreaWithLabelBarrier>
+																</Else>
+															</IsInsideAreaWithLabel>
+															<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Move>
+																	</Then>
+																	<Else>
+																		<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Move>
+																	</Else>
+																</IfElseCondition>
+															</IfGate>
+														</Parallel>
+														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Function_callInterrupt_animal_annoyance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_callInterrupt_animal_annoyance>
+															</Then>
+															<Else>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+															</Else>
+														</EntityContextCheck>
+														<Function_switch_animal_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_switch_animal_callFollowUpBehavior>
+													</Sequence>
+												</LogToLabel>
+											</LogToLabel>
+										</AddPerceivableState>
+									</EntityContext>
+								</EntityContext>
+							</DisableCollisionAvoidance>
+						</Child>
+						<OnFail>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<InformationEmittingEnd hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</InformationEmittingEnd>
+										<DestroyInformationCompletely hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</DestroyInformationCompletely>
+									</Sequence>
+								</AtomicDecorator>
+							</IfCondition>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

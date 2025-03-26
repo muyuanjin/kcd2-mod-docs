@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_createOrUpdatePoachingInformation" is_function="1">
+		<Variables>
+			<Variable name="animalSpecies" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="animalUIName" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="animal_fineString" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="animals" type="_string" values="" isPersistent="0" form="array" />
+			<Variable name="animals_val" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="calculatedFine" type="_int" values="0" isPersistent="0" form="single" />
+			<Variable name="crimeType" type="_int" values="" isPersistent="0" form="associative" />
+			<Variable name="crimeTypes" type="_string" values="" isPersistent="0" form="array" />
+			<Variable name="crimeTypes_val" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="fine_animalBase" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="fine_crimeString" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="paramsFineString" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="animalAbuseKind" type="enum:crime_animalAbuseKind" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="attributedCrime" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" requirementType="Out" />
+			<Variable name="victim" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Sequence>
+						<Selector>
+							<Sequence>
+								<RetrieveInformation PerceivedWuid="$victim" label="&apos;poaching&apos;" OutVariable="$information" />
+								<LockDynamicInformationValues Information="$information">
+									<Sequence>
+										<GetDynamicInformationValue Information="$information" Tag="&apos;crimeType&apos;" Out="$crimeType" />
+									</Sequence>
+								</LockDynamicInformationValues>
+							</Sequence>
+							<Sequence>
+								<CreateInformationWrapper Label="&apos;poaching&apos;" PerceivedWuid="$victim" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$information" />
+								<Expression expressions="$crimeType[&apos;assault&apos;] = 0 &#10;$crimeType[&apos;murder&apos;] = 0 &#10;$crimeType[&apos;theft&apos;] = 0" />
+								<LockDynamicInformationValues Information="$information">
+									<SetDynamicInformationValue Information="$information" Tag="&apos;crimeType&apos;" Variable="$crimeType" Type="" Value="" />
+								</LockDynamicInformationValues>
+							</Sequence>
+						</Selector>
+					</Sequence>
+					<Function_crime_getSoulArchetype soul="$victim" archetype="$animalSpecies" nodeLabel="57243360" />
+					<Function_crime_getSoulUIName soul="$victim" UIName="$animalUIName" nodeLabel="75760662" />
+					<Switch>
+						<IfCondition failOnCondition="false" condition="$animalAbuseKind == $enum:crime_animalAbuseKind.assault">
+							<Expression expressions="$crimeType[&apos;assault&apos;] = 1" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$animalAbuseKind == $enum:crime_animalAbuseKind.murder">
+							<Expression expressions="$crimeType[&apos;murder&apos;] = 1" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$animalAbuseKind == $enum:crime_animalAbuseKind.theft">
+							<Expression expressions="$crimeType[&apos;theft&apos;] = 1" />
+						</IfCondition>
+						<DefaultBranch>
+							<ErrorNode Message="&apos;[$this.name;] Unknown animalAbuseKind in createOrUpdatePoachingInformation&apos;" />
+						</DefaultBranch>
+					</Switch>
+					<LockDynamicInformationValues Information="$information">
+						<Sequence>
+							<SetDynamicInformationValue Information="$information" Tag="&apos;crimeType&apos;" Variable="$crimeType" Type="" Value="" />
+							<SetDynamicInformationValue Information="$information" Tag="&apos;victim&apos;" Variable="$this.id" Type="" Value="" />
+							<SetDynamicInformationValue Information="$information" Tag="&apos;animalArchetype&apos;" Variable="$animalSpecies" Type="" Value="" />
+							<SetDynamicInformationValue Information="$information" Tag="&apos;attributedCrime&apos;" Variable="$attributedCrime" Type="" Value="" />
+							<SetDynamicInformationValue Information="$information" Tag="&apos;animalCount&apos;" Variable="" Type="&apos;int&apos;" Value="1" />
+							<SetDynamicInformationValue Information="$information" Tag="&apos;animalUIName&apos;" Variable="$animalUIName" Type="" Value="" />
+						</Sequence>
+					</LockDynamicInformationValues>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<ForEach startIndex="0" step="1" array="$animals" iterator="" value="$animals_val" break="">
+				<Sequence>
+					<Concatenation OutString="$animal_fineString" Pattern="&apos;crime_poaching_$animals_val;_baseFine&apos;" />
+					<Expression expressions="$fine_animalBase = $data:script_param[ $animal_fineString ].value" />
+					<IfCondition failOnCondition="false" condition="$animals_val == $animalSpecies">
+						<ForEach startIndex="0" step="1" array="$crimeTypes" iterator="" value="$crimeTypes_val" break="">
+							<Sequence>
+								<Concatenation OutString="$fine_crimeString" Pattern="&apos;crime_poaching_$crimeTypes_val;_multiplier&apos;" />
+								<IfCondition failOnCondition="false" condition="$crimeType[ $crimeTypes_val ] == 1 &amp; &#10;$fine_animalBase * $data:script_param[ $fine_crimeString ].value &gt; $calculatedFine">
+									<Expression expressions="$calculatedFine = $fine_animalBase * $data:script_param[ $fine_crimeString ].value" />
+								</IfCondition>
+							</Sequence>
+						</ForEach>
+					</IfCondition>
+				</Sequence>
+			</ForEach>
+			<Sequence>
+				<Expression expressions="$animals[0] = &apos;Boar&apos; &#10;$animals[1] = &apos;RedDeer&apos; &#10;$animals[2] = &apos;DeerDoe&apos;" />
+				<Expression expressions="$crimeTypes[0] = &apos;assault&apos; &#10;$crimeTypes[1] = &apos;murder&apos; &#10;$crimeTypes[2] = &apos;theft&apos;" />
+			</Sequence>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="animalSpecies" comment="" />
+				<Variable name="animalUIName" comment="" />
+				<Variable name="animal_fineString" comment="" />
+				<Variable name="animals" comment="" />
+				<Variable name="animals_val" comment="" />
+				<Variable name="calculatedFine" comment="" />
+				<Variable name="crimeType" comment="" />
+				<Variable name="crimeTypes" comment="" />
+				<Variable name="crimeTypes_val" comment="" />
+				<Variable name="fine_animalBase" comment="" />
+				<Variable name="fine_crimeString" comment="" />
+				<Variable name="paramsFineString" comment="" />
+				<Variable name="animalAbuseKind" comment="" />
+				<Variable name="attributedCrime" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="victim" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RetrieveInformation>
+									<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetDynamicInformationValue>
+										</Sequence>
+									</LockDynamicInformationValues>
+								</Sequence>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</CreateInformationWrapper>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</SetDynamicInformationValue>
+									</LockDynamicInformationValues>
+								</Sequence>
+							</Selector>
+						</Sequence>
+						<Function_crime_getSoulArchetype hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_crime_getSoulArchetype>
+						<Function_crime_getSoulUIName hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_crime_getSoulUIName>
+						<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<DefaultBranch>
+								<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</ErrorNode>
+							</DefaultBranch>
+						</Switch>
+						<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</SetDynamicInformationValue>
+								<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</SetDynamicInformationValue>
+								<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</SetDynamicInformationValue>
+								<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</SetDynamicInformationValue>
+								<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</SetDynamicInformationValue>
+								<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</SetDynamicInformationValue>
+							</Sequence>
+						</LockDynamicInformationValues>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest>
+				<ForEach editorPosX="1430" editorPosY="140" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Concatenation>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Concatenation>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</IfCondition>
+								</Sequence>
+							</ForEach>
+						</IfCondition>
+					</Sequence>
+				</ForEach>
+				<Sequence editorPosX="1430" editorPosY="-140" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+				</Sequence>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

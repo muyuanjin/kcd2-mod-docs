@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="interrupt_intermediateEventBehaviour" is_function="0">
+    <Variables>
+      <Variable name="FFSuspend" type="_bool" values="false" isPersistent="0" form="single" />
+      <Variable name="attack_eventType" type="enum:genericRandomEventType" values="" isPersistent="0" form="single" />
+      <Variable name="evadeFailed" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="fastTravelContinues" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="mrkev" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="reactionData" type="crime:reactor" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="aa_chosenBehavior" type="enum:crime_reactionKind" values="$enum:crime_reactionKind.unknown" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="arrestData" type="switch:interruptData:arrest" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+      <Variable name="attackData" type="switch:interruptData:attack" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+      <Variable name="friskData" type="switch:interruptData:frisk" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+      <Variable name="priority" type="_int" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="selfHelpData" type="switch:interruptData:selfhelp" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+          <Child canSkip="1">
+            <EntityContext context="crime_preventDespawn" target="">
+              <LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:intermediateEventBehaviour&apos;">
+                <LogToLabel Name="$aa_chosenBehavior" Wuid="" Message="&apos;reactionKind&apos;">
+                  <Sequence>
+                    <Function_crime_getMrkev mrkev="$mrkev" nodeLabel="54244259" />
+                    <Sequence>
+                      <Function_crime_limits_confirmReactionLink reactionKind="$aa_chosenBehavior" nodeLabel="92768195" />
+                      <GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;crime_reactor&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                        <LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                        <WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                        <LinkDataFilter tag="&apos;crime_reactor&apos;" condition="$__link_crime_reactor.reactionKind == $aa_chosenBehavior" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                        <Datalyzer Tag="&apos;crime_reactor&apos;" Quantifiers="Exists" Parent="" Child="" Data="$reactionData" saveVersion="2" />
+                      </GraphSearch>
+                      <GetScheduledPriority Priority="$priority" />
+                      <Switch>
+                        <IfCondition failOnCondition="false" condition="$aa_chosenBehavior == $enum:crime_reactionKind.frisk">
+                          <FastTravelGenericRandomEvent FastForward="true" EventType="Frisk" FastTravelContinuesOut="$fastTravelContinues" EvadeFailedOut="$evadeFailed" RunLogic="KeepRunning">
+                            <IfCondition failOnCondition="false" condition="~$fastTravelContinues">
+                              <Sequence>
+                                <Expression expressions="$FFSuspend = true" />
+                                <AddInterrupt_frisk friskData="$friskData" Target="$this.id" Host="$mrkev" Behavior="&apos;interrupt_frisk&apos;" Priority="$priority" IgnorePriorityOnPreviousInterrupt="true" urgency="Default" Aliveness="Alive" Privileged="false" FastForward="true" />
+                              </Sequence>
+                            </IfCondition>
+                          </FastTravelGenericRandomEvent>
+                        </IfCondition>
+                        <IfCondition failOnCondition="false" condition="$aa_chosenBehavior == $enum:crime_reactionKind.arrest">
+                          <FastTravelGenericRandomEvent FastForward="true" EventType="Arrest" FastTravelContinuesOut="$fastTravelContinues" EvadeFailedOut="$evadeFailed" RunLogic="KeepRunning">
+                            <IfCondition failOnCondition="false" condition="~$fastTravelContinues">
+                              <Sequence>
+                                <Expression expressions="$FFSuspend = true" />
+                                <AddInterrupt_arrest arrestData="$arrestData" Target="$this.id" Host="$mrkev" Behavior="&apos;interrupt_arrest&apos;" Priority="$priority" IgnorePriorityOnPreviousInterrupt="true" urgency="Fast" Aliveness="Alive" Privileged="false" FastForward="true" />
+                              </Sequence>
+                            </IfCondition>
+                          </FastTravelGenericRandomEvent>
+                        </IfCondition>
+                        <IfCondition failOnCondition="false" condition="$aa_chosenBehavior == $enum:crime_reactionKind.selfhelp">
+                          <FastTravelGenericRandomEvent FastForward="true" EventType="SelfHelp" FastTravelContinuesOut="$fastTravelContinues" EvadeFailedOut="$evadeFailed" RunLogic="KeepRunning">
+                            <IfCondition failOnCondition="false" condition="~$fastTravelContinues">
+                              <Sequence>
+                                <Expression expressions="$FFSuspend = true" />
+                                <AddInterrupt_selfhelp selfhelpData="$selfHelpData" Target="$this.id" Host="$mrkev" Behavior="&apos;interrupt_selfhelp&apos;" Priority="$priority" IgnorePriorityOnPreviousInterrupt="true" urgency="Fast" Aliveness="Alive" Privileged="false" FastForward="true" />
+                              </Sequence>
+                            </IfCondition>
+                          </FastTravelGenericRandomEvent>
+                        </IfCondition>
+                        <IfCondition failOnCondition="false" condition="$aa_chosenBehavior == $enum:crime_reactionKind.attack">
+                          <Sequence>
+                            <CheckRelationshipInterval_SoulToSoul TargetSoul="$__player" Soul="$this.id" Flag="enemy" saveVersion="2">
+                              <Then canSkip="1">
+                                <Expression expressions="$attack_eventType = $enum:genericRandomEventType.enemy" />
+                              </Then>
+                              <Else canSkip="1">
+                                <Expression expressions="$attack_eventType = $enum:genericRandomEventType.combat" />
+                              </Else>
+                            </CheckRelationshipInterval_SoulToSoul>
+                            <FastTravelGenericRandomEvent FastForward="true" EventType="$attack_eventType" FastTravelContinuesOut="$fastTravelContinues" EvadeFailedOut="$evadeFailed" RunLogic="KeepRunning">
+                              <IfCondition failOnCondition="false" condition="~$fastTravelContinues">
+                                <Sequence>
+                                  <Expression expressions="$FFSuspend = true" />
+                                  <AddInterrupt_attack attackData="$attackData" Target="$this.id" Host="$mrkev" Behavior="&apos;interrupt_attack&apos;" Priority="$priority" IgnorePriorityOnPreviousInterrupt="true" urgency="Fast" Aliveness="Alive" Privileged="false" FastForward="true" />
+                                </Sequence>
+                              </IfCondition>
+                            </FastTravelGenericRandomEvent>
+                          </Sequence>
+                        </IfCondition>
+                        <DefaultBranch>
+                          <ErrorNode Message="&apos;[$this.name;] ReactionKind $a_chosenBehavior; not supported&apos;" />
+                        </DefaultBranch>
+                      </Switch>
+                    </Sequence>
+                  </Sequence>
+                </LogToLabel>
+              </LogToLabel>
+            </EntityContext>
+          </Child>
+          <OnFail canSkip="1">
+            <IfCondition failOnCondition="false" condition="~$FFSuspend">
+              <Function_crime_limits_removeReactionLink information="$reactionData.information" reactionKind="$aa_chosenBehavior" nodeLabel="82153788" />
+            </IfCondition>
+          </OnFail>
+        </FuseBox>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData Signature="interrupt_intermediateEventBehaviour" EventSet="">
+      <Variables>
+        <Variable name="FFSuspend" comment="" />
+        <Variable name="attack_eventType" comment="" />
+        <Variable name="evadeFailed" comment="" />
+        <Variable name="fastTravelContinues" comment="" />
+        <Variable name="mrkev" comment="" />
+        <Variable name="reactionData" comment="" />
+        <Variable name="aa_chosenBehavior" comment="" />
+        <Variable name="arrestData" comment="" />
+        <Variable name="attackData" comment="" />
+        <Variable name="friskData" comment="" />
+        <Variable name="priority" comment="" />
+        <Variable name="selfHelpData" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+            <OutputBreakpoints />
+            <Child>
+              <EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Function_crime_getMrkev hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Function_crime_getMrkev>
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Function_crime_limits_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Function_crime_limits_confirmReactionLink>
+                        <GraphSearch hasInputBreakpoint="0" comment="Get motivation so we can delete it if needed" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </LinkTagFilter>
+                          <WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </WUIDFilter>
+                          <LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </LinkDataFilter>
+                          <Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                          </Datalyzer>
+                        </GraphSearch>
+                        <GetScheduledPriority hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </GetScheduledPriority>
+                        <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <FastTravelGenericRandomEvent hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                  <AddInterrupt_frisk hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </AddInterrupt_frisk>
+                                </Sequence>
+                              </IfCondition>
+                            </FastTravelGenericRandomEvent>
+                          </IfCondition>
+                          <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <FastTravelGenericRandomEvent hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                  <AddInterrupt_arrest hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </AddInterrupt_arrest>
+                                </Sequence>
+                              </IfCondition>
+                            </FastTravelGenericRandomEvent>
+                          </IfCondition>
+                          <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <FastTravelGenericRandomEvent hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                  <AddInterrupt_selfhelp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </AddInterrupt_selfhelp>
+                                </Sequence>
+                              </IfCondition>
+                            </FastTravelGenericRandomEvent>
+                          </IfCondition>
+                          <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                <OutputBreakpoints />
+                                <Then>
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                </Then>
+                                <Else>
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                </Else>
+                              </CheckRelationshipInterval_SoulToSoul>
+                              <FastTravelGenericRandomEvent hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </Expression>
+                                    <AddInterrupt_attack hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </AddInterrupt_attack>
+                                  </Sequence>
+                                </IfCondition>
+                              </FastTravelGenericRandomEvent>
+                            </Sequence>
+                          </IfCondition>
+                          <DefaultBranch>
+                            <ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </ErrorNode>
+                          </DefaultBranch>
+                        </Switch>
+                      </Sequence>
+                    </Sequence>
+                  </LogToLabel>
+                </LogToLabel>
+              </EntityContext>
+            </Child>
+            <OnFail>
+              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Function_crime_limits_removeReactionLink hasInputBreakpoint="0" comment="Player dodged" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Function_crime_limits_removeReactionLink>
+              </IfCondition>
+            </OnFail>
+          </FuseBox>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

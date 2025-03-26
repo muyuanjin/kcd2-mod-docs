@@ -1,0 +1,2019 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="seller" is_function="0">
+		<Variables>
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="distanceToIgnoreDotProduct" type="_float" values="0.8" isPersistent="0" form="single" />
+			<Variable name="dogObservableActivityTarget" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="dotProducTurnValue" type="_float" values="0.25" isPersistent="0" form="single" />
+			<Variable name="dotProduct" type="_float" values="999" isPersistent="0" form="single" />
+			<Variable name="interiorArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="isPlayerVisible" type="_bool" values="" isPersistent="1" form="single" />
+			<Variable name="lastGuardDialogTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="lookingAtPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="nextIteration" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="npcCooldowns" type="crime:npcCooldowns" values="" isPersistent="0" form="single" />
+			<Variable name="observableDogActivity" type="enum:dogObservableActivityType" values="" isPersistent="0" form="single" />
+			<Variable name="onIsKickingPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="perceptionInfo" type="perceptionInfo" values="" isPersistent="0" form="single" />
+			<Variable name="playerInteriorArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="playerInviteDecision" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerPosition" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="preventInvitePlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="requestSellerInviteMonolog" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="shopDirection" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="shopGuard" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="shopPosition" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="shopToPlayerDirection" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="shopperArray" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="shouldPlaySecondLoop" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="shouldRotateTowardsPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="trespassAreaArray" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="trespassAreaIndex" type="_int" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<VariableExistsGate VarToTest="$isKickingPlayer" VarIndexMode="Parents" FailSubtMissing="false" saveVersion="2">
+						<Then canSkip="1">
+							<Expression expressions="$onIsKickingPlayer = true" />
+						</Then>
+					</VariableExistsGate>
+					<GetCurrentPerceptionFocus PerceptionNfo="$perceptionInfo" />
+					<RandomGate opensWithChance="0.500000" saveVersion="2">
+						<Then canSkip="1">
+							<Expression expressions="$shouldPlaySecondLoop = true" />
+						</Then>
+						<Else canSkip="1">
+							<Success />
+						</Else>
+					</RandomGate>
+					<IfCondition failOnCondition="false" condition="$__playerDog ~= $__null">
+						<GetDogObservableActivity Companion="$__playerDog" ObservableActivity="$observableDogActivity" Target="" IsBarking="" />
+					</IfCondition>
+					<GetBehaviorHolders area="$__object.id" behaviors="&apos;shopper,shopper_buy&apos;" targetVar="$shopperArray" />
+					<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+						<LinkTagFilter tag="&apos;crime_npcCooldowns&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$npcCooldowns" />
+					</GraphSearch>
+					<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;shopGuard&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+						<Nodalyzer Quantifiers="Exists" Parent="" Child="$shopGuard" saveVersion="2" />
+					</GraphSearch>
+					<IfCondition failOnCondition="false" condition="$shopGuard ~= $__null">
+						<EntityContextCheck context="shopGuardEnabled" target="$shopGuard" saveVersion="2">
+							<Else canSkip="1">
+								<Expression expressions="$shopGuard = $__null" />
+							</Else>
+						</EntityContextCheck>
+					</IfCondition>
+					<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+					<Expression expressions="$preventInvitePlayer = $npcCooldowns.leavingCrimeInterrupt + $data:script_param[&apos;shop_preventInvitePlayerAfterCrimeCooldown&apos;].value &gt; $currentTime &amp; &#10;$npcCooldowns.leavingCrimeInterrupt ~= 0" />
+					<ExecuteLua code="local soEntity = XGenAIModule.GetEntityByWUID(data.__object.id); &#10;data.shouldRotateTowardsPlayer = EntityUtils.GetScriptProperty(soEntity,&apos;rotateToPlayer&apos;);" />
+					<IsLoadedGate saveVersion="2">
+						<Then canSkip="1">
+							<Success />
+						</Then>
+						<Else canSkip="1">
+							<EntityContextCheck context="market_seller" target="" saveVersion="2">
+								<Then canSkip="1">
+									<IsTimeSkipping saveVersion="2">
+										<Then canSkip="1">
+											<Success />
+										</Then>
+										<Else canSkip="1">
+											<Sequence>
+												<HasSeenPlayer NPC="$this.id" FullyAwareOnly="true" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$isPlayerVisible = true" />
+													</Then>
+													<Else canSkip="1">
+														<Success />
+													</Else>
+												</HasSeenPlayer>
+												<RandomGate opensWithChance="$data:script_param[&apos;shop_marketSellerInviteBarkFrequency&apos;].value" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$requestSellerInviteMonolog = true" />
+													</Then>
+												</RandomGate>
+											</Sequence>
+										</Else>
+									</IsTimeSkipping>
+								</Then>
+								<Else canSkip="1">
+									<Sequence>
+										<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;trespassArea&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+											<Nodalyzer Quantifiers="ForAll" Parent="" Child="$trespassAreaArray" saveVersion="2" />
+										</GraphSearch>
+										<For startIndex="0" endIndex="-1" step="1" array="$trespassAreaArray" iterator="$trespassAreaIndex" value="" break="$isPlayerVisible">
+											<IsInsideArea Origin="$__player" Area="$trespassAreaArray[$trespassAreaIndex]" FailSubtMissing="false" saveVersion="2">
+												<Then canSkip="1">
+													<Expression expressions="$isPlayerVisible = true" />
+												</Then>
+												<Else canSkip="1">
+													<Success />
+												</Else>
+											</IsInsideArea>
+										</For>
+									</Sequence>
+								</Else>
+							</EntityContextCheck>
+						</Else>
+					</IsLoadedGate>
+					<IncludeTree File="&apos;profession/seller/so_seller.xml&apos;" Name="&apos;seller_getPlayerDotProduct&apos;" nodeLabel="52119710" />
+					<EntityContextCheck context="market_seller" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Expression expressions="$shouldRotateTowardsPlayer = false" />
+						</Then>
+						<Else canSkip="1">
+							<Expression expressions="$shouldRotateTowardsPlayer = true" />
+						</Else>
+					</EntityContextCheck>
+					<DistanceCondition Origin="$this.id" ReferencePt="$__object.id" Low="$distanceToIgnoreDotProduct" High="$distanceToIgnoreDotProduct" Negation="true" ValueOnMiddle="false" failOnCondition="false">
+						<Expression expressions="$dotProduct = 1" />
+					</DistanceCondition>
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<EntityContextElement context="DisableSituationParticipation" enabled="true">
+					<EntityContextElement context="activity_seller" enabled="true">
+						<EntityContextElement context="shop_sellerReadyToSell" enabled="true">
+							<EntityContextElement context="situation_gossipDuringActivity" enabled="true">
+								<EntityContextElement context="situation_suppressLostItemParticipation" enabled="true">
+									<EntityContextElement context="crime_dontGreetPlayer" enabled="true">
+										<AnyDecorator preset="crime_keepConfiscatedItems" enabled="true">
+											<EntityContextPresetElement contextPreset="crime_disableAllPostTrespassReactions" enabled="true">
+												<EnableBehaviorForNPCElement smartEntity="$__object.id" behavior="&apos;seller_kickingPlayer&apos;" npc="$this.id" enabled="$isPlayerVisible">
+													<Decision decisionLabel="seller_invitePlayer" variable="$playerInviteDecision" saveVersion="2">
+														<Search canSkip="1">
+															<Success />
+														</Search>
+														<Exec canSkip="1">
+															<Decision decisionLabel="seller_firstIteration" variable="$nextIteration" saveVersion="2">
+																<Search canSkip="1">
+																	<Success />
+																</Search>
+																<Exec canSkip="1">
+																	<Decision decisionLabel="seller_guardDialog" variable="$lastGuardDialogTime" saveVersion="2">
+																		<Search canSkip="1">
+																			<Expression expressions="$lastGuardDialogTime = 0" />
+																		</Search>
+																		<Exec canSkip="1">
+																			<Decision decisionLabel="seller_lookAtPlayer" variable="$lookingAtPlayer" saveVersion="2">
+																				<Search canSkip="1">
+																					<Success />
+																				</Search>
+																				<Exec canSkip="1">
+																					<Sequence>
+																						<IfCondition failOnCondition="false" condition="!$isPlayerVisible">
+																							<Expression expressions="$lookingAtPlayer = false" />
+																						</IfCondition>
+																						<Parallel successMode="Any" failureMode="Any">
+																							<EntityContextBarrier context="activity_seller" target="$this.id" Negation="false" RunLogic="Halt">
+																								<IsInsideAreaWithLabel Position="$this.id" Label="&apos;interior&apos;" Area="$interiorArea" FailSubtMissing="false" saveVersion="2">
+																									<Then canSkip="1">
+																										<EntityContext context="activity_seller_inside" target="">
+																											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																										</EntityContext>
+																									</Then>
+																									<Else canSkip="1">
+																										<EntityContext context="activity_seller_outside" target="">
+																											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																										</EntityContext>
+																									</Else>
+																								</IsInsideAreaWithLabel>
+																							</EntityContextBarrier>
+																							<IfElseCondition failOnCondition="false" condition="$__playerDog ~= $__null &amp; !($observableDogActivity == $enum:dogObservableActivityType.counterSniffing)" saveVersion="2">
+																								<Then canSkip="1">
+																									<While doFail="false" propagateChildFail="false" condition="!($observableDogActivity == $enum:dogObservableActivityType.counterSniffing)">
+																										<IfElseCondition failOnCondition="false" condition="$__playerDog ~= $__null" saveVersion="2">
+																											<Then canSkip="1">
+																												<Sequence>
+																													<Expression expressions="$dogObservableActivityTarget = $__object.id" />
+																													<GetDogObservableActivity Companion="$__playerDog" ObservableActivity="$observableDogActivity" Target="$dogObservableActivityTarget" IsBarking="" />
+																													<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+																												</Sequence>
+																											</Then>
+																											<Else canSkip="1">
+																												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																											</Else>
+																										</IfElseCondition>
+																									</While>
+																								</Then>
+																								<Else canSkip="1">
+																									<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																								</Else>
+																							</IfElseCondition>
+																							<IfElseCondition failOnCondition="false" condition="$isPlayerVisible" saveVersion="2">
+																								<Then canSkip="1">
+																									<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																								</Then>
+																								<Else canSkip="1">
+																									<EntityContextCheck context="market_seller" target="" saveVersion="2">
+																										<Then canSkip="1">
+																											<IsTimeSkipping saveVersion="2">
+																												<Then canSkip="1">
+																													<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																												</Then>
+																												<Else canSkip="1">
+																													<While doFail="false" propagateChildFail="false" condition="!($perceptionInfo.threshold == 1 &amp; $perceptionInfo.perceptible == $__player)">
+																														<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$perceptionInfo" senderInfo="" inbox="&apos;PerceptionPass&apos;" condition="" answerVar="">
+																															<Success />
+																														</ProcessMessage>
+																													</While>
+																												</Else>
+																											</IsTimeSkipping>
+																										</Then>
+																										<Else canSkip="1">
+																											<IfGate atomic="false" condition="#trespassAreaArray &gt; 0" RunLogic="KeepRunning">
+																												<AreaPresenceGate aiObjects="$__player" area="$trespassAreaArray" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																													<Success />
+																												</AreaPresenceGate>
+																											</IfGate>
+																										</Else>
+																									</EntityContextCheck>
+																								</Else>
+																							</IfElseCondition>
+																							<IfElseCondition failOnCondition="false" condition="$shouldRotateTowardsPlayer" saveVersion="2">
+																								<Then canSkip="1">
+																									<While doFail="false" propagateChildFail="false" condition="true">
+																										<Sequence>
+																											<AtomicDecorator>
+																												<Sequence>
+																													<IncludeTree File="&apos;profession/seller/so_seller.xml&apos;" Name="&apos;seller_getPlayerDotProduct&apos;" nodeLabel="57167303" />
+																													<DistanceCondition Origin="$this.id" ReferencePt="$__object.id" Low="$distanceToIgnoreDotProduct" High="$distanceToIgnoreDotProduct" Negation="true" ValueOnMiddle="false" failOnCondition="false">
+																														<Expression expressions="$dotProduct = 1" />
+																													</DistanceCondition>
+																												</Sequence>
+																											</AtomicDecorator>
+																											<Wait duration="&apos;500ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																										</Sequence>
+																									</While>
+																								</Then>
+																								<Else canSkip="1">
+																									<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																								</Else>
+																							</IfElseCondition>
+																							<ContinuousSwitch>
+																								<IfCondition failOnCondition="false" condition="!($shouldRotateTowardsPlayer &amp; $isPlayerVisible &amp; ($dotProduct &lt; $dotProducTurnValue | $lookingAtPlayer))">
+																									<Sequence>
+																										<Switch>
+																											<IfCondition failOnCondition="false" condition="$isPlayerVisible &amp; !$playerInviteDecision &amp; !$onIsKickingPlayer">
+																												<UnstanceElement unstance="seller" locationObject="$__object.id" slaveObject="" enabled="true">
+																													<ForceLook LookTarget="$__player" DisableVariations="false">
+																														<Sequence>
+																															<IfCondition failOnCondition="false" condition="!$preventInvitePlayer">
+																																<IsInsideAreaWithLabel Position="$this.id" Label="&apos;interior&apos;" Area="$interiorArea" FailSubtMissing="false" saveVersion="2">
+																																	<Then canSkip="1">
+																																		<IsInsideAreaWithLabel Position="$__player" Label="&apos;interior&apos;" Area="$playerInteriorArea" FailSubtMissing="false" saveVersion="2">
+																																			<Then canSkip="1">
+																																				<IfCondition failOnCondition="false" condition="$interiorArea == $playerInteriorArea">
+																																					<Sequence>
+																																						<Parallel successMode="All" failureMode="Any">
+																																							<SuppressFailure>
+																																								<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="$__player" metarole="&apos;NPC_VITA_HRACE_V_OBCHODE&apos;" skipInLod="false" subtitlesDown="false" nodeLabel="35228931" />
+																																							</SuppressFailure>
+																																							<AnimationAction fragment="&apos;SellerInvite&apos;" tags="" eventReferenceObject="" alignObject="$__object.id" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																																						</Parallel>
+																																						<Expression expressions="$playerInviteDecision = true" />
+																																					</Sequence>
+																																				</IfCondition>
+																																			</Then>
+																																			<Else canSkip="1">
+																																				<Success />
+																																			</Else>
+																																		</IsInsideAreaWithLabel>
+																																	</Then>
+																																	<Else canSkip="1">
+																																		<Expression expressions="$playerInviteDecision = true" />
+																																	</Else>
+																																</IsInsideAreaWithLabel>
+																															</IfCondition>
+																															<WaitAction />
+																														</Sequence>
+																													</ForceLook>
+																												</UnstanceElement>
+																											</IfCondition>
+																											<IfCondition failOnCondition="false" condition="$observableDogActivity == $enum:dogObservableActivityType.counterSniffing">
+																												<UrgencyDecorator Urgency="Slow">
+																													<UnstanceElement unstance="seller" locationObject="$__object.id" slaveObject="" enabled="true">
+																														<Sequence>
+																															<Parallel successMode="All" failureMode="Any">
+																																<SuppressFailure>
+																																	<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="$__playerDog" metarole="&apos;NPC_REAGUJE_NA_PSA_U_STANKU&apos;" skipInLod="false" subtitlesDown="false" nodeLabel="33625823" />
+																																</SuppressFailure>
+																																<AnimationAction fragment="&apos;SellerDogReaction&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																															</Parallel>
+																															<WaitAction />
+																														</Sequence>
+																													</UnstanceElement>
+																												</UrgencyDecorator>
+																											</IfCondition>
+																											<IfCondition failOnCondition="false" condition="#shopperArray &gt; 0">
+																												<UnstanceElement unstance="seller" locationObject="$__object.id" slaveObject="" enabled="true">
+																													<Sequence>
+																														<WaitAction />
+																														<SuppressFailure>
+																															<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;15s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;15s&apos;" LockManagerType="Local" SemaphoreName="&apos;shopperPrePay&apos;" RunLogic="KeepRunning">
+																																<JoinedAnimationAction requiresMovement="false" lockContext="$__object.id" lockName="&apos;shopperPay&apos;" lockCount="2" timeout="&apos;10s&apos;" ignoreOthersLeaving="false" fragment="&apos;SellerShopping2Pay&apos;" tags="" eventReferenceObject="$__object.id" alignObject="$__object.id" slaveObject="" resourceOverride="&apos;seller&apos;" allowTorchForPlayer="false" />
+																															</Synchronize>
+																														</SuppressFailure>
+																													</Sequence>
+																												</UnstanceElement>
+																											</IfCondition>
+																											<IfCondition failOnCondition="false" condition="$shopGuard ~= $__null &amp; ($currentTime &gt; $lastGuardDialogTime + $data:script_param[&apos;shop_guardDialogCooldown&apos;].value)">
+																												<EntityContextElement context="shop_sellerGuardReadyForGossip" enabled="true">
+																													<Sequence>
+																														<SuppressFailure>
+																															<Parallel successMode="All" failureMode="Any">
+																																<Function_seller_gossipInner shopGuard="$shopGuard" synchroEntity="$__object.id" nodeLabel="13540408" />
+																																<UnstanceAction unstance="seller" locationObject="$__object.id" slaveObject="" />
+																															</Parallel>
+																														</SuppressFailure>
+																														<GetTime TimeType="GameTime" OutVar="$lastGuardDialogTime" Delta="" />
+																													</Sequence>
+																												</EntityContextElement>
+																											</IfCondition>
+																											<IfCondition failOnCondition="false" condition="$isPlayerVisible">
+																												<ForceLook LookTarget="$__player" DisableVariations="false">
+																													<Sequence>
+																														<UnstanceAction unstance="seller" locationObject="$__object.id" slaveObject="" />
+																														<IfCondition failOnCondition="false" condition="$requestSellerInviteMonolog">
+																															<EntityContextCheck context="seller_disableMarketCries" target="$this.id" saveVersion="2">
+																																<Then canSkip="1">
+																																	<Success />
+																																</Then>
+																																<Else canSkip="1">
+																																	<SuppressFailure>
+																																		<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="" metarole="&apos;NPC_VYVOLAVANI_NA_TRHU&apos;" skipInLod="true" subtitlesDown="false" nodeLabel="72961194" />
+																																	</SuppressFailure>
+																																</Else>
+																															</EntityContextCheck>
+																														</IfCondition>
+																													</Sequence>
+																												</ForceLook>
+																											</IfCondition>
+																											<IfCondition failOnCondition="false" condition="$nextIteration &amp; $shouldPlaySecondLoop &amp; !$onIsKickingPlayer">
+																												<Sequence>
+																													<UnstanceAction unstance="seller2" locationObject="$__object.id" slaveObject="" />
+																													<IfCondition failOnCondition="false" condition="$requestSellerInviteMonolog">
+																														<EntityContextCheck context="seller_disableMarketCries" target="$this.id" saveVersion="2">
+																															<Then canSkip="1">
+																																<Success />
+																															</Then>
+																															<Else canSkip="1">
+																																<SuppressFailure>
+																																	<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="" metarole="&apos;NPC_VYVOLAVANI_NA_TRHU&apos;" skipInLod="true" subtitlesDown="false" nodeLabel="86380704" />
+																																</SuppressFailure>
+																															</Else>
+																														</EntityContextCheck>
+																													</IfCondition>
+																												</Sequence>
+																											</IfCondition>
+																											<DefaultBranch>
+																												<Sequence>
+																													<UnstanceAction unstance="seller" locationObject="$__object.id" slaveObject="" />
+																													<IfCondition failOnCondition="false" condition="$requestSellerInviteMonolog">
+																														<EntityContextCheck context="seller_disableMarketCries" target="$this.id" saveVersion="2">
+																															<Then canSkip="1">
+																																<Success />
+																															</Then>
+																															<Else canSkip="1">
+																																<SuppressFailure>
+																																	<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="" metarole="&apos;NPC_VYVOLAVANI_NA_TRHU&apos;" skipInLod="true" subtitlesDown="false" nodeLabel="49609291" />
+																																</SuppressFailure>
+																															</Else>
+																														</EntityContextCheck>
+																													</IfCondition>
+																												</Sequence>
+																											</DefaultBranch>
+																										</Switch>
+																										<Expression expressions="$nextIteration = true" />
+																										<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+																										<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;schedulerTick&apos;" RunLogic="KeepRunning">
+																											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																										</Synchronize>
+																									</Sequence>
+																								</IfCondition>
+																								<IfCondition failOnCondition="false" condition="$shouldRotateTowardsPlayer &amp; $isPlayerVisible &amp; ($dotProduct &lt; $dotProducTurnValue | $lookingAtPlayer)">
+																									<ForceLook LookTarget="$__player" DisableVariations="false">
+																										<Parallel successMode="Any" failureMode="Any">
+																											<While doFail="false" propagateChildFail="false" condition="true">
+																												<Sequence>
+																													<UrgencyDecorator Urgency="Slow">
+																														<WaitAction />
+																													</UrgencyDecorator>
+																													<Expression expressions="$lookingAtPlayer = true" />
+																													<Turn target="$__player" align="false" />
+																													<Wait duration="&apos;500ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																													<SuppressFailure>
+																														<InstantSynchronize SemaphoreCount="2" LockManagerType="Intellect" SemaphoreName="&apos;turnDone&apos;" RunLogic="KeepRunning">
+																															<Success />
+																														</InstantSynchronize>
+																													</SuppressFailure>
+																												</Sequence>
+																											</While>
+																											<Sequence>
+																												<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+																												<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;turnDone&apos;" RunLogic="KeepRunning">
+																													<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;schedulerTick&apos;" RunLogic="KeepRunning">
+																														<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																													</Synchronize>
+																												</Synchronize>
+																											</Sequence>
+																										</Parallel>
+																									</ForceLook>
+																								</IfCondition>
+																							</ContinuousSwitch>
+																							<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Intellect" SemaphoreName="&apos;schedulerTick&apos;" RunLogic="KeepRunning">
+																								<Success />
+																							</Synchronize>
+																						</Parallel>
+																					</Sequence>
+																				</Exec>
+																			</Decision>
+																		</Exec>
+																	</Decision>
+																</Exec>
+															</Decision>
+														</Exec>
+													</Decision>
+												</EnableBehaviorForNPCElement>
+											</EntityContextPresetElement>
+										</AnyDecorator>
+									</EntityContextElement>
+								</EntityContextElement>
+							</EntityContextElement>
+						</EntityContextElement>
+					</EntityContextElement>
+				</EntityContextElement>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="currentTime" comment="" />
+				<Variable name="distanceToIgnoreDotProduct" comment="" />
+				<Variable name="dogObservableActivityTarget" comment="" />
+				<Variable name="dotProducTurnValue" comment="" />
+				<Variable name="dotProduct" comment="" />
+				<Variable name="interiorArea" comment="" />
+				<Variable name="isPlayerVisible" comment="" />
+				<Variable name="lastGuardDialogTime" comment="" />
+				<Variable name="lookingAtPlayer" comment="" />
+				<Variable name="nextIteration" comment="" />
+				<Variable name="npcCooldowns" comment="" />
+				<Variable name="observableDogActivity" comment="" />
+				<Variable name="onIsKickingPlayer" comment="" />
+				<Variable name="perceptionInfo" comment="" />
+				<Variable name="playerInteriorArea" comment="" />
+				<Variable name="playerInviteDecision" comment="" />
+				<Variable name="playerPosition" comment="" />
+				<Variable name="preventInvitePlayer" comment="" />
+				<Variable name="requestSellerInviteMonolog" comment="" />
+				<Variable name="shopDirection" comment="" />
+				<Variable name="shopGuard" comment="" />
+				<Variable name="shopPosition" comment="" />
+				<Variable name="shopToPlayerDirection" comment="" />
+				<Variable name="shopperArray" comment="" />
+				<Variable name="shouldPlaySecondLoop" comment="" />
+				<Variable name="shouldRotateTowardsPlayer" comment="" />
+				<Variable name="trespassAreaArray" comment="" />
+				<Variable name="trespassAreaIndex" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<VariableExistsGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Then>
+						</VariableExistsGate>
+						<GetCurrentPerceptionFocus hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetCurrentPerceptionFocus>
+						<RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Then>
+							<Else>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Else>
+						</RandomGate>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GetDogObservableActivity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</GetDogObservableActivity>
+						</IfCondition>
+						<GetBehaviorHolders hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetBehaviorHolders>
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</WUIDFilter>
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+						</GraphSearch>
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+							<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+							</Nodalyzer>
+						</GraphSearch>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Else>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+								</Else>
+							</EntityContextCheck>
+						</IfCondition>
+						<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetTime>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</ExecuteLua>
+						<IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Then>
+							<Else>
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<IsTimeSkipping hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Then>
+											<Else>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+														<Else>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Success>
+														</Else>
+													</HasSeenPlayer>
+													<RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+													</RandomGate>
+												</Sequence>
+											</Else>
+										</IsTimeSkipping>
+									</Then>
+									<Else>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+												<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+												</Nodalyzer>
+											</GraphSearch>
+											<For hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IsInsideArea hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Then>
+													<Else>
+														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Success>
+													</Else>
+												</IsInsideArea>
+											</For>
+										</Sequence>
+									</Else>
+								</EntityContextCheck>
+							</Else>
+						</IsLoadedGate>
+						<IncludeTree hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</IncludeTree>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Then>
+							<Else>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Else>
+						</EntityContextCheck>
+						<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</DistanceCondition>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContextElement hasInputBreakpoint="0" comment="enables shop dialog + chat" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<EntityContextPresetElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EnableBehaviorForNPCElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Decision hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Search>
+																<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Success>
+															</Search>
+															<Exec>
+																<Decision hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Search>
+																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Success>
+																	</Search>
+																	<Exec>
+																		<Decision hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Search>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Search>
+																			<Exec>
+																				<Decision hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Search>
+																						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Success>
+																					</Search>
+																					<Exec>
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																							</IfCondition>
+																							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<EntityContextBarrier hasInputBreakpoint="0" comment="Wait until seller is in an unstance" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																										<OutputBreakpoints />
+																										<Then>
+																											<EntityContext hasInputBreakpoint="0" comment="Not element, because it would get added on 2nd iteration" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Wait>
+																											</EntityContext>
+																										</Then>
+																										<Else>
+																											<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Wait>
+																											</EntityContext>
+																										</Else>
+																									</IsInsideAreaWithLabel>
+																								</EntityContextBarrier>
+																								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																									<OutputBreakpoints />
+																									<Then>
+																										<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																												<OutputBreakpoints />
+																												<Then>
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Expression>
+																														<GetDogObservableActivity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</GetDogObservableActivity>
+																														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Wait>
+																													</Sequence>
+																												</Then>
+																												<Else>
+																													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</Wait>
+																												</Else>
+																											</IfElseCondition>
+																										</While>
+																									</Then>
+																									<Else>
+																										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Wait>
+																									</Else>
+																								</IfElseCondition>
+																								<IfElseCondition hasInputBreakpoint="0" comment="if player is not visible (check in Init), we will wait for perception to give us info about him once it will be seen" breakpointFlags="0" saveVersion="2">
+																									<OutputBreakpoints />
+																									<Then>
+																										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Wait>
+																									</Then>
+																									<Else>
+																										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																											<OutputBreakpoints />
+																											<Then>
+																												<IsTimeSkipping hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																													<OutputBreakpoints />
+																													<Then>
+																														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Wait>
+																													</Then>
+																													<Else>
+																														<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<Success hasInputBreakpoint="0" comment="if we will see player, we will just succeed and make scheduler loop so &quot;HasSeenPlayer&quot; will throw &quot;true&quot; in Init" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																</Success>
+																															</ProcessMessage>
+																														</While>
+																													</Else>
+																												</IsTimeSkipping>
+																											</Then>
+																											<Else>
+																												<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Success>
+																													</AreaPresenceGate>
+																												</IfGate>
+																											</Else>
+																										</EntityContextCheck>
+																									</Else>
+																								</IfElseCondition>
+																								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																									<OutputBreakpoints />
+																									<Then>
+																										<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<IncludeTree hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</IncludeTree>
+																														<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</Expression>
+																														</DistanceCondition>
+																													</Sequence>
+																												</AtomicDecorator>
+																												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Wait>
+																											</Sequence>
+																										</While>
+																									</Then>
+																									<Else>
+																										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Wait>
+																									</Else>
+																								</IfElseCondition>
+																								<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<IfCondition hasInputBreakpoint="0" comment="if player is visible and we didnt wave at him" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<UnstanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																		<OutputBreakpoints />
+																																		<Then>
+																																			<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																				<OutputBreakpoints />
+																																				<Then>
+																																					<IfCondition hasInputBreakpoint="0" comment="isInsideArea does not work for areaUnion" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</Function_speech_schedulerMonolog>
+																																								</SuppressFailure>
+																																								<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																								</AnimationAction>
+																																							</Parallel>
+																																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																							</Expression>
+																																						</Sequence>
+																																					</IfCondition>
+																																				</Then>
+																																				<Else>
+																																					<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																					</Success>
+																																				</Else>
+																																			</IsInsideAreaWithLabel>
+																																		</Then>
+																																		<Else>
+																																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																			</Expression>
+																																		</Else>
+																																	</IsInsideAreaWithLabel>
+																																</IfCondition>
+																																<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																</WaitAction>
+																															</Sequence>
+																														</ForceLook>
+																													</UnstanceElement>
+																												</IfCondition>
+																												<IfCondition hasInputBreakpoint="0" comment="dog reaction" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<UnstanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Function_speech_schedulerMonolog>
+																																	</SuppressFailure>
+																																	<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</AnimationAction>
+																																</Parallel>
+																																<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																</WaitAction>
+																															</Sequence>
+																														</UnstanceElement>
+																													</UrgencyDecorator>
+																												</IfCondition>
+																												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<UnstanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</WaitAction>
+																															<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<Synchronize hasInputBreakpoint="0" comment="There need to be sync before JAA otherwise JAA will throw error on timeout. And timeout is expected in this behavior" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<JoinedAnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</JoinedAnimationAction>
+																																</Synchronize>
+																															</SuppressFailure>
+																														</Sequence>
+																													</UnstanceElement>
+																												</IfCondition>
+																												<IfCondition hasInputBreakpoint="0" comment="shopGuardBark" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<Function_seller_gossipInner hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</Function_seller_gossipInner>
+																																	<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</UnstanceAction>
+																																</Parallel>
+																															</SuppressFailure>
+																															<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</GetTime>
+																														</Sequence>
+																													</EntityContextElement>
+																												</IfCondition>
+																												<IfCondition hasInputBreakpoint="0" comment="if there is player visible but we already waved, we can just play seller animation" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</UnstanceAction>
+																															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																	<OutputBreakpoints />
+																																	<Then>
+																																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Success>
+																																	</Then>
+																																	<Else>
+																																		<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																			<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="none may be available" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																			</Function_speech_schedulerMonolog>
+																																		</SuppressFailure>
+																																	</Else>
+																																</EntityContextCheck>
+																															</IfCondition>
+																														</Sequence>
+																													</ForceLook>
+																												</IfCondition>
+																												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</UnstanceAction>
+																														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																<OutputBreakpoints />
+																																<Then>
+																																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</Success>
+																																</Then>
+																																<Else>
+																																	<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="none may be available" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Function_speech_schedulerMonolog>
+																																	</SuppressFailure>
+																																</Else>
+																															</EntityContextCheck>
+																														</IfCondition>
+																													</Sequence>
+																												</IfCondition>
+																												<DefaultBranch>
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</UnstanceAction>
+																														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																<OutputBreakpoints />
+																																<Then>
+																																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</Success>
+																																</Then>
+																																<Else>
+																																	<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="none may be available" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Function_speech_schedulerMonolog>
+																																	</SuppressFailure>
+																																</Else>
+																															</EntityContextCheck>
+																														</IfCondition>
+																													</Sequence>
+																												</DefaultBranch>
+																											</Switch>
+																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Expression>
+																											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Wait>
+																											<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Wait>
+																											</Synchronize>
+																										</Sequence>
+																									</IfCondition>
+																									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</WaitAction>
+																														</UrgencyDecorator>
+																														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Expression>
+																														<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Turn>
+																														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Wait>
+																														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<InstantSynchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																</Success>
+																															</InstantSynchronize>
+																														</SuppressFailure>
+																													</Sequence>
+																												</While>
+																												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</Wait>
+																													<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</Wait>
+																														</Synchronize>
+																													</Synchronize>
+																												</Sequence>
+																											</Parallel>
+																										</ForceLook>
+																									</IfCondition>
+																								</ContinuousSwitch>
+																								<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Success>
+																								</Synchronize>
+																							</Parallel>
+																						</Sequence>
+																					</Exec>
+																				</Decision>
+																			</Exec>
+																		</Decision>
+																	</Exec>
+																</Decision>
+															</Exec>
+														</Decision>
+													</EnableBehaviorForNPCElement>
+												</EntityContextPresetElement>
+											</AnyDecorator>
+										</EntityContextElement>
+									</EntityContextElement>
+								</EntityContextElement>
+							</EntityContextElement>
+						</EntityContextElement>
+					</EntityContextElement>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="use_withBasket" is_function="0">
+		<Variables>
+			<Variable name="basket" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="npc" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="smartObject" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Expression expressions="$smartObject = $__object.id &#10;$npc = $this.id" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<HandContentElement hand="Right" item="$basket" allowAny="false" decisionLabel="Label1" saveVersion="2">
+					<Search canSkip="1">
+						<Function_findItemOnSlot linkName="&apos;basket&apos;" npc="$npc" searchOrigin="$smartObject" item="$basket" nodeLabel="49655382" />
+					</Search>
+					<Exec canSkip="1">
+						<Sequence>
+							<UnstanceAction unstance="seller_withBasket" locationObject="$__object.id" slaveObject="" />
+							<Function_reactionOnDogSniffing smartObject="$smartObject" nodeLabel="43892276" />
+							<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+						</Sequence>
+					</Exec>
+				</HandContentElement>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<UnstanceElement unstance="seller_withBasket" locationObject="" slaveObject="" />
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="basket" comment="" />
+				<Variable name="npc" comment="" />
+				<Variable name="smartObject" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+				</OnInit>
+				<Behavior>
+					<HandContentElement hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Search>
+							<Function_findItemOnSlot hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_findItemOnSlot>
+						</Search>
+						<Exec>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<OutputBreakpoints />
+								</UnstanceAction>
+								<Function_reactionOnDogSniffing hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_reactionOnDogSniffing>
+								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Wait>
+							</Sequence>
+						</Exec>
+					</HandContentElement>
+				</Behavior>
+			</Root>
+			<Forest>
+				<UnstanceElement editorPosX="230" editorPosY="300" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</UnstanceElement>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="use_dog_sniff" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<AnimationAction fragment="&apos;CounterSniffing&apos;" tags="" eventReferenceObject="" alignObject="$__object.id" slaveObject="" />
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<OutputBreakpoints />
+					</AnimationAction>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="reactionOnDogSniffing" is_function="1">
+		<Variables>
+			<Variable name="observableActivity" type="enum:dogObservableActivityType" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="smartObject" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<IfCondition failOnCondition="false" condition="$__playerDog ~= $__null">
+					<Sequence>
+						<GetDogObservableActivity Companion="$__playerDog" ObservableActivity="$observableActivity" Target="$smartObject" IsBarking="" />
+						<IfCondition failOnCondition="false" condition="$observableActivity == $enum:dogObservableActivityType.counterSniffing">
+							<Parallel successMode="All" failureMode="Any">
+								<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" metarole="&apos;NPC_REAGUJE_NA_PSA_U_STANKU&apos;" subtitlesDown="false" nodeLabel="69184357" />
+								<AnimationAction fragment="&apos;SellerDogReaction&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" />
+							</Parallel>
+						</IfCondition>
+					</Sequence>
+				</IfCondition>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="observableActivity" comment="" />
+				<Variable name="smartObject" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GetDogObservableActivity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</GetDogObservableActivity>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_speech_schedulerMonolog>
+									<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<OutputBreakpoints />
+									</AnimationAction>
+								</Parallel>
+							</IfCondition>
+						</Sequence>
+					</IfCondition>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="CounterSniffing" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<AnimationAction fragment="&apos;CounterSniffing&apos;" tags="" eventReferenceObject="" alignObject="$__object.id" slaveObject="" resourceOverride="" />
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<OutputBreakpoints />
+					</AnimationAction>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="seller_kickingPlayer" is_function="0">
+		<Variables>
+			<Variable name="isKickingPlayer" type="_bool" values="true" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<IncludeTree File="&apos;profession/seller/so_seller.xml&apos;" Name="&apos;seller&apos;" nodeLabel="39132538" />
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="isKickingPlayer" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="10" editorPosY="40" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<IncludeTree hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</IncludeTree>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="seller_deadUnconscious" is_function="0">
+		<Variables>
+			<Variable name="nextIteration" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerInviteDecision" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Decision decisionLabel="seller_invitePlayer" variable="$playerInviteDecision" saveVersion="2">
+					<Search canSkip="1">
+						<Success />
+					</Search>
+					<Exec canSkip="1">
+						<Decision decisionLabel="seller_firstIteration" variable="$nextIteration" saveVersion="2">
+							<Search canSkip="1">
+								<Success />
+							</Search>
+							<Exec canSkip="1">
+								<Sequence>
+									<WaitAction />
+									<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+								</Sequence>
+							</Exec>
+						</Decision>
+					</Exec>
+				</Decision>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="nextIteration" comment="" />
+				<Variable name="playerInviteDecision" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Decision hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Search>
+							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Success>
+						</Search>
+						<Exec>
+							<Decision hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Search>
+									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Success>
+								</Search>
+								<Exec>
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</WaitAction>
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</Sequence>
+								</Exec>
+							</Decision>
+						</Exec>
+					</Decision>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="shopper" is_function="0">
+		<Variables>
+			<Variable name="sellerTarget" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<GetBehaviorHolders area="$__object.id" behaviors="&apos;seller&apos;" targetVar="$sellerTarget" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<UnstanceElement unstance="housekeeper_shopping" locationObject="$__object.id" slaveObject="" enabled="true">
+					<Sequence>
+						<WaitAction />
+						<Function_crime_checkPockets initiator="$enum:switch_interruptInitiator.unknown" previousReaction="$enum:crime_reactionKind.unknown" nodeLabel="42040599" />
+						<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+						<Sequence>
+							<SuppressFailure>
+								<Function_speech_dialogInitiator alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="&apos;GOSSIP_OBCHODNICE_ZAKAZNICE&apos;" preset="$enum:dialogPreset.ingame" recipient="$sellerTarget[0]" recipientMetaroles="&apos;GOSSIP_OBCHODNICE_ZAKAZNICE&apos;" nodeLabel="81586012" />
+							</SuppressFailure>
+							<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+						</Sequence>
+					</Sequence>
+				</UnstanceElement>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="sellerTarget" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<GetBehaviorHolders hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</GetBehaviorHolders>
+				</OnInit>
+				<Behavior>
+					<UnstanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</WaitAction>
+							<Function_crime_checkPockets hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_checkPockets>
+							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Wait>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_speech_dialogInitiator>
+								</SuppressFailure>
+								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Wait>
+							</Sequence>
+						</Sequence>
+					</UnstanceElement>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="shopperBuying" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<SuppressFailure>
+					<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;15s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;15s&apos;" LockManagerType="Local" SemaphoreName="&apos;shopperPrePay&apos;" RunLogic="KeepRunning">
+						<JoinedAnimationAction requiresMovement="false" lockContext="$__object.id" lockName="&apos;shopperPay&apos;" lockCount="2" timeout="&apos;10s&apos;" ignoreOthersLeaving="false" fragment="&apos;HousekeeperShopping2Pay&apos;" tags="" eventReferenceObject="$__object.id" alignObject="$__object.id" slaveObject="" resourceOverride="&apos;shopper&apos;" />
+					</Synchronize>
+				</SuppressFailure>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<RandomGate opensWithChance="0.500000" saveVersion="2">
+				<Else canSkip="1">
+					<Success />
+				</Else>
+			</RandomGate>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root editorPosX="-20" editorPosY="10" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<JoinedAnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</JoinedAnimationAction>
+						</Synchronize>
+					</SuppressFailure>
+				</Behavior>
+			</Root>
+			<Forest>
+				<RandomGate editorPosX="130" editorPosY="160" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+					<OutputBreakpoints />
+					<Else>
+						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Success>
+					</Else>
+				</RandomGate>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="shopper_buy" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<UnstanceElement unstance="housekeeper_shopping" locationObject="$__object.id" slaveObject="">
+					<RandomGate opensWithChance="0.500000" saveVersion="2">
+						<Then canSkip="1">
+							<SuppressFailure>
+								<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;15s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;15s&apos;" LockManagerType="Local" SemaphoreName="&apos;shopperPrePay&apos;" RunLogic="KeepRunning">
+									<JoinedAnimationAction requiresMovement="false" lockContext="$__object.id" lockName="&apos;shopperPay&apos;" lockCount="2" timeout="&apos;10s&apos;" ignoreOthersLeaving="false" fragment="&apos;HousekeeperShopping2Pay&apos;" tags="" eventReferenceObject="$__object.id" alignObject="$__object.id" slaveObject="" resourceOverride="&apos;shopper&apos;" allowTorchForPlayer="false" />
+								</Synchronize>
+							</SuppressFailure>
+						</Then>
+						<Else canSkip="1">
+							<WaitAction />
+						</Else>
+					</RandomGate>
+				</UnstanceElement>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<UnstanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<JoinedAnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</JoinedAnimationAction>
+									</Synchronize>
+								</SuppressFailure>
+							</Then>
+							<Else>
+								<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</WaitAction>
+							</Else>
+						</RandomGate>
+					</UnstanceElement>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="seller_market" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<EntityContextElement context="DisableSituationParticipation" enabled="true">
+					<EntityContextElement context="activity_seller" enabled="true">
+						<EntityContextElement context="shop_sellerReadyToSell" enabled="true">
+							<EntityContextElement context="situation_gossipDuringActivity" enabled="true">
+								<EntityContextElement context="situation_suppressLostItemParticipation" enabled="true">
+									<Sequence>
+										<ExactMove directionType="AlignWithEntity" directionSpecification="$__object.id" animationTriggerDist="0.150000" precise="true" changeNPCState="true" fastForwardIncludesMove="true" destinationSpecification="$__object.id" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+										<EntityContextCheck context="seller_disableMarketCries" target="$this.id" saveVersion="2">
+											<Then canSkip="1">
+												<Success />
+											</Then>
+											<Else canSkip="1">
+												<RandomGate opensWithChance="0.500000" saveVersion="2">
+													<Then canSkip="1">
+														<SuppressFailure>
+															<Function_speech_schedulerMonolog alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="" metarole="&apos;NPC_VYVOLAVANI_NA_TRHU&apos;" skipInLod="true" subtitlesDown="false" nodeLabel="70267863" />
+														</SuppressFailure>
+													</Then>
+													<Else canSkip="1">
+														<Success />
+													</Else>
+												</RandomGate>
+											</Else>
+										</EntityContextCheck>
+										<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</EntityContextElement>
+							</EntityContextElement>
+						</EntityContextElement>
+					</EntityContextElement>
+				</EntityContextElement>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContextElement hasInputBreakpoint="0" comment="enables shop dialog + chat" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</ExactMove>
+											<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Success>
+												</Then>
+												<Else>
+													<RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="none may be available" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_speech_schedulerMonolog>
+															</SuppressFailure>
+														</Then>
+														<Else>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Success>
+														</Else>
+													</RandomGate>
+												</Else>
+											</EntityContextCheck>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</EntityContextElement>
+								</EntityContextElement>
+							</EntityContextElement>
+						</EntityContextElement>
+					</EntityContextElement>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="seller_gossipInner" is_function="1">
+		<Variables>
+			<Variable name="customSwitchTreeEntry" type="switch:customSwitchTreeEntry" values="" isPersistent="0" form="single" />
+			<Variable name="dialogTimedOut" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="enteredDialog" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="switchDialog" type="speech:switchDialog" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="shopGuard" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="synchroEntity" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<Sequence>
+							<Sequence>
+								<AddLink From="$synchroEntity" To="$this.id" Tag="&apos;speech_switchDialog_participant&apos;" Data="" LinkOpHandleMode="OverWrite" />
+								<AddLink From="$synchroEntity" To="$shopGuard" Tag="&apos;speech_switchDialog_participant&apos;" Data="" LinkOpHandleMode="OverWrite" />
+								<AddLink From="$this.id" To="$this.id" Tag="&apos;speech_switchDialog_participantMetarole&apos;" Data="&apos;GOSSIP_OBCHODNIK_STRAZ&apos;" LinkOpHandleMode="OverWrite" />
+								<AddLink From="$shopGuard" To="$shopGuard" Tag="&apos;speech_switchDialog_participantMetarole&apos;" Data="&apos;GOSSIP_OBCHODNIK_STRAZ&apos;" LinkOpHandleMode="OverWrite" />
+							</Sequence>
+							<Sequence>
+								<Expression expressions="$switchDialog.metarole = &apos;GOSSIP_OBCHODNIK_STRAZ&apos; &#10;$switchDialog.ingameDialogType = $enum:speech_ingameDialogType.Ingame &#10;$switchDialog.repeatAfterSeconds = -1 &#10;$switchDialog.playDialogAnimations = false &#10;$switchDialog.maxScheduledPriority = 10 &#10;$switchDialog.context = &apos;shop_sellerGuardReadyForGossip&apos; &#10;$switchDialog.percievingPlayer = false &#10;$switchDialog.playerDistance = -1 &#10;$switchDialog.playerInArea = $__land &#10;$switchDialog.playerInDialog = false &#10;$switchDialog.initiator = $this.id" />
+								<AddLink From="$synchroEntity" To="$synchroEntity" Tag="&apos;speech_switchDialog&apos;" Data="$switchDialog" LinkOpHandleMode="OverWrite" />
+							</Sequence>
+							<Sequence>
+								<Expression expressions="$customSwitchTreeEntry.treeFilename = &apos;speech/switchDialog.xml&apos; &#10;$customSwitchTreeEntry.treeName = &apos;switchDialog&apos;" />
+								<AddLink From="$this.id" To="$synchroEntity" Tag="&apos;switch_customSwitchTree&apos;" Data="$customSwitchTreeEntry" LinkOpHandleMode="OverWrite" />
+								<AddLink From="$shopGuard" To="$synchroEntity" Tag="&apos;switch_customSwitchTree&apos;" Data="$customSwitchTreeEntry" LinkOpHandleMode="OverWrite" />
+							</Sequence>
+							<IfGate atomic="false" condition="~$dialogTimedOut" RunLogic="Halt">
+								<Parallel successMode="Any" failureMode="Any">
+									<Sequence>
+										<IfGate atomic="false" condition="~$enteredDialog" RunLogic="Halt">
+											<Sequence>
+												<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" />
+												<Expression expressions="$dialogTimedOut = true" />
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Sequence>
+										</IfGate>
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+									<DialogGate Who="$this.id" Negation="true" EndDialogInRoot="false" Condition="InAny" RunLogic="KeepRunning">
+										<DialogGate Who="$this.id" Negation="false" EndDialogInRoot="false" Condition="InAny" RunLogic="KeepRunning">
+											<Sequence>
+												<Expression expressions="$enteredDialog = true" />
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Sequence>
+										</DialogGate>
+									</DialogGate>
+									<IfGate atomic="false" condition="$enteredDialog" RunLogic="KeepRunning">
+										<DialogGate Who="$this.id" Negation="true" EndDialogInRoot="false" Condition="InAny" RunLogic="KeepRunning">
+											<Success />
+										</DialogGate>
+									</IfGate>
+								</Parallel>
+							</IfGate>
+						</Sequence>
+					</Child>
+					<OnFail canSkip="1">
+						<AtomicDecorator>
+							<Sequence>
+								<RemoveLink From="$synchroEntity" To="$this.id" Tag="&apos;speech_switchDialog_participant&apos;" LinkOpHandleMode="OverWrite" />
+								<RemoveLink From="$synchroEntity" To="$shopGuard" Tag="&apos;speech_switchDialog_participant&apos;" LinkOpHandleMode="OverWrite" />
+								<RemoveLink From="$this.id" To="$this.id" Tag="&apos;speech_switchDialog_participantMetarole&apos;" LinkOpHandleMode="OverWrite" />
+								<RemoveLink From="$shopGuard" To="$shopGuard" Tag="&apos;speech_switchDialog_participantMetarole&apos;" LinkOpHandleMode="OverWrite" />
+								<RemoveLink From="$synchroEntity" To="$synchroEntity" Tag="&apos;speech_switchDialog&apos;" LinkOpHandleMode="OverWrite" />
+								<RemoveLink From="$this.id" To="$synchroEntity" Tag="&apos;switch_customSwitchTree&apos;" LinkOpHandleMode="OverWrite" />
+								<RemoveLink From="$shopGuard" To="$synchroEntity" Tag="&apos;switch_customSwitchTree&apos;" LinkOpHandleMode="OverWrite" />
+							</Sequence>
+						</AtomicDecorator>
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Function_speech_dialogInitiator alias="" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="&apos;GOSSIP_OBCHODNIK_STRAZ&apos;" preset="$enum:dialogPreset.ingame" recipient="$shopGuard" recipientMetaroles="&apos;GOSSIP_OBCHODNIK_STRAZ&apos;" nodeLabel="22916111" />
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="customSwitchTreeEntry" comment="" />
+				<Variable name="dialogTimedOut" comment="" />
+				<Variable name="enteredDialog" comment="" />
+				<Variable name="switchDialog" comment="" />
+				<Variable name="shopGuard" comment="" />
+				<Variable name="synchroEntity" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="Participants" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+								</Sequence>
+								<Sequence hasInputBreakpoint="0" comment="Dialog data" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+								</Sequence>
+								<Sequence hasInputBreakpoint="0" comment="Custom switch tree" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+								</Sequence>
+								<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfGate hasInputBreakpoint="0" comment="Timeout only if we haven&apos;t entered gossip dialogue" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Sequence>
+											</IfGate>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+										<DialogGate hasInputBreakpoint="0" comment="Wasn&apos;t in dialogue, entered one" breakpointFlags="0">
+											<OutputBreakpoints />
+											<DialogGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Sequence>
+											</DialogGate>
+										</DialogGate>
+										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<DialogGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</DialogGate>
+										</IfGate>
+									</Parallel>
+								</IfGate>
+							</Sequence>
+						</Child>
+						<OnFail>
+							<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="Cleanup" breakpointFlags="0">
+									<OutputBreakpoints />
+									<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RemoveLink>
+									<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RemoveLink>
+									<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RemoveLink>
+									<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RemoveLink>
+									<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RemoveLink>
+									<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RemoveLink>
+									<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RemoveLink>
+								</Sequence>
+							</AtomicDecorator>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Function_speech_dialogInitiator editorPosX="280" editorPosY="-1240" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</Function_speech_dialogInitiator>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="seller_getPlayerDotProduct" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<GetSpatialInfo In="$__player" Out="$playerPosition" What="Position" />
+					<GetSpatialInfo In="$__object.id" Out="$shopPosition" What="Position" />
+					<GetSpatialInfo In="$__object.id" Out="$shopDirection" What="Orientation" />
+					<Expression expressions="$shopToPlayerDirection.x = $playerPosition.x - $shopPosition.x, &#10;$shopToPlayerDirection.y = $playerPosition.y - $shopPosition.y, &#10;$shopToPlayerDirection.z = $playerPosition.z - $shopPosition.z" />
+					<NormalizeVector vector="$shopToPlayerDirection" />
+					<CalculateDotProduct vector1="$shopToPlayerDirection" vector2="$shopDirection" result="$dotProduct" />
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetSpatialInfo>
+						<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetSpatialInfo>
+						<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetSpatialInfo>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<NormalizeVector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</NormalizeVector>
+						<CalculateDotProduct hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</CalculateDotProduct>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

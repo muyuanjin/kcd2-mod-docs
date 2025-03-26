@@ -1,0 +1,459 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_emitInformation" is_function="1">
+		<Variables>
+			<Variable name="alarmInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="crimeEmitDistanceKey" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="crimeInformation_local" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="crimeLevel" type="enum:crime_crimeLevel" values="" isPersistent="0" form="single" />
+			<Variable name="emitPeriod" type="_string" values="&apos;2s&apos;" isPersistent="0" form="single" />
+			<Variable name="longDistanceModeEnabled_local" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="npcCanAlarm" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="reactionType" type="enum:crime_reactionType" values="$enum:crime_reactionType.unknown" isPersistent="0" form="single" />
+			<Variable name="stimulusKind" type="enum:crime_stimulusKind" values="" isPersistent="0" form="single" />
+			<Variable name="urgentAlarm" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="crimeInformation" type="information" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="emitAlarmInformation" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="emitCrimeInformation" type="_bool" values="true" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="longDistanceModeEnabled" type="_bool" values="" isPersistent="0" form="single" requirementType="ConstReference" optional="1" />
+			<Variable name="reactionKind" type="enum:crime_reactionKind" values="$enum:crime_reactionKind.unknown" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Switch>
+					<IfCondition failOnCondition="false" condition="$reactionKind == $enum:crime_reactionKind.watch">
+						<Expression expressions="$emitPeriod = &apos;15s&apos;" />
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$reactionKind == $enum:crime_reactionKind.attack | &#10;$reactionKind == $enum:crime_reactionKind.arrest | &#10;$reactionKind == $enum:crime_reactionKind.selfhelp">
+						<Expression expressions="$emitPeriod = &apos;5s&apos;" />
+					</IfCondition>
+					<DefaultBranch>
+						<Success />
+					</DefaultBranch>
+				</Switch>
+			</OnInit>
+			<Behavior canSkip="1">
+				<ContinuousSwitch>
+					<IfCondition failOnCondition="false" condition="$crimeInformation_local.label ~= $crimeInformation.label | &#10;$crimeInformation_local.perceivedWuid ~= $crimeInformation.perceivedWuid">
+						<Expression expressions="$crimeInformation_local = $crimeInformation" />
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="true">
+						<Parallel successMode="Any" failureMode="Any">
+							<Sequence>
+								<EntityContextCheck context="crime_isCamper" target="" saveVersion="2">
+									<Then canSkip="1">
+										<Expression expressions="$npcCanAlarm = true" />
+									</Then>
+									<Else canSkip="1">
+										<EntityContextCheck context="crime_isGroupMember" target="" saveVersion="2">
+											<Then canSkip="1">
+												<Expression expressions="$npcCanAlarm = true" />
+											</Then>
+										</EntityContextCheck>
+									</Else>
+								</EntityContextCheck>
+								<Loop count="-1">
+									<IfGate atomic="false" condition="$npcCanAlarm &amp; $emitAlarmInformation" RunLogic="Halt">
+										<SubtreeDecorator saveVersion="2">
+											<Init canSkip="1">
+												<CreateInformationWrapper Label="&apos;alarm&apos;" PerceivedWuid="$this.id" PositionType="positionVec3" PositionVec3="$crimeInformation_local.position" PositionWuid="" Information="$alarmInformation" />
+											</Init>
+											<Subtree canSkip="1">
+												<Sequence>
+													<IfElseCondition failOnCondition="false" condition="$data:crime[$crimeInformation.label].isCrime | &#10;$crimeInformation.label == &apos;corpse&apos;" saveVersion="2">
+														<Then canSkip="1">
+															<Function_crime_getStimulusKindFromString label="$crimeInformation.label" stimulusKind="$stimulusKind" nodeLabel="56272022" />
+														</Then>
+														<Else canSkip="1">
+															<IfElseCondition failOnCondition="false" condition="$crimeInformation.label == &apos;motivation&apos; | &#10;$crimeInformation.label== &apos;nonAttributedCrime&apos;" saveVersion="2">
+																<Then canSkip="1">
+																	<LockDynamicInformationValues Information="$crimeInformation">
+																		<GetDynamicInformationValue Information="$crimeInformation" Tag="&apos;stimulusKind&apos;" Out="$stimulusKind" />
+																	</LockDynamicInformationValues>
+																</Then>
+																<Else canSkip="1">
+																	<ErrorNode Message="&apos;ERROR: No way to determine stimulusKind from information: $crimeInformation!&apos;" />
+																</Else>
+															</IfElseCondition>
+														</Else>
+													</IfElseCondition>
+													<GetCrimeLevelByStimulusKind StimulusKind="$stimulusKind" CrimeLevel="$crimeLevel" />
+													<IfElseCondition failOnCondition="false" condition="$crimeLevel &gt;= $enum:crime_crimeLevel.property" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$urgentAlarm = true" />
+														</Then>
+														<Else canSkip="1">
+															<Sequence>
+																<Function_crime_getReactionType reactionKind="$reactionKind" stimulusKind="$stimulusKind" reactionType="$reactionType" nodeLabel="43606553" />
+																<IfCondition failOnCondition="false" condition="$reactionType == $enum:crime_reactionType.arrest">
+																	<Expression expressions="$urgentAlarm = true" />
+																</IfCondition>
+															</Sequence>
+														</Else>
+													</IfElseCondition>
+													<LockDynamicInformationValues Information="$alarmInformation">
+														<Sequence>
+															<SetDynamicInformationValue Information="$alarmInformation" Tag="&apos;stimulusKind&apos;" Variable="$stimulusKind" Type="" Value="" />
+															<SetDynamicInformationValue Information="$alarmInformation" Tag="&apos;urgent&apos;" Variable="$urgentAlarm" Type="" Value="" />
+															<IfCondition failOnCondition="false" condition="$crimeInformation_local.label ~= &apos;&apos;">
+																<IfCondition failOnCondition="false" condition="$data:crime[$crimeInformation_local.label].isCrime | &#10;$crimeInformation_local.label == &apos;nonAttributedCrime&apos; | &#10;$crimeInformation_local.label == &apos;corpse&apos;">
+																	<SetDynamicInformationValue Information="$alarmInformation" Tag="&apos;crimeInformation&apos;" Variable="$crimeInformation_local" Type="" Value="" />
+																</IfCondition>
+															</IfCondition>
+														</Sequence>
+													</LockDynamicInformationValues>
+													<SubtreeDecorator saveVersion="2">
+														<Init canSkip="1">
+															<EntityContextCheck context="crime_alarmEmittingSameDistanceAsCrimes" target="" saveVersion="2">
+																<Then canSkip="1">
+																	<InformationEmittingStart Information="$alarmInformation" Periodicity="$emitPeriod" TimerType="GameTime" Radius="$data:script_param[&apos;crime_crimeInformationEmitDistance&apos;].value" />
+																</Then>
+																<Else canSkip="1">
+																	<InformationEmittingStart Information="$alarmInformation" Periodicity="$emitPeriod" TimerType="GameTime" Radius="$data:script_param[&apos;crime_alarmInformationEmitDistance&apos;].value" />
+																</Else>
+															</EntityContextCheck>
+														</Init>
+														<Subtree canSkip="1">
+															<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+														</Subtree>
+														<Cleanup canSkip="1">
+															<InformationEmittingEnd Information="$alarmInformation" />
+														</Cleanup>
+													</SubtreeDecorator>
+												</Sequence>
+											</Subtree>
+											<Cleanup canSkip="1">
+												<Sequence>
+													<Function_crime_sendInformationDiffNotification information="$alarmInformation" statusString="&apos;Deleted&apos;" nodeLabel="90972464" />
+													<DestroyInformationCompletely Information="$alarmInformation" />
+												</Sequence>
+											</Cleanup>
+										</SubtreeDecorator>
+									</IfGate>
+								</Loop>
+							</Sequence>
+							<Sequence>
+								<IsPublicEnemy Soul="$this.id" FailOnSubtreeMissing="false" saveVersion="2">
+									<Then canSkip="1">
+										<Expression expressions="$emitCrimeInformation = false" />
+									</Then>
+									<Else canSkip="1">
+										<EntityContextCheck context="crime_disableCrimeInformationEmit" target="" saveVersion="2">
+											<Then canSkip="1">
+												<Expression expressions="$emitCrimeInformation = false" />
+											</Then>
+											<Else canSkip="1">
+												<Expression expressions="$emitCrimeInformation = $emitCrimeInformation &amp;  &#10;$crimeInformation_local.label ~= &apos;&apos; &amp; &#10;$crimeInformation_local.label ~= &apos;motivation&apos;" />
+											</Else>
+										</EntityContextCheck>
+									</Else>
+								</IsPublicEnemy>
+								<IfCondition failOnCondition="false" condition="$emitCrimeInformation">
+									<Loop count="-1">
+										<Sequence>
+											<Expression expressions="$longDistanceModeEnabled_local = $longDistanceModeEnabled &#10;$crimeEmitDistanceKey = $longDistanceModeEnabled_local ? &apos;crime_crimeInformationEmitDistance_long&apos; : &apos;crime_crimeInformationEmitDistance&apos;" />
+											<SubtreeDecorator saveVersion="2">
+												<Init canSkip="1">
+													<InformationEmittingStart Information="$crimeInformation_local" Periodicity="$emitPeriod" TimerType="GameTime" Radius="$data:script_param[$crimeEmitDistanceKey].value" />
+												</Init>
+												<Subtree canSkip="1">
+													<IfGate atomic="false" condition="$longDistanceModeEnabled ~= $longDistanceModeEnabled_local" RunLogic="KeepRunning">
+														<Success />
+													</IfGate>
+												</Subtree>
+												<Cleanup canSkip="1">
+													<InformationEmittingEnd Information="$crimeInformation_local" />
+												</Cleanup>
+											</SubtreeDecorator>
+										</Sequence>
+									</Loop>
+								</IfCondition>
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Sequence>
+						</Parallel>
+					</IfCondition>
+				</ContinuousSwitch>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="alarmInformation" comment="" />
+				<Variable name="crimeEmitDistanceKey" comment="" />
+				<Variable name="crimeInformation_local" comment="" />
+				<Variable name="crimeLevel" comment="" />
+				<Variable name="emitPeriod" comment="" />
+				<Variable name="longDistanceModeEnabled_local" comment="" />
+				<Variable name="npcCanAlarm" comment="" />
+				<Variable name="reactionType" comment="" />
+				<Variable name="stimulusKind" comment="" />
+				<Variable name="urgentAlarm" comment="" />
+				<Variable name="crimeInformation" comment="" />
+				<Variable name="emitAlarmInformation" comment="" />
+				<Variable name="emitCrimeInformation" comment="" />
+				<Variable name="longDistanceModeEnabled" comment="" />
+				<Variable name="reactionKind" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</IfCondition>
+						<DefaultBranch>
+							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Success>
+						</DefaultBranch>
+					</Switch>
+				</OnInit>
+				<Behavior>
+					<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Then>
+										<Else>
+											<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Then>
+											</EntityContextCheck>
+										</Else>
+									</EntityContextCheck>
+									<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Init>
+													<CreateInformationWrapper hasInputBreakpoint="0" comment="$crimeInformation.position is in fact correct here" breakpointFlags="0">
+														<OutputBreakpoints />
+													</CreateInformationWrapper>
+												</Init>
+												<Subtree>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Function_crime_getStimulusKindFromString hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_getStimulusKindFromString>
+															</Then>
+															<Else>
+																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</GetDynamicInformationValue>
+																		</LockDynamicInformationValues>
+																	</Then>
+																	<Else>
+																		<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</ErrorNode>
+																	</Else>
+																</IfElseCondition>
+															</Else>
+														</IfElseCondition>
+														<GetCrimeLevelByStimulusKind hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetCrimeLevelByStimulusKind>
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+															<Else>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Function_crime_getReactionType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_crime_getReactionType>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																</Sequence>
+															</Else>
+														</IfElseCondition>
+														<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</SetDynamicInformationValue>
+																<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</SetDynamicInformationValue>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfCondition hasInputBreakpoint="0" comment="cant be same condition" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</SetDynamicInformationValue>
+																	</IfCondition>
+																</IfCondition>
+															</Sequence>
+														</LockDynamicInformationValues>
+														<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Init>
+																<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<InformationEmittingStart hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</InformationEmittingStart>
+																	</Then>
+																	<Else>
+																		<InformationEmittingStart hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</InformationEmittingStart>
+																	</Else>
+																</EntityContextCheck>
+															</Init>
+															<Subtree>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+															</Subtree>
+															<Cleanup>
+																<InformationEmittingEnd hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</InformationEmittingEnd>
+															</Cleanup>
+														</SubtreeDecorator>
+													</Sequence>
+												</Subtree>
+												<Cleanup>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Function_crime_sendInformationDiffNotification hasInputBreakpoint="0" comment="For skald crime alarm" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_sendInformationDiffNotification>
+														<DestroyInformationCompletely hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</DestroyInformationCompletely>
+													</Sequence>
+												</Cleanup>
+											</SubtreeDecorator>
+										</IfGate>
+									</Loop>
+								</Sequence>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IsPublicEnemy hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Then>
+										<Else>
+											<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Then>
+												<Else>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Else>
+											</EntityContextCheck>
+										</Else>
+									</IsPublicEnemy>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Init>
+														<InformationEmittingStart hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</InformationEmittingStart>
+													</Init>
+													<Subtree>
+														<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Success>
+														</IfGate>
+													</Subtree>
+													<Cleanup>
+														<InformationEmittingEnd hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</InformationEmittingEnd>
+													</Cleanup>
+												</SubtreeDecorator>
+											</Sequence>
+										</Loop>
+									</IfCondition>
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Sequence>
+							</Parallel>
+						</IfCondition>
+					</ContinuousSwitch>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

@@ -1,0 +1,793 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_surrenderDecision" is_function="1">
+		<Variables>
+			<Variable name="NPCsAround" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="NPCsAroundKey" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="NPCsAround_value" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="alwaysChooseMercy" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="alwaysFlee" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="canReport" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="distanceCondition" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="fleeReactors" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="hasFriendAround" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="hasFriendAroundCondition" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="hasNeverSurrenderContext" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="hasSuppressingNeverSurrenderContext" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="hitReaction" type="hitReaction" values="" isPersistent="0" form="single" />
+			<Variable name="hpLow" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="isIndifferent" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="lastHitByPlayer" type="crime:lastHitByPlayer" values="" isPersistent="0" form="single" />
+			<Variable name="moraleLow" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="mostImportantInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="npcCooldowns" type="crime:npcCooldowns" values="" isPersistent="0" form="single" />
+			<Variable name="playersTarget" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="priorityForFlee" type="_int" values="135" isPersistent="0" form="single" />
+			<Variable name="reportDestination" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="reportDestinationType" type="enum:crime_reportDestinationType" values="" isPersistent="0" form="single" />
+			<Variable name="time" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="useless" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="attackData" type="switch:interruptData:attack" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="inQuestSkirmish" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="myTarget" type="_wuid" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="questFightStatus" type="combat:questFightStatus" values="" isPersistent="0" form="single" requirementType="Reference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+						<LinkTagFilter tag="&apos;crime_npcCooldowns&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+						<Datalyzer Tag="&apos;crime_npcCooldowns&apos;" Quantifiers="Exists" Parent="" Child="" Data="$npcCooldowns" saveVersion="2" />
+					</GraphSearch>
+					<EntityContextCheck context="combat_neverSurrenderOrFlee" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Expression expressions="$hasNeverSurrenderContext = true" />
+						</Then>
+					</EntityContextCheck>
+					<EntityContextCheck context="combat_suppressNeverSurrenderOrFlee" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Expression expressions="$hasSuppressingNeverSurrenderContext = true" />
+						</Then>
+					</EntityContextCheck>
+					<Parallel successMode="Any" failureMode="Any">
+						<Loop count="-1">
+							<Parallel successMode="Any" failureMode="Any">
+								<Loop count="-1">
+									<Sequence>
+										<EntityContextBarrier context="combat_neverSurrenderOrFlee" target="" Negation="false" RunLogic="Halt">
+											<Sequence>
+												<Expression expressions="$hasNeverSurrenderContext = true" />
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Sequence>
+										</EntityContextBarrier>
+										<Expression expressions="$hasNeverSurrenderContext = false" />
+									</Sequence>
+								</Loop>
+								<Loop count="-1">
+									<Sequence>
+										<EntityContextBarrier context="combat_suppressNeverSurrenderOrFlee" target="" Negation="false" RunLogic="Halt">
+											<Sequence>
+												<Expression expressions="$hasSuppressingNeverSurrenderContext = true" />
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Sequence>
+										</EntityContextBarrier>
+										<Expression expressions="$hasSuppressingNeverSurrenderContext = false" />
+									</Sequence>
+								</Loop>
+							</Parallel>
+						</Loop>
+						<Loop count="-1">
+							<EntityContextBarrier context="crime_processingSurrenderChat" target="" Negation="true" RunLogic="Halt">
+								<IfGate atomic="false" condition="$hasSuppressingNeverSurrenderContext | !$hasNeverSurrenderContext" RunLogic="Halt">
+									<Parallel successMode="Any" failureMode="Any">
+										<EntityContextCheck context="combat_immortalityProtection" target="" saveVersion="2">
+											<Then canSkip="1">
+												<NPCStateGate State="Health" Target="$this.id" Low="2.000000" High="2.000000" Negation="false" RunLogic="KeepRunning">
+													<DecoratorBuff BuffId="&apos;549119f2-d5c9-43f7-ab52-487b0a262d47&apos;" SoulWUID="$this.id">
+														<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+													</DecoratorBuff>
+												</NPCStateGate>
+											</Then>
+											<Else canSkip="1">
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Else>
+										</EntityContextCheck>
+										<Sequence>
+											<IfElseCondition failOnCondition="false" condition="$attackData.initiatedBy == $enum:switch_interruptInitiator.concept" saveVersion="2">
+												<Then canSkip="1">
+													<Wait duration="&apos;4s&apos;" timeType="GameTime" doFail="false" variation="" />
+												</Then>
+												<Else canSkip="1">
+													<IfElseCondition failOnCondition="false" condition="$attackData.previousReaction == $enum:crime_reactionKind.flee" saveVersion="2">
+														<Then canSkip="1">
+															<Wait duration="&apos;20s&apos;" timeType="GameTime" doFail="false" variation="" />
+														</Then>
+														<Else canSkip="1">
+															<IfElseCondition failOnCondition="false" condition="$currentTime - $npcCooldowns.fledFromAttack + $data:script_param[&apos;combat_fledFromAttack&apos;].value &lt; 16 |  &#10;$npcCooldowns.fledFromAttack == 0" saveVersion="2">
+																<Then canSkip="1">
+																	<Wait duration="&apos;16s&apos;" timeType="GameTime" doFail="false" variation="" />
+																</Then>
+																<Else canSkip="1">
+																	<While doFail="false" propagateChildFail="false" condition="$npcCooldowns.fledFromAttack + $data:script_param[&apos;combat_fledFromAttack&apos;].value &gt; $currentTime">
+																		<Sequence>
+																			<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+																			<Wait duration="&apos;3s&apos;" timeType="GameTime" doFail="false" variation="" />
+																		</Sequence>
+																	</While>
+																</Else>
+															</IfElseCondition>
+														</Else>
+													</IfElseCondition>
+												</Else>
+											</IfElseCondition>
+											<Expression expressions="$moraleLow = false" />
+											<EntityContextCheck context="combat_fightInQuestSkirmish" target="" saveVersion="2">
+												<Then canSkip="1">
+													<Loop count="-1">
+														<Function_combat_checkMoraleForCombat moraleLow="$moraleLow" nodeLabel="92947605" />
+													</Loop>
+												</Then>
+												<Else canSkip="1">
+													<MoraleGate Target="" Low="$data:script_param[&apos;combat_moraleForCombat&apos;].value" High="$data:script_param[&apos;combat_moraleForCombat&apos;].value" Negation="false" RunLogic="KeepRunning">
+														<Expression expressions="$moraleLow = true" />
+													</MoraleGate>
+												</Else>
+											</EntityContextCheck>
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+										<IfGate atomic="false" condition="$moraleLow | $hpLow" RunLogic="Halt">
+											<AtomicDecorator>
+												<Sequence>
+													<Sequence>
+														<CircularSpatialQuery Radius="15.000000" Center="$this.id" ToFill="$NPCsAround" Precision="Exact" Filter="ConsciousHumanNPCsPlayerExcluded" />
+														<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+															<LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+															<LinkDataFilter tag="&apos;crime_reactor&apos;" condition="$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.flee" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+															<WUIDFilter WUID="$NPCsAround" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+															<Nodalyzer Quantifiers="ForAll" Parent="" Child="$fleeReactors" saveVersion="2" />
+														</GraphSearch>
+														<ForEach startIndex="0" step="1" array="$NPCsAround" iterator="" value="$NPCsAround_value" break="$hasFriendAround">
+															<IfCondition failOnCondition="false" condition="$NPCsAround_value ~= $this.id">
+																<CheckRelationshipInterval_SoulToSoul TargetSoul="$NPCsAround_value" Soul="$this.id" Flag="friend" saveVersion="2">
+																	<Then canSkip="1">
+																		<HasGenderCheck Gender="Male" SoulWUID="$NPCsAround_value" FailSubtMissing="false" saveVersion="2">
+																			<Then canSkip="1">
+																				<EntityContextCheck context="crime_interruptFlee" target="$NPCsAround_value" saveVersion="2">
+																					<Else canSkip="1">
+																						<Selector>
+																							<FindInArray array="$fleeReactors" keyOut="$NPCsAroundKey" condition="$__value == $NPCsAround_value" />
+																							<Expression expressions="$hasFriendAround = true" />
+																						</Selector>
+																					</Else>
+																				</EntityContextCheck>
+																			</Then>
+																		</HasGenderCheck>
+																	</Then>
+																</CheckRelationshipInterval_SoulToSoul>
+															</IfCondition>
+														</ForEach>
+													</Sequence>
+													<IfCondition failOnCondition="false" condition="$inQuestSkirmish">
+														<Sequence>
+															<Expression expressions="$questFightStatus.status = $enum:combat_questFightStatus.fled" />
+															<AddLink From="$this.id" To="$this.id" Tag="&apos;combat_questFightStatus&apos;" Data="$questFightStatus" LinkOpHandleMode="OverWrite" />
+														</Sequence>
+													</IfCondition>
+													<SuppressFailure>
+														<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+															<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+															<LinkTagFilter tag="&apos;crime_lastHitByPlayer&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+															<Datalyzer Tag="&apos;crime_lastHitByPlayer&apos;" Quantifiers="Exists" Parent="" Child="" Data="$lastHitByPlayer" saveVersion="2" />
+														</GraphSearch>
+													</SuppressFailure>
+													<SuppressFailure>
+														<GetTarget ReferenceNPC="$__player" TargetVarOut="$playersTarget" />
+													</SuppressFailure>
+													<GetTime TimeType="GameTime" OutVar="$time" Delta="" />
+													<EntityContextCheck context="combat_alwaysChooseMercy" target="$this.id" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$alwaysChooseMercy = true" />
+														</Then>
+													</EntityContextCheck>
+													<IfCondition failOnCondition="false" condition="$attackData.previousReaction == $enum:crime_reactionKind.flee">
+														<Expression expressions="$alwaysFlee = true" />
+													</IfCondition>
+													<EntityContextCheck context="combat_neverMercyAlwaysFlee" target="$this.id" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$alwaysFlee = true" />
+														</Then>
+													</EntityContextCheck>
+													<DistanceCondition Origin="$this.id" ReferencePt="$__player" Low="3.000000" High="3.000000" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+														<Expression expressions="$distanceCondition = true" />
+													</DistanceCondition>
+													<IsIndifferent NPC="$this.id" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$isIndifferent = true" />
+														</Then>
+													</IsIndifferent>
+													<Switch>
+														<IfCondition failOnCondition="false" condition="$inQuestSkirmish | $isIndifferent">
+															<Success />
+														</IfCondition>
+														<IfCondition failOnCondition="false" condition="$data:crime[$attackData.information.label].isCrime">
+															<Expression expressions="$mostImportantInformation = $attackData.information" />
+														</IfCondition>
+														<DefaultBranch>
+															<GetMostImportantCrimeInformation Npc="$this.id" OnlyRelated="true" MostImportantInformation="$mostImportantInformation" />
+														</DefaultBranch>
+													</Switch>
+													<IfElseCondition failOnCondition="false" condition="( &#10; ( &#10;  ( &#10;   ($playersTarget == $this.id &amp; $myTarget == $__player) | ( $time &lt; $lastHitByPlayer.time + 4000 &amp; $lastHitByPlayer.time &gt; 0) &#10;  ) &#10;  &amp; !$hasFriendAround &amp; $distanceCondition &#10; )  &#10; | $alwaysChooseMercy &#10;) &#10;&amp; !$alwaysFlee" saveVersion="2">
+														<Then canSkip="1">
+															<Sequence>
+																<IfCondition failOnCondition="false" condition="$attackData.initiatedBy == $enum:switch_interruptInitiator.concept">
+																	<SuppressFailure>
+																		<InstantSendMessageToNPC target="$this.id" type="&apos;combat:duel:combatEvent&apos;" values="opponentSurrender(true)" />
+																	</SuppressFailure>
+																</IfCondition>
+																<EntityContext context="combat_surrender" target="">
+																	<Function_callInterrupt_mercy ignorePriority="true" information="$mostImportantInformation" initiator="$enum:switch_interruptInitiator.scheduler" isIndifferent="$isIndifferent" previousReaction="$enum:crime_reactionKind.attack" source="$enum:crime_source.personal" stimulusKind="$attackData.stimulusKind" nodeLabel="45874029" />
+																</EntityContext>
+															</Sequence>
+														</Then>
+														<Else canSkip="1">
+															<Sequence>
+																<IfCondition failOnCondition="false" condition="$attackData.initiatedBy == $enum:switch_interruptInitiator.concept">
+																	<Sequence>
+																		<Expression expressions="$priorityForFlee = 160" />
+																		<SuppressFailure>
+																			<InstantSendMessageToNPC target="$this.id" type="&apos;combat:duel:combatEvent&apos;" values="opponentFlee(true)" />
+																		</SuppressFailure>
+																	</Sequence>
+																</IfCondition>
+																<Sequence>
+																	<IfCondition failOnCondition="false" condition="($playersTarget == $this.id | $myTarget == $__player |  &#10; ($time &lt; $lastHitByPlayer.time + 4000 &amp; $lastHitByPlayer.time &gt; 0)) &#10; &#10;&amp; ~$alwaysFlee  &#10;&amp; ~$inQuestSkirmish">
+																		<Sequence>
+																			<IfElseCondition failOnCondition="false" condition="$data:crime[$attackData.information.label].isCrime" saveVersion="2">
+																				<Then canSkip="1">
+																					<Expression expressions="$mostImportantInformation = $attackData.information" />
+																				</Then>
+																				<Else canSkip="1">
+																					<GetMostImportantCrimeInformation Npc="$this.id" OnlyRelated="true" MostImportantInformation="$mostImportantInformation" />
+																				</Else>
+																			</IfElseCondition>
+																			<IfCondition failOnCondition="false" condition="$mostImportantInformation.label ~= &apos;&apos;">
+																				<Sequence>
+																					<ChooseReportDestination Information="$mostImportantInformation" IsImportant="false" Destination="$reportDestination" DestinationType="$reportDestinationType" />
+																					<IfCondition failOnCondition="false" condition="$reportDestinationType &gt; $enum:crime_reportDestinationType.none">
+																						<EntityContextCheck context="crime_interruptAttack" target="$reportDestination" saveVersion="2">
+																							<Else canSkip="1">
+																								<CheckReactionLimit DesiredReactionType="$enum:crime_reactionType.report" Information="$mostImportantInformation" Position="" StimulusKind="$enum:crime_stimulusKind.unknown" ShouldReact="$canReport" ShouldWatch="$useless" />
+																							</Else>
+																						</EntityContextCheck>
+																					</IfCondition>
+																				</Sequence>
+																			</IfCondition>
+																		</Sequence>
+																	</IfCondition>
+																	<EntityContext context="combat_flee" target="">
+																		<Sequence>
+																			<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+																			<Expression expressions="$npcCooldowns.fledFromAttack = $currentTime + $data:script_param[&apos;combat_fledFromAttack&apos;].value" />
+																			<AddLink From="$this.id" To="$this.id" Tag="&apos;crime_npcCooldowns&apos;" Data="$npcCooldowns" LinkOpHandleMode="OverWrite" />
+																			<IfElseCondition failOnCondition="false" condition="$canReport" saveVersion="2">
+																				<Then canSkip="1">
+																					<Function_callInterrupt_report assaultData="" corpseState="$enum:corpseState.undiscovered" criminalFreshness="$enum:crime_criminalFreshness.unknown" disableDetectedIcon="true" disableEmitting="false" freshlyAttributedCrime="false" ignorePriority="true" information="$mostImportantInformation" initiator="$enum:switch_interruptInitiator.scheduler" movementSpeed="$enum:movementSpeed.sprint" previousReaction="$enum:crime_reactionKind.attack" reportDestination="$reportDestination" reportDestinationType="$reportDestinationType" source="$enum:crime_source.direct" stimulusKind="$attackData.stimulusKind" nodeLabel="20785222" />
+																				</Then>
+																				<Else canSkip="1">
+																					<Function_callInterrupt_flee assaultData="$attackData.assaultData" corpseState="$enum:corpseState.undiscovered" criminalFreshness="$enum:crime_criminalFreshness.unknown" freshlyAttributedCrime="false" ignorePriority="true" information="$mostImportantInformation" initiator="$enum:switch_interruptInitiator.scheduler" isIndifferent="$isIndifferent" leaveLevel="false" mercyDialogueResult="$enum:crime_mercyDialogueResult.unknown" previousReaction="$enum:crime_reactionKind.attack" priority="$priorityForFlee" source="$enum:crime_source.direct" stimulusKind="$attackData.stimulusKind" target="$__player" nodeLabel="24147699" />
+																				</Else>
+																			</IfElseCondition>
+																		</Sequence>
+																	</EntityContext>
+																</Sequence>
+															</Sequence>
+														</Else>
+													</IfElseCondition>
+												</Sequence>
+											</AtomicDecorator>
+										</IfGate>
+									</Parallel>
+								</IfGate>
+							</EntityContextBarrier>
+						</Loop>
+					</Parallel>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="NPCsAround" comment="" />
+				<Variable name="NPCsAroundKey" comment="" />
+				<Variable name="NPCsAround_value" comment="" />
+				<Variable name="alwaysChooseMercy" comment="" />
+				<Variable name="alwaysFlee" comment="" />
+				<Variable name="canReport" comment="" />
+				<Variable name="currentTime" comment="" />
+				<Variable name="distanceCondition" comment="" />
+				<Variable name="fleeReactors" comment="" />
+				<Variable name="hasFriendAround" comment="" />
+				<Variable name="hasFriendAroundCondition" comment="" />
+				<Variable name="hasNeverSurrenderContext" comment="" />
+				<Variable name="hasSuppressingNeverSurrenderContext" comment="" />
+				<Variable name="hitReaction" comment="" />
+				<Variable name="hpLow" comment="" />
+				<Variable name="isIndifferent" comment="" />
+				<Variable name="lastHitByPlayer" comment="" />
+				<Variable name="moraleLow" comment="" />
+				<Variable name="mostImportantInformation" comment="" />
+				<Variable name="npcCooldowns" comment="" />
+				<Variable name="playersTarget" comment="" />
+				<Variable name="priorityForFlee" comment="" />
+				<Variable name="reportDestination" comment="" />
+				<Variable name="reportDestinationType" comment="" />
+				<Variable name="time" comment="" />
+				<Variable name="useless" comment="" />
+				<Variable name="attackData" comment="" />
+				<Variable name="inQuestSkirmish" comment="" />
+				<Variable name="myTarget" comment="" />
+				<Variable name="questFightStatus" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-190" editorPosY="-20" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</WUIDFilter>
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+							<Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+							</Datalyzer>
+						</GraphSearch>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Then>
+						</EntityContextCheck>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Then>
+						</EntityContextCheck>
+						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Sequence>
+											</EntityContextBarrier>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+									</Loop>
+									<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Sequence>
+											</EntityContextBarrier>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+									</Loop>
+								</Parallel>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<NPCStateGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<DecoratorBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</DecoratorBuff>
+													</NPCStateGate>
+												</Then>
+												<Else>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Else>
+											</EntityContextCheck>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Wait>
+													</Then>
+													<Else>
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+															</Then>
+															<Else>
+																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Wait>
+																	</Then>
+																	<Else>
+																		<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</GetTime>
+																				<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Wait>
+																			</Sequence>
+																		</While>
+																	</Else>
+																</IfElseCondition>
+															</Else>
+														</IfElseCondition>
+													</Else>
+												</IfElseCondition>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_combat_checkMoraleForCombat hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_combat_checkMoraleForCombat>
+														</Loop>
+													</Then>
+													<Else>
+														<MoraleGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</MoraleGate>
+													</Else>
+												</EntityContextCheck>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+											<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<CircularSpatialQuery hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</CircularSpatialQuery>
+															<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+																<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkDataFilter>
+																<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</WUIDFilter>
+																<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																</Nodalyzer>
+															</GraphSearch>
+															<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<HasGenderCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Else>
+																							<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</FindInArray>
+																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																							</Selector>
+																						</Else>
+																					</EntityContextCheck>
+																				</Then>
+																			</HasGenderCheck>
+																		</Then>
+																	</CheckRelationshipInterval_SoulToSoul>
+																</IfCondition>
+															</ForEach>
+														</Sequence>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</AddLink>
+															</Sequence>
+														</IfCondition>
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</WUIDFilter>
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+																<Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																</Datalyzer>
+															</GraphSearch>
+														</SuppressFailure>
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GetTarget hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</GetTarget>
+														</SuppressFailure>
+														<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetTime>
+														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+														</EntityContextCheck>
+														<IfCondition hasInputBreakpoint="0" comment="KCD2-117860" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</IfCondition>
+														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+														</EntityContextCheck>
+														<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</DistanceCondition>
+														<IsIndifferent hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+														</IsIndifferent>
+														<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Success>
+															</IfCondition>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</IfCondition>
+															<DefaultBranch>
+																<GetMostImportantCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetMostImportantCrimeInformation>
+															</DefaultBranch>
+														</Switch>
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</InstantSendMessageToNPC>
+																		</SuppressFailure>
+																	</IfCondition>
+																	<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Function_callInterrupt_mercy hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_callInterrupt_mercy>
+																	</EntityContext>
+																</Sequence>
+															</Then>
+															<Else>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</InstantSendMessageToNPC>
+																			</SuppressFailure>
+																		</Sequence>
+																	</IfCondition>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Then>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Then>
+																					<Else>
+																						<GetMostImportantCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</GetMostImportantCrimeInformation>
+																					</Else>
+																				</IfElseCondition>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<ChooseReportDestination hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</ChooseReportDestination>
+																						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																								<OutputBreakpoints />
+																								<Else>
+																									<CheckReactionLimit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</CheckReactionLimit>
+																								</Else>
+																							</EntityContextCheck>
+																						</IfCondition>
+																					</Sequence>
+																				</IfCondition>
+																			</Sequence>
+																		</IfCondition>
+																		<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</GetTime>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</AddLink>
+																				<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Then>
+																						<Function_callInterrupt_report hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_callInterrupt_report>
+																					</Then>
+																					<Else>
+																						<Function_callInterrupt_flee hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_callInterrupt_flee>
+																					</Else>
+																				</IfElseCondition>
+																			</Sequence>
+																		</EntityContext>
+																	</Sequence>
+																</Sequence>
+															</Else>
+														</IfElseCondition>
+													</Sequence>
+												</AtomicDecorator>
+											</IfGate>
+										</Parallel>
+									</IfGate>
+								</EntityContextBarrier>
+							</Loop>
+						</Parallel>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

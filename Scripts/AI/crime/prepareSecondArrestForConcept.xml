@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_prepareSecondArrestForConcept" is_function="1">
+		<Variables>
+			<Variable name="assets_wuid" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="assets_wuid_val" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="fastTravelCH" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="guardAvailable" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="lastArrester" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="newGuardSpawnPoint" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="oldGuardSpawnPoint" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="punishmentArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="punishmentGuard" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="punishmentLocation" type="enum:crime_punishmentLocation" values="" isPersistent="0" form="single" />
+			<Variable name="qso_openworld" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="timeAdvancePoint" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<AtomicDecorator>
+					<Sequence>
+						<Function_crime_getPunishmentArea punishmentArea="$punishmentArea" punishmentLocation="$punishmentLocation" nodeLabel="84251515" />
+						<Function_crime_getOpenworldQSO openworldQSO="$qso_openworld" nodeLabel="34820089" />
+						<Function_crime_preparePunishmentForConcept punishmentType="$enum:crime_punishmentType.beating" nodeLabel="97819965" />
+						<Sequence>
+							<SuppressFailure>
+								<Sequence>
+									<GraphSearch Origin="$qso_openworld" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;crime_secondArrest_lastArrester&apos;" prune="true" negprune="unknown" Parent="" Child="$lastArrester" Data="" />
+									</GraphSearch>
+									<RemoveLink From="$qso_openworld" To="$lastArrester" Tag="&apos;crime_secondArrest_lastArrester&apos;" LinkOpHandleMode="Error" />
+								</Sequence>
+							</SuppressFailure>
+							<AddLink From="$qso_openworld" To="$this.id" Tag="&apos;crime_secondArrest_lastArrester&apos;" Data="" LinkOpHandleMode="OverWrite" />
+						</Sequence>
+						<Sequence>
+							<Sequence>
+								<SuppressFailure>
+									<GraphSearch Origin="$qso_openworld" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<Nodalyzer Quantifiers="ForAll" Parent="" Child="$assets_wuid" saveVersion="2" />
+										<LinkDataFilter tag="&apos;asset&apos;" condition="$__link_asset == &apos;punishment_guard&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+									</GraphSearch>
+								</SuppressFailure>
+								<ForEach startIndex="0" step="1" array="$assets_wuid" iterator="" value="$assets_wuid_val" break="">
+									<RemoveLink From="$qso_openworld" To="$assets_wuid_val" Tag="&apos;asset&apos;" LinkOpHandleMode="Error" />
+								</ForEach>
+							</Sequence>
+							<SuppressFailure>
+								<Sequence>
+									<Selector>
+										<GraphSearch Origin="$punishmentArea" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;punishment_defaultGuard&apos;" prune="true" negprune="unknown" Parent="" Child="$punishmentGuard" Data="" />
+										</GraphSearch>
+										<LogToConsole LogLevel="Info" Message="&apos;[PrepareSecondArrestForConcept] unable to retrieve default guard for punishmentArea ($punishmentArea;)&apos;" />
+									</Selector>
+									<IsDeadCheck SoulWUID="$punishmentGuard" FailSubtMissing="false" saveVersion="2">
+										<Else canSkip="1">
+											<IsUnconsciousCheck SoulWUID="$punishmentGuard" FailSubtMissing="false" saveVersion="2">
+												<Else canSkip="1">
+													<EntityContextCheck context="crime_isAuthority" target="$punishmentGuard" saveVersion="2">
+														<Then canSkip="1">
+															<Sequence>
+																<AddLink From="$qso_openworld" To="$punishmentGuard" Tag="&apos;asset&apos;" Data="&apos;punishment_guard&apos;" LinkOpHandleMode="Success" />
+																<Expression expressions="$guardAvailable = true" />
+															</Sequence>
+														</Then>
+													</EntityContextCheck>
+												</Else>
+											</IsUnconsciousCheck>
+										</Else>
+									</IsDeadCheck>
+								</Sequence>
+							</SuppressFailure>
+						</Sequence>
+						<Sequence>
+							<SuppressFailure>
+								<Sequence>
+									<GraphSearch Origin="$qso_openworld" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<Nodalyzer Quantifiers="ForAll" Parent="" Child="$oldGuardSpawnPoint" saveVersion="2" />
+										<LinkDataFilter tag="&apos;asset&apos;" condition="$__link_asset == &apos;punishment_guardSpawnPoint&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+									</GraphSearch>
+									<RemoveLink From="$qso_openworld" To="$oldGuardSpawnPoint" Tag="&apos;asset&apos;" LinkOpHandleMode="OverWrite" />
+								</Sequence>
+							</SuppressFailure>
+							<Sequence>
+								<Selector>
+									<GraphSearch Origin="$punishmentArea" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;punishment_guardSpawnPoint&apos;" prune="true" negprune="unknown" Parent="" Child="$newGuardSpawnPoint" Data="" />
+									</GraphSearch>
+									<ErrorNode Message="&apos;[PrepareSecondArrestForConcept] Unable to retrieve guardSpawnPoint from punishmentArea ($punishmentArea;)&apos;" />
+								</Selector>
+								<AddLink From="$qso_openworld" To="$newGuardSpawnPoint" Tag="&apos;asset&apos;" Data="&apos;punishment_guardSpawnPoint&apos;" LinkOpHandleMode="OverWrite" />
+							</Sequence>
+						</Sequence>
+						<SendAIConceptSignal_crime_punishmentRecalculateDialog guardAvailable="$guardAvailable" punismentLocation="$punishmentLocation" />
+					</Sequence>
+				</AtomicDecorator>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Sequence>
+				<Sequence>
+					<SuppressFailure>
+						<GraphSearch Origin="$qso_openworld" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+							<Nodalyzer Quantifiers="ForAll" Parent="" Child="$assets_wuid" saveVersion="2" />
+							<LinkDataFilter tag="&apos;asset&apos;" condition="$__link_asset == &apos;punishment_dialogueHolder&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+						</GraphSearch>
+					</SuppressFailure>
+					<ForEach startIndex="0" step="1" array="$assets_wuid" iterator="" value="$assets_wuid_val" break="">
+						<RemoveLink From="$qso_openworld" To="$assets_wuid_val" Tag="&apos;asset&apos;" LinkOpHandleMode="Error" />
+					</ForEach>
+				</Sequence>
+				<Sequence>
+					<Selector>
+						<Sequence>
+							<GraphSearch Origin="$punishmentArea" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<LinkTagFilter tag="&apos;punishment_dialogueHolder&apos;" prune="true" negprune="unknown" Parent="" Child="$dialogueHolder" Data="" />
+							</GraphSearch>
+							<AddLink From="$qso_openworld" To="$dialogueHolder" Tag="&apos;asset&apos;" Data="&apos;punishment_dialogueHolder&apos;" LinkOpHandleMode="Success" />
+						</Sequence>
+						<ErrorNode Message="&apos;[PrepareSecondArrestForConcept] unable to retrieve dialogueHolder for current punishmentArea ($punishmentArea;)&apos;" />
+					</Selector>
+				</Sequence>
+				<ReinitVariable variable="$assets_wuid" />
+				<ReinitVariable variable="$assets_wuid_val" />
+			</Sequence>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="assets_wuid" comment="" />
+				<Variable name="assets_wuid_val" comment="" />
+				<Variable name="fastTravelCH" comment="" />
+				<Variable name="guardAvailable" comment="" />
+				<Variable name="lastArrester" comment="" />
+				<Variable name="newGuardSpawnPoint" comment="" />
+				<Variable name="oldGuardSpawnPoint" comment="" />
+				<Variable name="punishmentArea" comment="" />
+				<Variable name="punishmentGuard" comment="" />
+				<Variable name="punishmentLocation" comment="" />
+				<Variable name="qso_openworld" comment="" />
+				<Variable name="timeAdvancePoint" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="50" editorPosY="30" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Function_crime_getPunishmentArea hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_getPunishmentArea>
+							<Function_crime_getOpenworldQSO hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_getOpenworldQSO>
+							<Function_crime_preparePunishmentForConcept hasInputBreakpoint="0" comment="Type is not important here, only need FastTravel point and Cutscene for SecondArrest distance check" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_preparePunishmentForConcept>
+							<Sequence hasInputBreakpoint="0" comment="Last arrester" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+										<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</RemoveLink>
+									</Sequence>
+								</SuppressFailure>
+								<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</AddLink>
+							</Sequence>
+							<Sequence hasInputBreakpoint="0" comment="GUARD" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="Clear old guard" breakpointFlags="0">
+									<OutputBreakpoints />
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+											</Nodalyzer>
+											<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkDataFilter>
+										</GraphSearch>
+									</SuppressFailure>
+									<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</RemoveLink>
+									</ForEach>
+								</Sequence>
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="Check new guard" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+											<LogToConsole hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LogToConsole>
+										</Selector>
+										<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Else>
+												<IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Else>
+														<EntityContextCheck hasInputBreakpoint="0" comment="Just in case" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</AddLink>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Sequence>
+															</Then>
+														</EntityContextCheck>
+													</Else>
+												</IsUnconsciousCheck>
+											</Else>
+										</IsDeadCheck>
+									</Sequence>
+								</SuppressFailure>
+							</Sequence>
+							<Sequence hasInputBreakpoint="0" comment="Guard point" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SuppressFailure hasInputBreakpoint="0" comment="Delete old" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+											</Nodalyzer>
+											<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkDataFilter>
+										</GraphSearch>
+										<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</RemoveLink>
+									</Sequence>
+								</SuppressFailure>
+								<Sequence hasInputBreakpoint="0" comment="Add new" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+										<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ErrorNode>
+									</Selector>
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+								</Sequence>
+							</Sequence>
+							<SendAIConceptSignal_crime_punishmentRecalculateDialog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</SendAIConceptSignal_crime_punishmentRecalculateDialog>
+						</Sequence>
+					</AtomicDecorator>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Sequence editorPosX="1970" editorPosY="-980" hasInputBreakpoint="0" comment="DIALOGUE HOLDER" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Sequence hasInputBreakpoint="0" comment="Clear old dialogueHolder" breakpointFlags="0">
+						<OutputBreakpoints />
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+								</Nodalyzer>
+								<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</LinkDataFilter>
+							</GraphSearch>
+						</SuppressFailure>
+						<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</RemoveLink>
+						</ForEach>
+					</Sequence>
+					<Sequence hasInputBreakpoint="0" comment="Add new dialogueHolder" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkTagFilter>
+								</GraphSearch>
+								<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</AddLink>
+							</Sequence>
+							<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</ErrorNode>
+						</Selector>
+					</Sequence>
+					<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</ReinitVariable>
+					<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</ReinitVariable>
+				</Sequence>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

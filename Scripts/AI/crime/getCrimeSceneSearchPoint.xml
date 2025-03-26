@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="crime_getCrimeSceneSearchPoint" is_function="1">
+    <Variables>
+      <Variable name="customSearchArea" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="customSearchPoints" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="customSearchPoints_key" type="_int" values="" isPersistent="0" form="single" />
+      <Variable name="customSearchPoints_value" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="directionInfluence" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="informationFound" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="lowerBoundary" type="_int" values="" isPersistent="0" form="single" />
+      <Variable name="myInformation" type="information" values="" isPersistent="0" form="single" />
+      <Variable name="randomIndex" type="_int" values="" isPersistent="0" form="single" />
+      <Variable name="reactorData" type="_wuid,crime:reactor" values="" isPersistent="0" form="custom_associative" />
+      <Variable name="reactorDataEvaluated" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="reactorData_key" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="reactorData_value" type="crime:reactor" values="" isPersistent="0" form="single" />
+      <Variable name="reactorData_value_distanceToCrimePos" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="searchDistance" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="searchModeToken" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="searchPathFindingParams" type="pathFindingParams" values="useGeneratedNSO(true)" isPersistent="0" form="single" />
+      <Variable name="searchPoints" type="crime:searchPoint" values="" isPersistent="0" form="array" />
+      <Variable name="searchPointsTag" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="searchPoints_vec" type="vec3" values="" isPersistent="0" form="array" />
+      <Variable name="searchPoints_vec_value" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="upperBoundary" type="_int" values="" isPersistent="0" form="single" />
+      <Variable name="validSearchPointFound" type="_bool" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="crimePos" type="vec3" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="desiredSearchPointCount" type="_int" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="direction" type="vec3" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="forceUpdate" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="searchMode" type="enum:crime_crimeSceneSearchMode" values="$enum:crime_crimeSceneSearchMode.widespread" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="searchPoint" type="crime:searchPoint" values="" isPersistent="0" form="single" requirementType="Out" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <IfElseCondition failOnCondition="false" condition="$searchMode == $enum:crime_crimeSceneSearchMode.widespread" saveVersion="2">
+            <Then canSkip="1">
+              <Expression expressions="$searchModeToken = &apos;widespread&apos;" />
+            </Then>
+            <Else canSkip="1">
+              <Expression expressions="$searchModeToken = &apos;concentrated&apos;" />
+            </Else>
+          </IfElseCondition>
+          <Semaphore SemaphoreCount="1" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;crime_searchPoints&apos;">
+            <Sequence>
+              <AtomicDecorator>
+                <Sequence>
+                  <GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                    <LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                    <EvaLLyzer Expresion="$reactorData[$__to] = $__link_crime_reactor" Quantifiers="ForAll" saveVersion="2" />
+                  </GraphSearch>
+                  <ForEach startIndex="0" step="1" array="$reactorData" iterator="$reactorData_key" value="$reactorData_value" break="$reactorDataEvaluated">
+                    <Sequence>
+                      <MeasureDistance position1="$crimePos" position2="$reactorData_value.information.position" mode="ThreeDimensions" result="$reactorData_value_distanceToCrimePos" />
+                      <IfCondition failOnCondition="false" condition="$reactorData_value_distanceToCrimePos &lt; $data:script_param[&apos;crime_crimeSceneSpatialSize&apos;].value | &#10;$reactorData_key == this.id">
+                        <SuppressFailure>
+                          <LockDynamicInformationValues Information="$reactorData_value.information">
+                            <Sequence>
+                              <Expression expressions="$searchPointsTag = &apos;searchPoints&apos; + $searchModeToken" />
+                              <GetDynamicInformationValue Information="$reactorData_value.information" Tag="$searchPointsTag" Out="$searchPoints" />
+                              <IfElseCondition failOnCondition="false" condition="$forceUpdate" saveVersion="2">
+                                <Then canSkip="1">
+                                  <Sequence>
+                                    <ClearDynamicInformationValue Information="$reactorData_value.information" Tag="$searchPointsTag" />
+                                    <ReinitVariable variable="$searchPoints" />
+                                    <Expression expressions="$reactorDataEvaluated = true" />
+                                  </Sequence>
+                                </Then>
+                                <Else canSkip="1">
+                                  <While doFail="false" propagateChildFail="false" condition="~$validSearchPointFound &amp; #searchPoints &gt; 0">
+                                    <Selector>
+                                      <Sequence>
+                                        <GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                          <LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                                          <LinkDataFilter tag="&apos;crime_reactor&apos;" condition="$searchPoints[0].position.x - $__link_crime_reactor.searchPointPosition.x &gt; -1 &amp; &#10;$searchPoints[0].position.x - $__link_crime_reactor.searchPointPosition.x &lt; 1 &amp; &#10;$searchPoints[0].position.y - $__link_crime_reactor.searchPointPosition.y &gt; -1 &amp; &#10;$searchPoints[0].position.y - $__link_crime_reactor.searchPointPosition.y &lt; 1 &amp; &#10;$searchPoints[0].position.z - $__link_crime_reactor.searchPointPosition.z &gt; -1 &amp; &#10;$searchPoints[0].position.z - $__link_crime_reactor.searchPointPosition.z &lt; 1" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                                        </GraphSearch>
+                                        <PopFromArray array="$searchPoints" valueOut="" direction="Front" />
+                                      </Sequence>
+                                      <Sequence>
+                                        <Expression expressions="$searchPoint = $searchPoints[0] &#10;$validSearchPointFound = true &#10;$reactorDataEvaluated = true" />
+                                        <LinkDataExpression From="$__player" To="$this.id" Expresssion="$__link_crime_reactor.searchPointPosition = $searchPoint.position" />
+                                        <PopFromArray array="$searchPoints" valueOut="" direction="Front" />
+                                        <SetDynamicInformationValue Information="$reactorData_value.information" Tag="$searchPointsTag" Variable="$searchPoints" Type="" Value="" />
+                                      </Sequence>
+                                    </Selector>
+                                  </While>
+                                </Else>
+                              </IfElseCondition>
+                            </Sequence>
+                          </LockDynamicInformationValues>
+                        </SuppressFailure>
+                      </IfCondition>
+                    </Sequence>
+                  </ForEach>
+                </Sequence>
+              </AtomicDecorator>
+              <IfCondition failOnCondition="false" condition="~$validSearchPointFound">
+                <Sequence>
+                  <Expression expressions="$searchDistance = $data:script_param[&apos;crime_crimeSceneSeachRadius_&apos; + $searchModeToken].value" />
+                  <Function_crime_crimeSearch_getDirectionInfluence direction="$direction" directionInfluence="$directionInfluence" nodeLabel="29615144" />
+                  <GetCrimeSearchingPoints Position="$crimePos" Direction="$direction" DirectionInfluence="$directionInfluence" MaxDistance="$searchDistance" DesiredPointCount="$desiredSearchPointCount" FilteringSectorCount="12" PathFindParams="$searchPathFindingParams" FoundPoints="$searchPoints_vec" />
+                  <ForEach startIndex="0" step="1" array="$searchPoints_vec" iterator="" value="$searchPoints_vec_value" break="">
+                    <Expression expressions="$searchPoint.position = $searchPoints_vec_value &#10;$searchPoints[#searchPoints] = $searchPoint" />
+                  </ForEach>
+                  <IsInsideAreaWithLabel Position="$crimePos" Label="&apos;crime_searchPoints&apos;" Area="$customSearchArea" FailSubtMissing="false" saveVersion="2">
+                    <Then canSkip="1">
+                      <IfCondition failOnCondition="false" condition="$searchMode ~= $enum:crime_crimeSceneSearchMode.concentrated">
+                        <Sequence>
+                          <GraphSearch Origin="$customSearchArea" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                            <LinkTagFilter tag="&apos;searchPoint&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                            <Nodalyzer Quantifiers="ForAll" Parent="" Child="$customSearchPoints" saveVersion="2" />
+                          </GraphSearch>
+                          <IfCondition failOnCondition="false" condition="#customSearchPoints &gt; 0">
+                            <ForEach startIndex="0" step="1" array="$customSearchPoints" iterator="$customSearchPoints_key" value="$customSearchPoints_value" break="">
+                              <Sequence>
+                                <Expression expressions="$lowerBoundary = $upperBoundary + 1" />
+                                <Expression expressions="$upperBoundary = $desiredSearchPointCount / #customSearchPoints * ($customSearchPoints_key + 1)" />
+                                <GenerateRandomInteger lowerBoundary="$lowerBoundary" upperBoundary="$upperBoundary" result="$randomIndex" />
+                                <GetSpatialInfo In="$customSearchPoints_value" Out="$searchPoint.position" What="Position" />
+                                <GetSpatialInfo In="$customSearchPoints_value" Out="$searchPoint.direction" What="Orientation" />
+                                <Expression expressions="$searchPoints[$randomIndex] = $searchPoint" />
+                              </Sequence>
+                            </ForEach>
+                          </IfCondition>
+                        </Sequence>
+                      </IfCondition>
+                    </Then>
+                  </IsInsideAreaWithLabel>
+                  <AtomicDecorator>
+                    <Sequence>
+                      <GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                        <LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                        <WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                        <EvaLLyzer Expresion="$myInformation = $__link_crime_reactor.information" Quantifiers="Exists" saveVersion="2" />
+                      </GraphSearch>
+                      <Function_crime_checkInterruptInformation information="$myInformation" nodeLabel="86506773" />
+                      <Expression expressions="$searchPoint = $searchPoints[0] &#10;$validSearchPointFound = true" />
+                      <PopFromArray array="$searchPoints" valueOut="" direction="Front" />
+                      <LockDynamicInformationValues Information="$myInformation">
+                        <Sequence>
+                          <Expression expressions="$searchPointsTag = &apos;searchPoints&apos; + $searchModeToken" />
+                          <SetDynamicInformationValue Information="$myInformation" Tag="$searchPointsTag" Variable="$searchPoints" Type="" Value="" />
+                        </Sequence>
+                      </LockDynamicInformationValues>
+                      <LinkDataExpression From="$__player" To="$this.id" Expresssion="$__link_crime_reactor.searchPointPosition = $searchPoint.position" />
+                      <Expression expressions="$informationFound = true" />
+                    </Sequence>
+                  </AtomicDecorator>
+                </Sequence>
+              </IfCondition>
+            </Sequence>
+          </Semaphore>
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="customSearchArea" comment="" />
+        <Variable name="customSearchPoints" comment="" />
+        <Variable name="customSearchPoints_key" comment="" />
+        <Variable name="customSearchPoints_value" comment="" />
+        <Variable name="directionInfluence" comment="" />
+        <Variable name="informationFound" comment="" />
+        <Variable name="lowerBoundary" comment="" />
+        <Variable name="myInformation" comment="" />
+        <Variable name="randomIndex" comment="" />
+        <Variable name="reactorData" comment="" />
+        <Variable name="reactorDataEvaluated" comment="" />
+        <Variable name="reactorData_key" comment="" />
+        <Variable name="reactorData_value" comment="" />
+        <Variable name="reactorData_value_distanceToCrimePos" comment="" />
+        <Variable name="searchDistance" comment="" />
+        <Variable name="searchModeToken" comment="" />
+        <Variable name="searchPathFindingParams" comment="" />
+        <Variable name="searchPoints" comment="" />
+        <Variable name="searchPointsTag" comment="" />
+        <Variable name="searchPoints_vec" comment="" />
+        <Variable name="searchPoints_vec_value" comment="" />
+        <Variable name="upperBoundary" comment="" />
+        <Variable name="validSearchPointFound" comment="" />
+        <Variable name="crimePos" comment="" />
+        <Variable name="desiredSearchPointCount" comment="" />
+        <Variable name="direction" comment="" />
+        <Variable name="forceUpdate" comment="" />
+        <Variable name="searchMode" comment="" />
+        <Variable name="searchPoint" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root editorPosX="-10" editorPosY="1650" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Then>
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </Then>
+              <Else>
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </Else>
+            </IfElseCondition>
+            <Semaphore hasInputBreakpoint="0" comment="TODO: should be somehow made local (meaning only shared between NPCs trying to react at the same crimeScene)" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </LinkTagFilter>
+                      <EvaLLyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                        <OutputBreakpoints />
+                      </EvaLLyzer>
+                    </GraphSearch>
+                    <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </MeasureDistance>
+                        <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Expression>
+                                <GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </GetDynamicInformationValue>
+                                <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                  <OutputBreakpoints />
+                                  <Then>
+                                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <ClearDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </ClearDynamicInformationValue>
+                                      <ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </ReinitVariable>
+                                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </Expression>
+                                    </Sequence>
+                                  </Then>
+                                  <Else>
+                                    <While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                            <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </LinkTagFilter>
+                                            <LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </LinkDataFilter>
+                                          </GraphSearch>
+                                          <PopFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </PopFromArray>
+                                        </Sequence>
+                                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </Expression>
+                                          <LinkDataExpression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </LinkDataExpression>
+                                          <PopFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </PopFromArray>
+                                          <SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </SetDynamicInformationValue>
+                                        </Sequence>
+                                      </Selector>
+                                    </While>
+                                  </Else>
+                                </IfElseCondition>
+                              </Sequence>
+                            </LockDynamicInformationValues>
+                          </SuppressFailure>
+                        </IfCondition>
+                      </Sequence>
+                    </ForEach>
+                  </Sequence>
+                </AtomicDecorator>
+                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                    <Function_crime_crimeSearch_getDirectionInfluence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Function_crime_crimeSearch_getDirectionInfluence>
+                    <GetCrimeSearchingPoints hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </GetCrimeSearchingPoints>
+                    <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </ForEach>
+                    <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Then>
+                        <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </LinkTagFilter>
+                              <Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                <OutputBreakpoints />
+                              </Nodalyzer>
+                            </GraphSearch>
+                            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                  <GenerateRandomInteger hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </GenerateRandomInteger>
+                                  <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </GetSpatialInfo>
+                                  <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </GetSpatialInfo>
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                </Sequence>
+                              </ForEach>
+                            </IfCondition>
+                          </Sequence>
+                        </IfCondition>
+                      </Then>
+                    </IsInsideAreaWithLabel>
+                    <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </LinkTagFilter>
+                          <WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </WUIDFilter>
+                          <EvaLLyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                          </EvaLLyzer>
+                        </GraphSearch>
+                        <Function_crime_checkInterruptInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Function_crime_checkInterruptInformation>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                        <PopFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </PopFromArray>
+                        <LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </Expression>
+                            <SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </SetDynamicInformationValue>
+                          </Sequence>
+                        </LockDynamicInformationValues>
+                        <LinkDataExpression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </LinkDataExpression>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                      </Sequence>
+                    </AtomicDecorator>
+                  </Sequence>
+                </IfCondition>
+              </Sequence>
+            </Semaphore>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

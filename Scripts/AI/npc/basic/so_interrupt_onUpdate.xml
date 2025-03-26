@@ -1,0 +1,717 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="onUpdate" is_function="0">
+		<Variables>
+			<Variable name="_corpseEntries" type="crime:dailyCheck:corpseEntry" values="" isPersistent="1" form="array" />
+			<Variable name="_homeEntries" type="crime:dailyCheck:homeEntry" values="" isPersistent="1" form="array" />
+			<Variable name="break" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="checkMatesRequest" type="crime:checkMatesRequest" values="" isPersistent="0" form="single" />
+			<Variable name="chestHome" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="chestOwner" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="corpseEntries_temp" type="crime:dailyCheck:corpseEntry" values="" isPersistent="0" form="array" />
+			<Variable name="corpseEntries_val" type="crime:dailyCheck:corpseEntry" values="" isPersistent="0" form="single" />
+			<Variable name="corpseMates" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="for_i" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="homeEntries_temp" type="crime:dailyCheck:homeEntry" values="" isPersistent="0" form="array" />
+			<Variable name="homeEntries_val" type="crime:dailyCheck:homeEntry" values="" isPersistent="0" form="single" />
+			<Variable name="homeInhabitants" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="int_val" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="msPerDay" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="msPerHour" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="newChestEntry" type="crime:dailyCheck:chestEntry" values="" isPersistent="0" form="single" />
+			<Variable name="newCorpseEntry" type="crime:dailyCheck:corpseEntry" values="" isPersistent="0" form="single" />
+			<Variable name="newHomeEntry" type="crime:dailyCheck:homeEntry" values="" isPersistent="0" form="single" />
+			<Variable name="npcToAnnounce" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="recentlyInNormalDialog" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="shouldKeepEntry" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="shouldPerformCheck" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="wuid_val" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Expression expressions="$msPerHour = 1000 * 60 * 60 &#10;$msPerDay = $msPerHour * 24" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<Parallel successMode="Any" failureMode="Any">
+					<Function_crime_perceptionIconDebug nodeLabel="20980012" />
+					<Loop count="-1">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$newCorpseEntry" senderInfo="" inbox="&apos;crime_dailyCheck_corpseEntry&apos;" condition="" answerVar="">
+							<SuppressFailure>
+								<Sequence>
+									<GetMates Target="$newCorpseEntry.corpse" Mates="$corpseMates" />
+									<IfCondition failOnCondition="false" condition="#corpseMates &gt; 0">
+										<Sequence>
+											<Invertor>
+												<FindInArray array="$_corpseEntries" keyOut="$int_val" condition="$__value.corpse == $newCorpseEntry.corpse" />
+											</Invertor>
+											<Expression expressions="$newCorpseEntry.numberOfDaysBeforeChecking = $data:script_param[&apos;crime_corpseDailyCheckNumberOfLoopsBeforeChecking&apos;].value" />
+											<PushToArray array="$_corpseEntries" value="$newCorpseEntry" direction="Back" />
+										</Sequence>
+									</IfCondition>
+								</Sequence>
+							</SuppressFailure>
+						</ProcessMessage>
+					</Loop>
+					<Loop count="-1">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$newChestEntry" senderInfo="" inbox="&apos;crime_dailyCheck_chestEntry&apos;" condition="" answerVar="">
+							<SuppressFailure>
+								<Sequence>
+									<GetOwner Object="$newChestEntry.chest" Owner="$chestOwner" />
+									<GraphSearch Origin="$chestOwner" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;home&apos;" prune="true" negprune="unknown" Parent="" Child="$chestHome" Data="" />
+									</GraphSearch>
+									<IfCondition failOnCondition="false" condition="$chestHome ~= $__null">
+										<Sequence>
+											<Invertor>
+												<FindInArray array="$_homeEntries" keyOut="$int_val" condition="$__value.home == $chestHome" />
+											</Invertor>
+											<Expression expressions="$newHomeEntry.numberOfDaysBeforeChecking = $data:script_param[&apos;crime_chestDailyCheckNumberOfLoopsBeforeChecking&apos;].value &#10;$newHomeEntry.timestamp = $newChestEntry.timestamp &#10;$newHomeEntry.delayed = false &#10;$newHomeEntry.home = $chestHome" />
+											<PushToArray array="$_homeEntries" value="$newHomeEntry" direction="Back" />
+										</Sequence>
+									</IfCondition>
+								</Sequence>
+							</SuppressFailure>
+						</ProcessMessage>
+					</Loop>
+					<ContinuousSwitch>
+						<TimerBox startTime="&apos;8&apos;" endTime="" variation="&apos;1h&apos;" duration="&apos;1h&apos;">
+							<Sequence>
+								<Expression expressions="$shouldPerformCheck = true" />
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Sequence>
+						</TimerBox>
+						<TimerBox startTime="&apos;20&apos;" endTime="" variation="&apos;1h&apos;" duration="&apos;1h&apos;">
+							<Sequence>
+								<Expression expressions="$shouldPerformCheck = true" />
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Sequence>
+						</TimerBox>
+						<IfCondition failOnCondition="false" condition="true">
+							<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+						</IfCondition>
+					</ContinuousSwitch>
+					<Loop count="-1">
+						<Sequence>
+							<IfGate atomic="true" condition="$shouldPerformCheck" RunLogic="KeepRunning">
+								<Sequence>
+									<Sequence>
+										<ForEach startIndex="0" step="1" array="$_corpseEntries" iterator="$for_i" value="$corpseEntries_val" break="">
+											<Sequence>
+												<Expression expressions="$shouldKeepEntry = false" />
+												<CheckWuidValid wuid="$corpseEntries_val.corpse" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<IfElseCondition failOnCondition="false" condition="$corpseEntries_val.numberOfDaysBeforeChecking &lt;= 0 | &#10;$corpseEntries_val.delayed == true" saveVersion="2">
+															<Then canSkip="1">
+																<Sequence>
+																	<GetMates Target="$corpseEntries_val.corpse" Mates="$corpseMates" />
+																	<Expression expressions="$npcToAnnounce = $__null &#10;$break = false" />
+																	<ForEach startIndex="0" step="1" array="$corpseMates" iterator="" value="$wuid_val" break="$break">
+																		<IsDeadCheck SoulWUID="$wuid_val" FailSubtMissing="false" saveVersion="2">
+																			<Else canSkip="1">
+																				<IsUnconsciousCheck SoulWUID="$wuid_val" FailSubtMissing="false" saveVersion="2">
+																					<Else canSkip="1">
+																						<IsInsideAreaWithLabel Position="$wuid_val" Label="&apos;private&apos;" Area="" FailSubtMissing="false" saveVersion="2">
+																							<Then canSkip="1">
+																								<Expression expressions="$npcToAnnounce = $wuid_val &#10;$break = true" />
+																							</Then>
+																						</IsInsideAreaWithLabel>
+																					</Else>
+																				</IsUnconsciousCheck>
+																			</Else>
+																		</IsDeadCheck>
+																	</ForEach>
+																	<VarOperation varName="$corpseMates" targetVarName="" operation="Reinit" argument="" />
+																	<IfElseCondition failOnCondition="false" condition="$npcToAnnounce ~= $__null" saveVersion="2">
+																		<Then canSkip="1">
+																			<SuppressFailure>
+																				<Sequence>
+																					<Expression expressions="$checkMatesRequest.deadMate = $corpseEntries_val.corpse" />
+																					<InstantSendMessageToNPC target="$npcToAnnounce" variable="$checkMatesRequest" />
+																				</Sequence>
+																			</SuppressFailure>
+																		</Then>
+																		<Else canSkip="1">
+																			<IfElseCondition failOnCondition="false" condition="$corpseEntries_val.delayed == false" saveVersion="2">
+																				<Then canSkip="1">
+																					<Expression expressions="$_corpseEntries[$for_i].numberOfDaysBeforeChecking = 0 &#10;$_corpseEntries[$for_i].delayed = true &#10; &#10;$shouldKeepEntry = true" />
+																				</Then>
+																				<Else canSkip="1">
+																					<Expression expressions="$shouldKeepEntry = false" />
+																				</Else>
+																			</IfElseCondition>
+																		</Else>
+																	</IfElseCondition>
+																</Sequence>
+															</Then>
+															<Else canSkip="1">
+																<Expression expressions="$_corpseEntries[$for_i].numberOfDaysBeforeChecking -= 1 &#10; &#10;$shouldKeepEntry = true" />
+															</Else>
+														</IfElseCondition>
+													</Then>
+													<Else canSkip="1">
+														<Expression expressions="$shouldKeepEntry = false" />
+													</Else>
+												</CheckWuidValid>
+												<IfCondition failOnCondition="false" condition="$shouldKeepEntry == true">
+													<PushToArray array="$corpseEntries_temp" value="$_corpseEntries[$for_i]" direction="Back" />
+												</IfCondition>
+											</Sequence>
+										</ForEach>
+										<VarOperation varName="$corpseEntries_temp" targetVarName="$_corpseEntries" operation="Copy" argument="" />
+										<VarOperation varName="$corpseEntries_temp" targetVarName="" operation="Reinit" argument="" />
+									</Sequence>
+									<Sequence>
+										<ForEach startIndex="0" step="1" array="$_homeEntries" iterator="$for_i" value="$homeEntries_val" break="">
+											<Sequence>
+												<Expression expressions="$shouldKeepEntry = false" />
+												<CheckWuidValid wuid="$homeEntries_val.home" FailSubtMissing="false" saveVersion="2">
+													<Then canSkip="1">
+														<IfElseCondition failOnCondition="false" condition="$homeEntries_val.numberOfDaysBeforeChecking &lt;= 0 | &#10;$homeEntries_val.delayed == true" saveVersion="2">
+															<Then canSkip="1">
+																<Sequence>
+																	<SuppressFailure>
+																		<GraphSearch Origin="$homeEntries_val.home" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																			<LinkTagFilter tag="&apos;home_inhabitant&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																			<Nodalyzer Quantifiers="ForAll" Parent="" Child="$homeInhabitants" saveVersion="2" />
+																		</GraphSearch>
+																	</SuppressFailure>
+																	<Expression expressions="$npcToAnnounce = $__null &#10;$break = false" />
+																	<ForEach startIndex="0" step="1" array="$homeInhabitants" iterator="" value="$wuid_val" break="$break">
+																		<IsDeadCheck SoulWUID="$wuid_val" FailSubtMissing="false" saveVersion="2">
+																			<Else canSkip="1">
+																				<IsUnconsciousCheck SoulWUID="$wuid_val" FailSubtMissing="false" saveVersion="2">
+																					<Else canSkip="1">
+																						<IsInsideAreaWithLabel Position="$wuid_val" Label="&apos;private&apos;" Area="" FailSubtMissing="false" saveVersion="2">
+																							<Then canSkip="1">
+																								<Expression expressions="$npcToAnnounce = $wuid_val &#10;$break = true" />
+																							</Then>
+																						</IsInsideAreaWithLabel>
+																					</Else>
+																				</IsUnconsciousCheck>
+																			</Else>
+																		</IsDeadCheck>
+																	</ForEach>
+																	<VarOperation varName="$homeInhabitants" targetVarName="" operation="Reinit" argument="" />
+																	<IfElseCondition failOnCondition="false" condition="$npcToAnnounce ~= $__null" saveVersion="2">
+																		<Then canSkip="1">
+																			<Function_crime_checkHomeStashes checker="$npcToAnnounce" home="$chestHome" initiator="$enum:switch_interruptInitiator.unknown" previousReaction="$enum:crime_reactionKind.unknown" nodeLabel="26063088" />
+																		</Then>
+																		<Else canSkip="1">
+																			<IfElseCondition failOnCondition="false" condition="$homeEntries_val.delayed == false" saveVersion="2">
+																				<Then canSkip="1">
+																					<Expression expressions="$_homeEntries[$for_i].numberOfDaysBeforeChecking = 0 &#10;$_homeEntries[$for_i].delayed = true &#10; &#10;$shouldKeepEntry = true" />
+																				</Then>
+																				<Else canSkip="1">
+																					<Expression expressions="$shouldKeepEntry = false" />
+																				</Else>
+																			</IfElseCondition>
+																		</Else>
+																	</IfElseCondition>
+																</Sequence>
+															</Then>
+															<Else canSkip="1">
+																<Expression expressions="$_homeEntries[$for_i].numberOfDaysBeforeChecking -= 1 &#10; &#10;$shouldKeepEntry = true" />
+															</Else>
+														</IfElseCondition>
+													</Then>
+													<Else canSkip="1">
+														<Expression expressions="$shouldKeepEntry = false" />
+													</Else>
+												</CheckWuidValid>
+												<IfCondition failOnCondition="false" condition="$shouldKeepEntry == true">
+													<PushToArray array="$homeEntries_temp" value="$_homeEntries[$for_i]" direction="Back" />
+												</IfCondition>
+											</Sequence>
+										</ForEach>
+										<VarOperation varName="$homeEntries_temp" targetVarName="$_homeEntries" operation="Copy" argument="" />
+										<VarOperation varName="$homeEntries_temp" targetVarName="" operation="Reinit" argument="" />
+									</Sequence>
+								</Sequence>
+							</IfGate>
+							<Expression expressions="$shouldPerformCheck = false" />
+						</Sequence>
+					</Loop>
+					<Function_crime_stopCrime nodeLabel="94028162" />
+					<Function_crime_handleDespawnVolumeRequests nodeLabel="55934418" />
+					<DialogGate Who="$__player" Negation="false" EndDialogInRoot="false" Condition="InNormalDialog" RunLogic="KeepRunning">
+						<Parallel successMode="Any" failureMode="Any">
+							<While doFail="false" propagateChildFail="false" condition="true">
+								<IfGate atomic="false" condition="$recentlyInNormalDialog" RunLogic="Halt">
+									<EntityContext context="speech_playerWasRecentlyInNormalDialog" target="$__player">
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</EntityContext>
+								</IfGate>
+							</While>
+							<While doFail="false" propagateChildFail="false" condition="true">
+								<DialogGate Who="$__player" Negation="false" EndDialogInRoot="false" Condition="InNormalDialog" RunLogic="Halt">
+									<Sequence>
+										<Expression expressions="$recentlyInNormalDialog = true" />
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</DialogGate>
+							</While>
+							<While doFail="false" propagateChildFail="false" condition="true">
+								<DialogGate Who="$__player" Negation="true" EndDialogInRoot="false" Condition="InNormalDialog" RunLogic="Halt">
+									<Sequence>
+										<Wait duration="&apos;20s&apos;" timeType="GameTime" doFail="false" variation="" />
+										<Expression expressions="$recentlyInNormalDialog = false" />
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</DialogGate>
+							</While>
+						</Parallel>
+					</DialogGate>
+				</Parallel>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Function_crime_checkMates checker="$npcToAnnounce" deadMate="$corpseEntries_val.corpse" initiator="$enum:switch_interruptInitiator.unknown" previousReaction="$enum:crime_reactionKind.unknown" nodeLabel="64349973" />
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="_corpseEntries" comment="" />
+				<Variable name="_homeEntries" comment="" />
+				<Variable name="break" comment="" />
+				<Variable name="checkMatesRequest" comment="" />
+				<Variable name="chestHome" comment="" />
+				<Variable name="chestOwner" comment="" />
+				<Variable name="corpseEntries_temp" comment="" />
+				<Variable name="corpseEntries_val" comment="" />
+				<Variable name="corpseMates" comment="" />
+				<Variable name="for_i" comment="" />
+				<Variable name="homeEntries_temp" comment="" />
+				<Variable name="homeEntries_val" comment="" />
+				<Variable name="homeInhabitants" comment="" />
+				<Variable name="int_val" comment="" />
+				<Variable name="msPerDay" comment="" />
+				<Variable name="msPerHour" comment="" />
+				<Variable name="newChestEntry" comment="" />
+				<Variable name="newCorpseEntry" comment="" />
+				<Variable name="newHomeEntry" comment="" />
+				<Variable name="npcToAnnounce" comment="" />
+				<Variable name="recentlyInNormalDialog" comment="" />
+				<Variable name="shouldKeepEntry" comment="" />
+				<Variable name="shouldPerformCheck" comment="" />
+				<Variable name="wuid_val" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+				</OnInit>
+				<Behavior>
+					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Function_crime_perceptionIconDebug hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_crime_perceptionIconDebug>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GetMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetMates>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Invertor hasInputBreakpoint="0" comment="Only continue if we can&apos;t find home in _homeEntries" breakpointFlags="0">
+													<OutputBreakpoints />
+													<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</FindInArray>
+												</Invertor>
+												<Expression hasInputBreakpoint="0" comment="More like loopsBeforeChecking" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</PushToArray>
+											</Sequence>
+										</IfCondition>
+									</Sequence>
+								</SuppressFailure>
+							</ProcessMessage>
+						</Loop>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GetOwner hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetOwner>
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Invertor hasInputBreakpoint="0" comment="Only continue if we can&apos;t find home in _homeEntries" breakpointFlags="0">
+													<OutputBreakpoints />
+													<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</FindInArray>
+												</Invertor>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</PushToArray>
+											</Sequence>
+										</IfCondition>
+									</Sequence>
+								</SuppressFailure>
+							</ProcessMessage>
+						</Loop>
+						<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<TimerBox hasInputBreakpoint="0" comment="7-9AM" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Sequence>
+							</TimerBox>
+							<TimerBox hasInputBreakpoint="0" comment="7-9PM" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Sequence>
+							</TimerBox>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Wait>
+							</IfCondition>
+						</ContinuousSwitch>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="Check corpses" breakpointFlags="0">
+											<OutputBreakpoints />
+											<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<GetMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</GetMates>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																		<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Else>
+																					<IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Else>
+																							<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="Just check private, maybe add THEIR home" breakpointFlags="0" saveVersion="2">
+																								<OutputBreakpoints />
+																								<Then>
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																								</Then>
+																							</IsInsideAreaWithLabel>
+																						</Else>
+																					</IsUnconsciousCheck>
+																				</Else>
+																			</IsDeadCheck>
+																		</ForEach>
+																		<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</VarOperation>
+																		<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																						<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</InstantSendMessageToNPC>
+																					</Sequence>
+																				</SuppressFailure>
+																			</Then>
+																			<Else>
+																				<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Then>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Then>
+																					<Else>
+																						<Expression hasInputBreakpoint="0" comment="already delayed once" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Else>
+																				</IfElseCondition>
+																			</Else>
+																		</IfElseCondition>
+																	</Sequence>
+																</Then>
+																<Else>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Else>
+															</IfElseCondition>
+														</Then>
+														<Else>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Else>
+													</CheckWuidValid>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</PushToArray>
+													</IfCondition>
+												</Sequence>
+											</ForEach>
+											<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</VarOperation>
+											<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</VarOperation>
+										</Sequence>
+										<Sequence hasInputBreakpoint="0" comment="Check chests" breakpointFlags="0">
+											<OutputBreakpoints />
+											<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</LinkTagFilter>
+																				<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																				</Nodalyzer>
+																			</GraphSearch>
+																		</SuppressFailure>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																		<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Else>
+																					<IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Else>
+																							<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="Just check private, maybe add THEIR home" breakpointFlags="0" saveVersion="2">
+																								<OutputBreakpoints />
+																								<Then>
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																								</Then>
+																							</IsInsideAreaWithLabel>
+																						</Else>
+																					</IsUnconsciousCheck>
+																				</Else>
+																			</IsDeadCheck>
+																		</ForEach>
+																		<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</VarOperation>
+																		<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Function_crime_checkHomeStashes hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_checkHomeStashes>
+																			</Then>
+																			<Else>
+																				<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Then>
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Then>
+																					<Else>
+																						<Expression hasInputBreakpoint="0" comment="already delayed once" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</Else>
+																				</IfElseCondition>
+																			</Else>
+																		</IfElseCondition>
+																	</Sequence>
+																</Then>
+																<Else>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Else>
+															</IfElseCondition>
+														</Then>
+														<Else>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Else>
+													</CheckWuidValid>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</PushToArray>
+													</IfCondition>
+												</Sequence>
+											</ForEach>
+											<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</VarOperation>
+											<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</VarOperation>
+										</Sequence>
+									</Sequence>
+								</IfGate>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Sequence>
+						</Loop>
+						<Function_crime_stopCrime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_crime_stopCrime>
+						<Function_crime_handleDespawnVolumeRequests hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_crime_handleDespawnVolumeRequests>
+						<DialogGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</EntityContext>
+									</IfGate>
+								</While>
+								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<DialogGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</DialogGate>
+								</While>
+								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<DialogGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</DialogGate>
+								</While>
+							</Parallel>
+						</DialogGate>
+					</Parallel>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Function_crime_checkMates editorPosX="3640" editorPosY="500" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</Function_crime_checkMates>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

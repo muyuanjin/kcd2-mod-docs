@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="crime_followHelpingNpc" is_function="1">
+    <Variables>
+      <Variable name="computeNpcCloseDistance" type="_bool" values="true" isPersistent="0" form="single" />
+      <Variable name="helpingNpcIsLooking" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="move" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="moveParams" type="additionalMoveParams" values="destChangedThreshold(&apos;500&apos;),continueWhenHalting(false)" isPersistent="0" form="single" />
+      <Variable name="npcCloseDistance" type="_float" values="4" isPersistent="0" form="single" />
+      <Variable name="pathFind_params" type="pathFindingParams" values="useGeneratedNSO(false)" isPersistent="0" form="single" />
+      <Variable name="pathInfo" type="pathInfo" values="" isPersistent="0" form="single" />
+      <Variable name="random" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="speed" type="enum:movementSpeed" values="" isPersistent="0" form="single" />
+      <Variable name="stoppingDistance" type="_float" values="2.5" isPersistent="0" form="single" />
+      <Variable name="uselessArea" type="_wuid" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="helpingNpc" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <GenerateRandomFloat result="$random" />
+          <Parallel successMode="Any" failureMode="Any">
+            <Parallel successMode="Any" failureMode="Any">
+              <Loop count="-1">
+                <IfGate atomic="false" condition="$computeNpcCloseDistance" RunLogic="KeepRunning">
+                  <Sequence>
+                    <Expression expressions="$npcCloseDistance = 4 + 4 * $random &#10;$stoppingDistance = $npcCloseDistance - 2" />
+                    <IsInsideAreaWithLabel Position="$helpingNpc" Label="&apos;interior&apos;" Area="$uselessArea" FailSubtMissing="false" saveVersion="2">
+                      <Then canSkip="1">
+                        <Expression expressions="$stoppingDistance /= 2 &#10;$npcCloseDistance /= 2" />
+                      </Then>
+                      <Else canSkip="1">
+                        <EntityContextCheck context="crime_interruptLookAround_looking" target="$helpingNpc" saveVersion="2">
+                          <Then canSkip="1">
+                            <Expression expressions="$stoppingDistance *= 2 &#10;$npcCloseDistance *= 2" />
+                          </Then>
+                        </EntityContextCheck>
+                      </Else>
+                    </IsInsideAreaWithLabel>
+                    <Expression expressions="$computeNpcCloseDistance = false" />
+                  </Sequence>
+                </IfGate>
+              </Loop>
+              <EntityContextBarrier context="crime_interruptLookAround_looking" target="$helpingNpc" Negation="false" RunLogic="KeepRunning">
+                <Sequence>
+                  <Expression expressions="$computeNpcCloseDistance = true &#10;$helpingNpcIsLooking = true" />
+                  <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                </Sequence>
+              </EntityContextBarrier>
+              <Loop count="-1">
+                <IsInsideAreaWithLabelBarrier Who="$helpingNpc" Label="&apos;interior&apos;" Negation="false" RunLogic="KeepRunning">
+                  <Sequence>
+                    <Expression expressions="$computeNpcCloseDistance = true" />
+                    <IsInsideAreaWithLabelBarrier Who="$helpingNpc" Label="&apos;interior&apos;" Negation="true" RunLogic="KeepRunning">
+                      <Expression expressions="$computeNpcCloseDistance = true" />
+                    </IsInsideAreaWithLabelBarrier>
+                  </Sequence>
+                </IsInsideAreaWithLabelBarrier>
+              </Loop>
+            </Parallel>
+            <Loop count="-1">
+              <Sequence>
+                <Expression expressions="$move = false" />
+                <DistanceGate Origin="$this.id" ReferencePt="$helpingNpc" Low="$npcCloseDistance" High="$npcCloseDistance" Negation="true" OpenInMiddle="false" RunLogic="Halt">
+                  <Loop count="-1">
+                    <Sequence>
+                      <Expression expressions="$move = true &#10;$speed = $enum:movementSpeed.walk" />
+                      <IfGate atomic="false" condition="~$helpingNpcIsLooking" RunLogic="KeepRunning">
+                        <DistanceGate Origin="$this.id" ReferencePt="$helpingNpc" Low="6.000000" High="6.000000" Negation="true" OpenInMiddle="false" RunLogic="Halt">
+                          <Loop count="-1">
+                            <Sequence>
+                              <Expression expressions="$speed = $enum:movementSpeed.run" />
+                              <DistanceGate Origin="$this.id" ReferencePt="$helpingNpc" Low="15.000000" High="15.000000" Negation="true" OpenInMiddle="false" RunLogic="Halt">
+                                <Sequence>
+                                  <Expression expressions="$speed = $enum:movementSpeed.sprint" />
+                                  <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                                </Sequence>
+                              </DistanceGate>
+                            </Sequence>
+                          </Loop>
+                        </DistanceGate>
+                      </IfGate>
+                    </Sequence>
+                  </Loop>
+                </DistanceGate>
+              </Sequence>
+            </Loop>
+            <EntityContextBarrier context="crime_interruptLookAround_nothingFound" target="$helpingNpc" Negation="false" RunLogic="KeepRunning">
+              <Success />
+            </EntityContextBarrier>
+            <ContinuousSwitch>
+              <IfCondition failOnCondition="false" condition="~$move">
+                <Sequence>
+                  <Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+                  <Turn target="$helpingNpc" align="false" />
+                </Sequence>
+              </IfCondition>
+              <IfCondition failOnCondition="false" condition="true">
+                <MoveParamsDecorator speed="$speed" pathFindingParams="$pathFind_params" doorClosingPolicy="LeaveOpened">
+                  <Move stopWithinDistance="$stoppingDistance" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$helpingNpc" destinationSpecification2="" destinationSpecification3="" speed="$speed" additionalParams="$moveParams" pathFindingParams="$pathFind_params" staminaPolicy="" pathInfo="&apos;pathInfo&apos;" AnimationToPlay="" AnimationContext="" />
+                </MoveParamsDecorator>
+              </IfCondition>
+            </ContinuousSwitch>
+          </Parallel>
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="computeNpcCloseDistance" comment="" />
+        <Variable name="helpingNpcIsLooking" comment="" />
+        <Variable name="move" comment="" />
+        <Variable name="moveParams" comment="" />
+        <Variable name="npcCloseDistance" comment="" />
+        <Variable name="pathFind_params" comment="" />
+        <Variable name="pathInfo" comment="" />
+        <Variable name="random" comment="" />
+        <Variable name="speed" comment="" />
+        <Variable name="stoppingDistance" comment="" />
+        <Variable name="uselessArea" comment="" />
+        <Variable name="helpingNpc" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <GenerateRandomFloat hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </GenerateRandomFloat>
+            <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                      <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                        <OutputBreakpoints />
+                        <Then>
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                        </Then>
+                        <Else>
+                          <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                            <Then>
+                              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Expression>
+                            </Then>
+                          </EntityContextCheck>
+                        </Else>
+                      </IsInsideAreaWithLabel>
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </Sequence>
+                  </IfGate>
+                </Loop>
+                <EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                    <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Wait>
+                  </Sequence>
+                </EntityContextBarrier>
+                <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                      <IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                      </IsInsideAreaWithLabelBarrier>
+                    </Sequence>
+                  </IsInsideAreaWithLabelBarrier>
+                </Loop>
+              </Parallel>
+              <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Expression>
+                  <DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                        <IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Expression>
+                                <DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </Expression>
+                                    <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </Wait>
+                                  </Sequence>
+                                </DistanceGate>
+                              </Sequence>
+                            </Loop>
+                          </DistanceGate>
+                        </IfGate>
+                      </Sequence>
+                    </Loop>
+                  </DistanceGate>
+                </Sequence>
+              </Loop>
+              <EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Success>
+              </EntityContextBarrier>
+              <ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Wait>
+                    <Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Turn>
+                  </Sequence>
+                </IfCondition>
+                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Move>
+                  </MoveParamsDecorator>
+                </IfCondition>
+              </ContinuousSwitch>
+            </Parallel>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

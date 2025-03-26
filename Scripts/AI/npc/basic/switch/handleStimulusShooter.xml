@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleStimulusShooter" is_function="1">
+		<Variables>
+			<Variable name="createDisturbance" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="hotEntity" type="switch:hotEntity" values="" isPersistent="0" form="single" />
+			<Variable name="ignoreShooting" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerShooterSeen" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="scanDirection" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="source" type="enum:crime_source" values="$enum:crime_source.direct" isPersistent="0" form="single" />
+			<Variable name="stimulusAnimalAbuse" type="switch:stimulus:animalAbuse" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusCombat" type="switch:stimulus:combat" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusDisturbance" type="switch:stimulus:disturbance" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusHit" type="switch:stimulus:hit" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="stimulus" type="switch:stimulus:shooter" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<IfElseCondition failOnCondition="false" condition="$stimulus.shooter == $__player" saveVersion="2">
+						<Then canSkip="1">
+							<HasSeenPlayer NPC="" FullyAwareOnly="false" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$playerShooterSeen = true" />
+								</Then>
+							</HasSeenPlayer>
+						</Then>
+						<Else canSkip="1">
+							<IfElseCondition failOnCondition="false" condition="$stimulus.target == $this.id" saveVersion="2">
+								<Then canSkip="1">
+									<CheckRelationshipInterval_SoulToSoul TargetSoul="$stimulus.shooter" Soul="$this.id" Flag="enemy" saveVersion="2">
+										<Then canSkip="1">
+											<Success />
+										</Then>
+										<Else canSkip="1">
+											<Expression expressions="$ignoreShooting = true" />
+										</Else>
+									</CheckRelationshipInterval_SoulToSoul>
+								</Then>
+								<Else canSkip="1">
+									<CheckRelationshipInterval_SoulToSoul TargetSoul="$stimulus.target" Soul="$this.id" Flag="friend" saveVersion="2">
+										<Then canSkip="1">
+											<Success />
+										</Then>
+										<Else canSkip="1">
+											<Expression expressions="$ignoreShooting = true" />
+										</Else>
+									</CheckRelationshipInterval_SoulToSoul>
+								</Else>
+							</IfElseCondition>
+						</Else>
+					</IfElseCondition>
+					<IfCondition failOnCondition="false" condition="~$ignoreShooting">
+						<IfElseCondition failOnCondition="false" condition="$playerShooterSeen" saveVersion="2">
+							<Then canSkip="1">
+								<Switch>
+									<IfCondition failOnCondition="false" condition="$stimulus.projectileType == $enum:crime_projectileType.arrow">
+										<IfElseCondition failOnCondition="false" condition="$stimulus.target == $this.id" saveVersion="2">
+											<Then canSkip="1">
+												<Sequence>
+													<Expression expressions="$stimulusHit.kind = $enum:crime_attackKind.missile &#10;$stimulusHit.attacker = $stimulus.shooter &#10;$stimulusHit.victim = $this.id &#10;$stimulusHit.directHit = $stimulus.gotDirectHit &#10;$stimulusHit.shouldSendNotification = false // already sent" />
+													<Function_switch_handleStimulusHit stimulus="$stimulusHit" nodeLabel="56006793" />
+												</Sequence>
+											</Then>
+											<Else canSkip="1">
+												<IfElseCondition failOnCondition="false" condition="$stimulus.animalAbuseKind == $enum:crime_animalAbuseKind.none" saveVersion="2">
+													<Then canSkip="1">
+														<Sequence>
+															<Function_crime_createShooterInformation directHit="$stimulus.gotDirectHit" target="$stimulus.target" nodeLabel="67704914" />
+															<Expression expressions="$stimulusCombat.participant1 = $stimulus.shooter &#10;$stimulusCombat.participant2 = $stimulus.target &#10;$stimulusCombat.attackKind = $enum:crime_attackKind.missile" />
+															<Function_switch_handleStimulusCombat stimulus="$stimulusCombat" nodeLabel="97346419" />
+														</Sequence>
+													</Then>
+													<Else canSkip="1">
+														<Sequence>
+															<Expression expressions="$stimulusAnimalAbuse.culprit = $stimulus.shooter &#10;$stimulusAnimalAbuse.victim = $stimulus.target &#10;$stimulusAnimalAbuse.animalAbuseKind = $stimulus.animalAbuseKind &#10;$stimulusAnimalAbuse.isPoaching = $stimulus.animalAbuseIsPoaching &#10;$stimulusAnimalAbuse.isRanged = true" />
+															<Function_switch_handleStimulusAnimalAbuse stimulus="$stimulusAnimalAbuse" nodeLabel="40728228" />
+														</Sequence>
+													</Else>
+												</IfElseCondition>
+											</Else>
+										</IfElseCondition>
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="$stimulus.projectileType == $enum:crime_projectileType.pebble">
+										<Sequence>
+											<Switch>
+												<EntityContextCheck context="crime_escalationLevel_script_confrontingGeneral" target="" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$createDisturbance = true" />
+													</Then>
+												</EntityContextCheck>
+												<EntityContextCheck context="crime_escalationLevel_confrontingTrespass" target="" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$createDisturbance = true" />
+													</Then>
+												</EntityContextCheck>
+												<EntityContextCheck context="crime_interruptMindPlayer" target="" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$createDisturbance = true" />
+													</Then>
+												</EntityContextCheck>
+												<DefaultBranch>
+													<CheckNervousnessInterval Soul="$this.id" Flag="highToInf" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$createDisturbance = true" />
+														</Then>
+													</CheckNervousnessInterval>
+												</DefaultBranch>
+											</Switch>
+											<Switch>
+												<IfCondition failOnCondition="false" condition="$createDisturbance">
+													<AtomicDecorator>
+														<Function_switch_handleStimulusDisturbance stimulus="$stimulusDisturbance" nodeLabel="23380415" />
+													</AtomicDecorator>
+												</IfCondition>
+												<CheckNervousnessInterval Soul="$this.id" Flag="midToInf" saveVersion="2">
+													<Then canSkip="1">
+														<Function_callInterrupt_mindPlayer ignorePriority="true" initiator="$enum:switch_interruptInitiator.switch" previousReaction="$enum:crime_reactionKind.unknown" soundType="$enum:sound.invalid" stimulusKind="$enum:crime_stimulusKind.disturbance" nodeLabel="40932263" />
+													</Then>
+												</CheckNervousnessInterval>
+												<DefaultBranch>
+													<Function_crime_crimeSwitchBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBarkFromSleep="false" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_ROZPOZNALO_VYTRZNIKA_(KAMINEK)&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="29725132" />
+												</DefaultBranch>
+											</Switch>
+										</Sequence>
+									</IfCondition>
+									<DefaultBranch>
+										<Success />
+									</DefaultBranch>
+								</Switch>
+							</Then>
+							<Else canSkip="1">
+								<Switch>
+									<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+										<Then canSkip="1">
+											<Function_stealth_recognitionState_I_reaction target="$stimulus.shooter" nodeLabel="86193285" />
+										</Then>
+									</EntityContextCheck>
+									<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+										<Then canSkip="1">
+											<Function_stealth_recognitionState_II_reaction stimulusKind="$enum:crime_stimulusKind.shooter" target="$stimulus.shooter" nodeLabel="52135266" />
+										</Then>
+									</EntityContextCheck>
+									<DefaultBranch>
+										<Sequence>
+											<IfCondition failOnCondition="false" condition="$stimulus.animalAbuseKind ~= $enum:crime_animalAbuseKind.none">
+												<Expression expressions="$stimulusAnimalAbuse.culprit = $stimulus.shooter &#10;$stimulusAnimalAbuse.victim = $stimulus.target &#10;$stimulusAnimalAbuse.animalAbuseKind = $stimulus.animalAbuseKind &#10;$stimulusAnimalAbuse.isPoaching = $stimulus.animalAbuseIsPoaching &#10;$stimulusAnimalAbuse.isRanged = true &#10; &#10;$hotEntity.stimulusAnimalAbuse = $stimulusAnimalAbuse" />
+											</IfCondition>
+											<Expression expressions="$hotEntity.stimulusShooter = $stimulus &#10;$hotEntity.reason = $enum:switch_hotEntityReason.shooter" />
+											<Function_switch_addHotEntity data="$hotEntity" entity="$stimulus.shooter" expiration="20" nodeLabel="42925442" />
+											<GetSpatialInfo In="$stimulus.shooter" Out="$scanDirection" What="Position" />
+											<IfCondition failOnCondition="false" condition="$stimulus.target == $this.id">
+												<Expression expressions="$source = $enum:crime_source.personal" />
+											</IfCondition>
+											<Function_callInterrupt_scan corpseState="$enum:corpseState.undiscovered" ignorePriority="false" information="" initiator="$enum:switch_interruptInitiator.switch" previousReaction="$enum:crime_reactionKind.unknown" scanDirection="$scanDirection" source="$source" stimulusAnimalAbuse="$stimulusAnimalAbuse" stimulusKind="$enum:crime_stimulusKind.shooter" stimulusMissingAnimal="" stimulusShooter="$stimulus" nodeLabel="89371329" />
+										</Sequence>
+									</DefaultBranch>
+								</Switch>
+							</Else>
+						</IfElseCondition>
+					</IfCondition>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<IfCondition failOnCondition="false" condition="$relationship.value &gt;= 0" />
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="createDisturbance" comment="" />
+				<Variable name="hotEntity" comment="" />
+				<Variable name="ignoreShooting" comment="" />
+				<Variable name="playerShooterSeen" comment="" />
+				<Variable name="scanDirection" comment="" />
+				<Variable name="source" comment="" />
+				<Variable name="stimulusAnimalAbuse" comment="" />
+				<Variable name="stimulusCombat" comment="" />
+				<Variable name="stimulusDisturbance" comment="" />
+				<Variable name="stimulusHit" comment="" />
+				<Variable name="stimulus" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-80" editorPosY="80" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+								</HasSeenPlayer>
+							</Then>
+							<Else>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="TODO: is this ok?" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Then>
+											<Else>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Else>
+										</CheckRelationshipInterval_SoulToSoul>
+									</Then>
+									<Else>
+										<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="TODO: is this ok? please note, that it is indeed different than the node above" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</Then>
+											<Else>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Else>
+										</CheckRelationshipInterval_SoulToSoul>
+									</Else>
+								</IfElseCondition>
+							</Else>
+						</IfElseCondition>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Then>
+									<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<Function_switch_handleStimulusHit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_switch_handleStimulusHit>
+													</Sequence>
+												</Then>
+												<Else>
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Sequence hasInputBreakpoint="0" comment="Target NPC" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_crime_createShooterInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_createShooterInformation>
+																<Expression hasInputBreakpoint="0" comment="TODO: WHAT WITH THE  HITSTRENGTH?!" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<Function_switch_handleStimulusCombat hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_switch_handleStimulusCombat>
+															</Sequence>
+														</Then>
+														<Else>
+															<Sequence hasInputBreakpoint="0" comment="Target AnimalAbuse" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<Function_switch_handleStimulusAnimalAbuse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_switch_handleStimulusAnimalAbuse>
+															</Sequence>
+														</Else>
+													</IfElseCondition>
+												</Else>
+											</IfElseCondition>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+													</EntityContextCheck>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+													</EntityContextCheck>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+													</EntityContextCheck>
+													<DefaultBranch>
+														<CheckNervousnessInterval hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+														</CheckNervousnessInterval>
+													</DefaultBranch>
+												</Switch>
+												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_switch_handleStimulusDisturbance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_handleStimulusDisturbance>
+														</AtomicDecorator>
+													</IfCondition>
+													<CheckNervousnessInterval hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Function_callInterrupt_mindPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_callInterrupt_mindPlayer>
+														</Then>
+													</CheckNervousnessInterval>
+													<DefaultBranch>
+														<Function_crime_crimeSwitchBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_crime_crimeSwitchBark>
+													</DefaultBranch>
+												</Switch>
+											</Sequence>
+										</IfCondition>
+										<DefaultBranch>
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</DefaultBranch>
+									</Switch>
+								</Then>
+								<Else>
+									<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_stealth_recognitionState_I_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_stealth_recognitionState_I_reaction>
+											</Then>
+										</EntityContextCheck>
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Function_stealth_recognitionState_II_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_stealth_recognitionState_II_reaction>
+											</Then>
+										</EntityContextCheck>
+										<DefaultBranch>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</IfCondition>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<Function_switch_addHotEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_addHotEntity>
+												<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetSpatialInfo>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</IfCondition>
+												<Function_callInterrupt_scan hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_callInterrupt_scan>
+											</Sequence>
+										</DefaultBranch>
+									</Switch>
+								</Else>
+							</IfElseCondition>
+						</IfCondition>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest>
+				<IfCondition editorPosX="1420" editorPosY="-330" hasInputBreakpoint="0" comment="TODO: is 0 ok?" breakpointFlags="0">
+					<OutputBreakpoints />
+				</IfCondition>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

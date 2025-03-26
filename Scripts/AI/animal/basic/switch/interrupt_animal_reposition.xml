@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_animal_reposition" is_function="0">
+		<Variables>
+			<Variable name="additionalMoveParams" type="additionalMoveParams" values="" isPersistent="0" form="single" />
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="dummyBool" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="dummySevereness" type="enum:trespassLevel" values="" isPersistent="0" form="single" />
+			<Variable name="dummyWuid" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="globalCooldowns" type="crime:globalCooldowns" values="" isPersistent="0" form="single" />
+			<Variable name="isInTrespass" type="_bool" values="true" isPersistent="0" form="single" />
+			<Variable name="pathFindingParams" type="pathFindingParams" values="useGeneratedNSO(true)" isPersistent="0" form="single" />
+			<Variable name="shouldExit" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="sm_distanceToFlee" type="_float" values="100" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="animalRepositionData" type="switch:animal_interruptData:reposition" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Expression expressions="$additionalMoveParams.destChangedThreshold = &apos;1s&apos; &#10;$additionalMoveParams.useStoppingDistanceForCuttingFromEnd = false" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<EntityContext context="crime_animal_interruptReposition" target="$this.id">
+					<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+						<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$animalRepositionData.stimulusKind&apos;">
+							<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:animal:reposition&apos;">
+								<Sequence>
+									<AtomicDecorator>
+										<EntityContextCheck context="switch_isHorse" target="" saveVersion="2">
+											<Then canSkip="1">
+												<Switch>
+													<IfCondition failOnCondition="false" condition="$animalRepositionData.stimulusKind == $enum:crime_animal_stimulusKind.sound">
+														<Sequence>
+															<Function_crime_getGlobalCrimeLinkData linkData="$globalCooldowns" nodeLabel="75351939" />
+															<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+															<IfElseCondition failOnCondition="false" condition="$globalCooldowns.horseCombatRepositionAudioTriggerTimestmap == 0 | &#10;$globalCooldowns.horseCombatRepositionAudioTriggerTimestmap &lt; $currentTime" saveVersion="2">
+																<Then canSkip="1">
+																	<Sequence>
+																		<ExecuteSoundTrigger entity="$this.id" triggerName="&apos;a_o_horse_whinny&apos;" stop="false" />
+																		<Expression expressions="$currentTime += $data:script_param[&apos;crime_horseWaitOnCombatRepositionEnd&apos;].value &#10;$globalCooldowns.horseCombatRepositionAudioTriggerTimestmap = $currentTime" />
+																		<AddLink From="$__player" To="$__player" Tag="&apos;crime_globalCooldowns&apos;" Data="$globalCooldowns" LinkOpHandleMode="OverWrite" />
+																	</Sequence>
+																</Then>
+															</IfElseCondition>
+														</Sequence>
+													</IfCondition>
+													<IfCondition failOnCondition="false" condition="$animalRepositionData.stimulusKind == $enum:crime_animal_stimulusKind.trespass">
+														<ExecuteSoundTrigger entity="$this.id" triggerName="&apos;a_o_horse_banished_reaction&apos;" stop="false" />
+													</IfCondition>
+													<DefaultBranch>
+														<Success />
+													</DefaultBranch>
+												</Switch>
+											</Then>
+										</EntityContextCheck>
+									</AtomicDecorator>
+									<Parallel successMode="Any" failureMode="Any">
+										<IsInsideAreaWithLabel Position="$this.id" Label="&apos;interior&apos;" Area="$dummyWuid" FailSubtMissing="false" saveVersion="2">
+											<Then canSkip="1">
+												<IsInsideAreaWithLabelBarrier Who="$this.id" Label="&apos;interior&apos;" Negation="true" RunLogic="Halt">
+													<IsInsideAreaWithLabelBarrier Who="$this.id" Label="&apos;interior&apos;" Negation="false" RunLogic="Halt">
+														<Expression expressions="$shouldExit = true" />
+													</IsInsideAreaWithLabelBarrier>
+												</IsInsideAreaWithLabelBarrier>
+											</Then>
+											<Else canSkip="1">
+												<IsInsideAreaWithLabelBarrier Who="$this.id" Label="&apos;interior&apos;" Negation="false" RunLogic="Halt">
+													<Expression expressions="$shouldExit = true" />
+												</IsInsideAreaWithLabelBarrier>
+											</Else>
+										</IsInsideAreaWithLabel>
+										<IfGate atomic="false" condition="~$shouldExit" RunLogic="Halt">
+											<IfElseCondition failOnCondition="false" condition="$animalRepositionData.isBanishment" saveVersion="2">
+												<Then canSkip="1">
+													<IfGate atomic="false" condition="$isInTrespass" RunLogic="Halt">
+														<Parallel successMode="Any" failureMode="Any">
+															<Loop count="-1">
+																<Sequence>
+																	<DetermineTrespassReaction Observer="$animalRepositionData.banishmentSource" Target="$this.id" Position="" ForceSemipublicReaction="false" ShouldUseVec3Position="false" TrespassAreaSevereness="$dummySevereness" TrespassArea="$dummyWuid" Reaction="$isInTrespass" ReactionSuppressed="$dummyBool" />
+																	<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" />
+																</Sequence>
+															</Loop>
+															<Loop count="-1">
+																<Move stopWithinDistance="1.500000" stopDistanceVariation="1.000000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animalRepositionData.repositionFromVec3" destinationSpecification2="$sm_distanceToFlee" destinationSpecification3="$animalRepositionData.keepMinimalDistance" speed="$animalRepositionData.movementSpeed" additionalParams="$additionalMoveParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+															</Loop>
+														</Parallel>
+													</IfGate>
+												</Then>
+												<Else canSkip="1">
+													<Move stopWithinDistance="1.500000" stopDistanceVariation="1.000000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$animalRepositionData.repositionFromVec3" destinationSpecification2="$animalRepositionData.distanceToFlee" destinationSpecification3="$animalRepositionData.keepMinimalDistance" speed="$animalRepositionData.movementSpeed" additionalParams="$additionalMoveParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+												</Else>
+											</IfElseCondition>
+										</IfGate>
+									</Parallel>
+									<EntityContextCheck context="switch_isHorse" target="" saveVersion="2">
+										<Then canSkip="1">
+											<IfCondition failOnCondition="false" condition="$animalRepositionData.stimulusKind == $enum:crime_animal_stimulusKind.sound">
+												<Wait duration="&apos;60s&apos;" timeType="GameTime" doFail="false" variation="" />
+											</IfCondition>
+										</Then>
+									</EntityContextCheck>
+									<Function_switch_animal_callFollowUpBehavior previousReaction="$enum:crime_animal_reactionKind.reposition" nodeLabel="20089739" />
+								</Sequence>
+							</LogToLabel>
+						</LogToLabel>
+					</AddPerceivableState>
+				</EntityContext>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="animal_reposition" EventSet="">
+			<Variables>
+				<Variable name="additionalMoveParams" comment="" />
+				<Variable name="currentTime" comment="" />
+				<Variable name="dummyBool" comment="" />
+				<Variable name="dummySevereness" comment="" />
+				<Variable name="dummyWuid" comment="" />
+				<Variable name="globalCooldowns" comment="" />
+				<Variable name="isInTrespass" comment="" />
+				<Variable name="pathFindingParams" comment="" />
+				<Variable name="shouldExit" comment="" />
+				<Variable name="sm_distanceToFlee" comment="" />
+				<Variable name="animalRepositionData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+				</OnInit>
+				<Behavior>
+					<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<AtomicDecorator hasInputBreakpoint="0" comment="Needs to be atomic to sync cooldown+audio" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_crime_getGlobalCrimeLinkData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_getGlobalCrimeLinkData>
+																<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetTime>
+																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<ExecuteSoundTrigger hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</ExecuteSoundTrigger>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</AddLink>
+																		</Sequence>
+																	</Then>
+																</IfElseCondition>
+															</Sequence>
+														</IfCondition>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<ExecuteSoundTrigger hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</ExecuteSoundTrigger>
+														</IfCondition>
+														<DefaultBranch>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Success>
+														</DefaultBranch>
+													</Switch>
+												</Then>
+											</EntityContextCheck>
+										</AtomicDecorator>
+										<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</IsInsideAreaWithLabelBarrier>
+													</IsInsideAreaWithLabelBarrier>
+												</Then>
+												<Else>
+													<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</IsInsideAreaWithLabelBarrier>
+												</Else>
+											</IsInsideAreaWithLabel>
+											<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<IfGate hasInputBreakpoint="0" comment="@KCD2-108018 smarter banish reposition" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</DetermineTrespassReaction>
+																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Wait>
+																	</Sequence>
+																</Loop>
+																<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Move hasInputBreakpoint="0" comment="Just reposition from target" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Move>
+																</Loop>
+															</Parallel>
+														</IfGate>
+													</Then>
+													<Else>
+														<Move hasInputBreakpoint="0" comment="Just reposition from target" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Move>
+													</Else>
+												</IfElseCondition>
+											</IfGate>
+										</Parallel>
+										<EntityContextCheck hasInputBreakpoint="0" comment="@KCD2-966" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</IfCondition>
+											</Then>
+										</EntityContextCheck>
+										<Function_switch_animal_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_switch_animal_callFollowUpBehavior>
+									</Sequence>
+								</LogToLabel>
+							</LogToLabel>
+						</AddPerceivableState>
+					</EntityContext>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

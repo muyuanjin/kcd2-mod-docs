@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="crime_robUnconsciousPlayer" is_function="1">
+    <Variables>
+      <Variable name="bootsStolen" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="chance" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="moneyStolen" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="now" type="_int64" values="" isPersistent="0" form="single" />
+      <Variable name="playersBoots" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="playersCooldowns" type="crime:globalCooldowns" values="" isPersistent="0" form="single" />
+      <Variable name="playersMoney" type="_int" values="" isPersistent="0" form="single" />
+      <Variable name="rand" type="_float" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Sequence>
+          <EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+            <Else canSkip="1">
+              <GameContextCheck context="crime_debug_alwaysRobUnconsciousPlayer" saveVersion="2">
+                <Then canSkip="1">
+                  <Expression expressions="$chance = 1" />
+                </Then>
+                <Else canSkip="1">
+                  <Sequence>
+                    <Function_crime_getGlobalCrimeLinkData linkData="$playersCooldowns" nodeLabel="25487283" />
+                    <GetTime TimeType="GameTime" OutVar="$now" Delta="" />
+                    <IfCondition failOnCondition="false" condition="( &#10; $playersCooldowns.robWhileUnconsciousTimestamp == 0 | &#10; $now &gt; $playersCooldowns.robWhileUnconsciousTimestamp + $data:script_param[&apos;crime_robUnconsciousPlayerCooldown&apos;].value &#10;)  &#10;&amp; &#10;( &#10; $playersCooldowns.robWhileUnconsciousChanceTimestamp == 0 | &#10; $now &gt; $playersCooldowns.robWhileUnconsciousChanceTimestamp + $data:script_param[&apos;crime_robUnconsciousPlayerChanceCooldown&apos;].value &#10;)">
+                      <Switch>
+                        <CheckAngrinessInterval_Soul type="Violence" Soul="$this.id" Flag="highToInf" saveVersion="2">
+                          <Then canSkip="1">
+                            <Expression expressions="$chance = 0.9" />
+                          </Then>
+                        </CheckAngrinessInterval_Soul>
+                        <CheckAngrinessInterval_Soul type="Material" Soul="$this.id" Flag="highToInf" saveVersion="2">
+                          <Then canSkip="1">
+                            <Expression expressions="$chance = 0.9" />
+                          </Then>
+                        </CheckAngrinessInterval_Soul>
+                        <CheckAngrinessInterval_Soul type="Violence" Soul="$this.id" Flag="mid" saveVersion="2">
+                          <Then canSkip="1">
+                            <Expression expressions="$chance = 0.5" />
+                          </Then>
+                        </CheckAngrinessInterval_Soul>
+                        <CheckAngrinessInterval_Soul type="Material" Soul="$this.id" Flag="mid" saveVersion="2">
+                          <Then canSkip="1">
+                            <Expression expressions="$chance = 0.5" />
+                          </Then>
+                        </CheckAngrinessInterval_Soul>
+                        <DefaultBranch>
+                          <Expression expressions="$chance = 0.1" />
+                        </DefaultBranch>
+                      </Switch>
+                    </IfCondition>
+                  </Sequence>
+                </Else>
+              </GameContextCheck>
+            </Else>
+          </EntityContextCheck>
+          <RandomGate opensWithChance="$chance" saveVersion="2">
+            <Then canSkip="1">
+              <Sequence>
+                <Function_crime_getPlayersMoney balance="$playersMoney" nodeLabel="55529067" />
+                <IfCondition failOnCondition="false" condition="$playersMoney &gt; 0">
+                  <Sequence>
+                    <GenerateRandomFloat result="$rand" />
+                    <Expression expressions="$playersMoney *= (5 + 10 * $rand) / 100" />
+                    <MoveItem Item="" ItemGUID="&apos;5ef63059-322e-4e1b-abe8-926e100c770e&apos;" Source="$__player" Target="$this.id" Amount="$playersMoney" FailOnDoesntExist="false" NotifyUI="true" MovedItem="" ChangeOwnership="true" />
+                    <SendAIConceptSignal_crime_moneyTaken amount="$playersMoney" />
+                    <Expression expressions="$moneyStolen = true" />
+                  </Sequence>
+                </IfCondition>
+                <GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent&apos;" AllowedEdges="" SubGraph="&apos;inventory&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                  <ItemParamFilter Param="Equip" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                  <UnionOp Results="true" Advance="true" EndOp="true" ShortCircuit="false" LocalNodalyzers="false">
+                    <ItemClassFilter ClassId="" Category="&apos;armor.Shoes.*&apos;" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                    <ItemClassFilter ClassId="" Category="&apos;armor.BootsAnkle.*&apos;" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                    <ItemClassFilter ClassId="" Category="&apos;armor.BootsKnee.*&apos;" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                  </UnionOp>
+                  <Nodalyzer Quantifiers="Exists" Parent="" Child="$playersBoots" saveVersion="2" />
+                </GraphSearch>
+                <IfCondition failOnCondition="false" condition="$playersBoots ~= $__null">
+                  <Sequence>
+                    <MoveItem Item="$playersBoots" ItemGUID="" Source="$__player" Target="$this.id" Amount="1" FailOnDoesntExist="false" NotifyUI="true" MovedItem="" ChangeOwnership="true" />
+                    <Expression expressions="$bootsStolen = true" />
+                  </Sequence>
+                </IfCondition>
+                <Function_crime_addUnconsciousPlayerLink stolenBoots="$bootsStolen" stolenMoney="$moneyStolen" teleportedOutOfTrespass="false" nodeLabel="97364799" />
+                <Expression expressions="$playersCooldowns.robWhileUnconsciousTimestamp = $now" />
+              </Sequence>
+            </Then>
+            <Else canSkip="1">
+              <Success />
+            </Else>
+          </RandomGate>
+          <Expression expressions="$playersCooldowns.robWhileUnconsciousChanceTimestamp = $now" />
+          <AddLink From="$__player" To="$__player" Tag="&apos;crime_globalCooldowns&apos;" Data="$playersCooldowns" LinkOpHandleMode="OverWrite" />
+        </Sequence>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="bootsStolen" comment="" />
+        <Variable name="chance" comment="" />
+        <Variable name="moneyStolen" comment="" />
+        <Variable name="now" comment="" />
+        <Variable name="playersBoots" comment="" />
+        <Variable name="playersCooldowns" comment="" />
+        <Variable name="playersMoney" comment="" />
+        <Variable name="rand" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Else>
+                <GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                  <OutputBreakpoints />
+                  <Then>
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </Then>
+                  <Else>
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Function_crime_getGlobalCrimeLinkData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Function_crime_getGlobalCrimeLinkData>
+                      <GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </GetTime>
+                      <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <CheckAngrinessInterval_Soul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                            <Then>
+                              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Expression>
+                            </Then>
+                          </CheckAngrinessInterval_Soul>
+                          <CheckAngrinessInterval_Soul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                            <Then>
+                              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Expression>
+                            </Then>
+                          </CheckAngrinessInterval_Soul>
+                          <CheckAngrinessInterval_Soul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                            <Then>
+                              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Expression>
+                            </Then>
+                          </CheckAngrinessInterval_Soul>
+                          <CheckAngrinessInterval_Soul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                            <Then>
+                              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </Expression>
+                            </Then>
+                          </CheckAngrinessInterval_Soul>
+                          <DefaultBranch>
+                            <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </Expression>
+                          </DefaultBranch>
+                        </Switch>
+                      </IfCondition>
+                    </Sequence>
+                  </Else>
+                </GameContextCheck>
+              </Else>
+            </EntityContextCheck>
+            <RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Then>
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Function_crime_getPlayersMoney hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Function_crime_getPlayersMoney>
+                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <GenerateRandomFloat hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </GenerateRandomFloat>
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                      <MoveItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </MoveItem>
+                      <SendAIConceptSignal_crime_moneyTaken hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </SendAIConceptSignal_crime_moneyTaken>
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </Sequence>
+                  </IfCondition>
+                  <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <ItemParamFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </ItemParamFilter>
+                    <UnionOp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <ItemClassFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </ItemClassFilter>
+                      <ItemClassFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </ItemClassFilter>
+                      <ItemClassFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </ItemClassFilter>
+                    </UnionOp>
+                    <Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                    </Nodalyzer>
+                  </GraphSearch>
+                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <MoveItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </MoveItem>
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </Sequence>
+                  </IfCondition>
+                  <Function_crime_addUnconsciousPlayerLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Function_crime_addUnconsciousPlayerLink>
+                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Expression>
+                </Sequence>
+              </Then>
+              <Else>
+                <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Success>
+              </Else>
+            </RandomGate>
+            <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Expression>
+            <AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </AddLink>
+          </Sequence>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

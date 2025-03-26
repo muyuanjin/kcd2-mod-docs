@@ -1,0 +1,517 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="use_walkAroundBailiff" is_function="0">
+		<Variables>
+			<Variable name="book" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="formation" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="goWithScribe" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="onPlace" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="resource" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="resourceSO" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="resources" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="scribe" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="scribeSpot" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="syncName" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="syncNameBook" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;resources&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+						<Nodalyzer Quantifiers="ForAll" Parent="" Child="$resources" saveVersion="2">
+							<Child0 canSkip="1">
+								<RangeSorter point="$__object.id" SortOrder="Ascending" Source="Child" />
+							</Child0>
+						</Nodalyzer>
+					</GraphSearch>
+					<Expression expressions="$syncName = $__object.name+&apos;bailiff_walkAround&apos; &#10;$syncNameBook = $__object.name+&apos;bailiff_walkAroundBook&apos;" />
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<ChangeBehaviorStateElement smartEntity="$__object.id" behavior="&apos;use_walkAroundScribe&apos;" state="Enabled" allowAnyState="false" enabled="true">
+					<AddLinkElement from="$__object.id" to="$this.id" tag="&apos;bailiff&apos;" data="" enabled="true">
+						<EntityContextElement context="DisableSituationParticipation" enabled="true">
+							<Sequence>
+								<WaitAction />
+								<Parallel successMode="Any" failureMode="Any">
+									<LinkGate from="$__object.id" to="" tag="&apos;scribe&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+										<Sequence>
+											<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+												<LinkTagFilter tag="&apos;scribe&apos;" prune="true" negprune="unknown" Parent="" Child="$scribe" Data="" />
+											</GraphSearch>
+											<Expression expressions="$goWithScribe = true" />
+										</Sequence>
+									</LinkGate>
+									<IfGate atomic="false" condition="!$goWithScribe" RunLogic="KeepRunning">
+										<Wait duration="&apos;20s&apos;" timeType="GameTime" doFail="false" variation="" />
+									</IfGate>
+								</Parallel>
+								<IfCondition failOnCondition="false" condition="!$goWithScribe">
+									<ChangeBehaviorStateElement smartEntity="$__object.id" behavior="&apos;use_walkAroundScribe&apos;" state="Disabled" allowAnyState="false" enabled="true">
+										<WaitAction />
+									</ChangeBehaviorStateElement>
+								</IfCondition>
+								<Parallel successMode="Any" failureMode="Any">
+									<ForEach startIndex="0" step="1" array="$resources" iterator="" value="$resource" break="">
+										<Sequence>
+											<GraphSearch Origin="$resource" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+												<AnyLinkFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="$resourceSO" />
+											</GraphSearch>
+											<GraphSearch Origin="$resourceSO" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+												<LinkTagFilter tag="&apos;scribeSpot&apos;" prune="true" negprune="unknown" Parent="" Child="$scribeSpot" Data="" />
+											</GraphSearch>
+											<GraphSearch Origin="$scribeSpot" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+												<AnyLinkFilter Source="Child" prune="true" negprune="unknown" Parent="" Child="$scribeSpot" />
+											</GraphSearch>
+											<WaitAction />
+											<IfElseCondition failOnCondition="false" condition="$goWithScribe" saveVersion="2">
+												<Then canSkip="1">
+													<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;15s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;$syncNameBook&apos;" RunLogic="Halt">
+														<Sequence>
+															<CallBehavior Target="$resourceSO" BehaviorName="&apos;use&apos;" ignoreDropUnloading="false" nodeLabel="35984607" />
+															<Expression expressions="$onPlace = false" />
+														</Sequence>
+													</Synchronize>
+												</Then>
+												<Else canSkip="1">
+													<HandContentElement hand="Right" item="$book" allowAny="false" allowHomeSlotAutoReturn="false" decisionLabel="scribe_libraryBook" useDecision="true" enabled="true" saveVersion="2">
+														<Search canSkip="1">
+															<Function_findItemOnSlot linkName="&apos;book&apos;" npc="$this.id" searchOrigin="$__object.id" item="$book" nodeLabel="60342532" />
+														</Search>
+														<Exec canSkip="1">
+															<Sequence>
+																<WaitAction />
+																<CallBehavior Target="$scribeSpot" BehaviorName="&apos;use&apos;" ignoreDropUnloading="false" nodeLabel="33868507" />
+															</Sequence>
+														</Exec>
+													</HandContentElement>
+												</Else>
+											</IfElseCondition>
+										</Sequence>
+									</ForEach>
+									<IfGate atomic="false" condition="$goWithScribe" RunLogic="KeepRunning">
+										<Loop count="-1">
+											<LinkGate from="$scribe" to="" tag="&apos;scribeSpot&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="Halt">
+												<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+													<Child canSkip="1">
+														<Sequence>
+															<MakeFormation FormationName="&apos;bailiffAndScribe_walkAround&apos;" HandleVariable="$formation" />
+															<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+														</Sequence>
+													</Child>
+													<OnSuccess canSkip="1">
+														<EndFormation FormationHandle="$formation" />
+													</OnSuccess>
+												</FuseBox>
+											</LinkGate>
+										</Loop>
+									</IfGate>
+								</Parallel>
+							</Sequence>
+						</EntityContextElement>
+					</AddLinkElement>
+				</ChangeBehaviorStateElement>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="book" comment="" />
+				<Variable name="formation" comment="" />
+				<Variable name="goWithScribe" comment="" />
+				<Variable name="onPlace" comment="" />
+				<Variable name="resource" comment="" />
+				<Variable name="resourceSO" comment="" />
+				<Variable name="resources" comment="" />
+				<Variable name="scribe" comment="" />
+				<Variable name="scribeSpot" comment="" />
+				<Variable name="syncName" comment="" />
+				<Variable name="syncNameBook" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+							<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Child0>
+									<RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RangeSorter>
+								</Child0>
+							</Nodalyzer>
+						</GraphSearch>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<ChangeBehaviorStateElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<AddLinkElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</WaitAction>
+									<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</LinkTagFilter>
+												</GraphSearch>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Sequence>
+										</LinkGate>
+										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</IfGate>
+									</Parallel>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<ChangeBehaviorStateElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</WaitAction>
+										</ChangeBehaviorStateElement>
+									</IfCondition>
+									<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<AnyLinkFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</AnyLinkFilter>
+												</GraphSearch>
+												<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</LinkTagFilter>
+												</GraphSearch>
+												<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<AnyLinkFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</AnyLinkFilter>
+												</GraphSearch>
+												<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</WaitAction>
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<CallBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</CallBehavior>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Sequence>
+														</Synchronize>
+													</Then>
+													<Else>
+														<HandContentElement hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Search>
+																<Function_findItemOnSlot hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_findItemOnSlot>
+															</Search>
+															<Exec>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</WaitAction>
+																	<CallBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</CallBehavior>
+																</Sequence>
+															</Exec>
+														</HandContentElement>
+													</Else>
+												</IfElseCondition>
+											</Sequence>
+										</ForEach>
+										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Child>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<MakeFormation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</MakeFormation>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+															</Sequence>
+														</Child>
+														<OnSuccess>
+															<EndFormation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</EndFormation>
+														</OnSuccess>
+													</FuseBox>
+												</LinkGate>
+											</Loop>
+										</IfGate>
+									</Parallel>
+								</Sequence>
+							</EntityContextElement>
+						</AddLinkElement>
+					</ChangeBehaviorStateElement>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="use_walkAroundScribe" is_function="0">
+		<Variables>
+			<Variable name="bailiff" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="book" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="bookSlot" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="formation" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="scribeSpot" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="stopFormation" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="syncName" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="syncNameBook" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Expression expressions="$syncName = $__object.name+&apos;bailiff_walkAround&apos; &#10;$syncNameBook = $__object.name+&apos;bailiff_walkAroundBook&apos;" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<Sequence>
+					<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;bailiff&apos;" prune="true" negprune="unknown" Parent="" Child="$bailiff" Data="" />
+					</GraphSearch>
+					<EntityContextElement context="DisableSituationParticipation" enabled="true">
+						<AddLinkElement from="$__object.id" to="$this.id" tag="&apos;scribe&apos;" data="" enabled="true">
+							<HandContentElement hand="Right" item="$book" allowAny="false" allowHomeSlotAutoReturn="false" decisionLabel="scribe_libraryBook" useDecision="true" enabled="true" saveVersion="2">
+								<Search canSkip="1">
+									<ErrorNode Message="&apos;trying to use search in walkAroundScribe HCE&apos;" />
+								</Search>
+								<Exec canSkip="1">
+									<Sequence>
+										<WaitAction />
+										<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;15s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;$syncNameBook&apos;" RunLogic="Halt">
+											<Sequence>
+												<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+													<LinkTagFilter tag="&apos;scribeSpot&apos;" prune="true" negprune="unknown" Parent="" Child="$scribeSpot" Data="" />
+												</GraphSearch>
+												<IfElseCondition failOnCondition="false" condition="$scribeSpot == $__null" saveVersion="2">
+													<Then canSkip="1">
+														<Sequence>
+															<GetMemberFormation MemberWUID="$bailiff" FormationHandleOut="$formation" />
+															<Parallel successMode="Any" failureMode="Any">
+																<Loop count="-1">
+																	<IfGate atomic="false" condition="!$stopFormation" RunLogic="Halt">
+																		<SuppressFailure>
+																			<FormationFollower FormationHandle="$formation" PreferredPositions="" FormationMode="MoveHistory" AllowRelocation="false" />
+																		</SuppressFailure>
+																	</IfGate>
+																</Loop>
+																<LinkGate from="$this.id" to="" tag="&apos;scribeSpot&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+																	<Sequence>
+																		<Expression expressions="$stopFormation = true" />
+																		<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																			<LinkTagFilter tag="&apos;scribeSpot&apos;" prune="true" negprune="unknown" Parent="" Child="$scribeSpot" Data="" />
+																		</GraphSearch>
+																		<Selector>
+																			<CallBehavior Target="$scribeSpot" BehaviorName="&apos;use&apos;" ignoreDropUnloading="false" nodeLabel="98301358" />
+																			<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+																		</Selector>
+																	</Sequence>
+																</LinkGate>
+															</Parallel>
+														</Sequence>
+													</Then>
+													<Else canSkip="1">
+														<Selector>
+															<CallBehavior Target="$scribeSpot" BehaviorName="&apos;use&apos;" ignoreDropUnloading="false" nodeLabel="72435514" />
+															<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+														</Selector>
+													</Else>
+												</IfElseCondition>
+											</Sequence>
+										</Synchronize>
+									</Sequence>
+								</Exec>
+							</HandContentElement>
+						</AddLinkElement>
+					</EntityContextElement>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="bailiff" comment="" />
+				<Variable name="book" comment="" />
+				<Variable name="bookSlot" comment="" />
+				<Variable name="formation" comment="" />
+				<Variable name="scribeSpot" comment="" />
+				<Variable name="stopFormation" comment="" />
+				<Variable name="syncName" comment="" />
+				<Variable name="syncNameBook" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+				</OnInit>
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="follow" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+						</GraphSearch>
+						<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<AddLinkElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<HandContentElement hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Search>
+										<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ErrorNode>
+									</Search>
+									<Exec>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</WaitAction>
+											<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</LinkTagFilter>
+													</GraphSearch>
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GetMemberFormation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetMemberFormation>
+																<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<FormationFollower hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</FormationFollower>
+																			</SuppressFailure>
+																		</IfGate>
+																	</Loop>
+																	<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</LinkTagFilter>
+																			</GraphSearch>
+																			<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<CallBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</CallBehavior>
+																				<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Wait>
+																			</Selector>
+																		</Sequence>
+																	</LinkGate>
+																</Parallel>
+															</Sequence>
+														</Then>
+														<Else>
+															<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<CallBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</CallBehavior>
+																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Wait>
+															</Selector>
+														</Else>
+													</IfElseCondition>
+												</Sequence>
+											</Synchronize>
+										</Sequence>
+									</Exec>
+								</HandContentElement>
+							</AddLinkElement>
+						</EntityContextElement>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

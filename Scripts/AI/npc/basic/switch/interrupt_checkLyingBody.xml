@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_checkLyingBody" is_function="1">
+		<Variables>
+			<Variable name="anyDecoratorPreset" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="awareness" type="switch:awareness" values="" isPersistent="0" form="single" />
+			<Variable name="moveParams" type="additionalMoveParams" values="continueWhenHalting(true)" isPersistent="0" form="single" />
+			<Variable name="perceptionInfo" type="perceptionInfo" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="checkLyingBodyData" type="switch:interruptData:checkLyingBody" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<EntityContext context="crime_preventDespawn" target="">
+							<Sequence>
+								<Function_crime_getAnyDecoratorPreset tryToKeepItems="false" tryToKeepSecondaryWeapon="true" presetString="$anyDecoratorPreset" nodeLabel="17004423" />
+								<AnyDecorator preset="$anyDecoratorPreset" enabled="true">
+									<EntityContextPreset preset="crime_greyOutEAndDisableChat" target="$this.id">
+										<EntityContextPresetElement contextPreset="crime_greyOutEAndDisableChat" enabled="true">
+											<EntityContextElement context="crime_interrupt" enabled="true">
+												<EntityContext context="crime_interruptCheckLyingBody" target="">
+													<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+														<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:checkLyingBody&apos;">
+															<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$checkLyingBodyData.stimulusKind&apos;">
+																<Sequence>
+																	<Function_crime_limits_confirmReactionLink reactionKind="$enum:crime_reactionKind.checkLyingBody" nodeLabel="59706069" />
+																	<Function_crime_checkInterruptInformation information="$checkLyingBodyData.information" nodeLabel="16822027" />
+																	<Parallel successMode="Any" failureMode="Any">
+																		<Sequence>
+																			<IsLoadedGate saveVersion="2">
+																				<Else canSkip="1">
+																					<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$checkLyingBodyData.body" metarole="&apos;NPC_VIDI_LEZICI_TELO_Z_DALKY&apos;" priority="$enum:crime_barkPriority.medium" nodeLabel="94071041" />
+																				</Else>
+																			</IsLoadedGate>
+																			<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																		</Sequence>
+																		<ForceLook LookTarget="$checkLyingBodyData.body" DisableVariations="true">
+																			<Sequence>
+																				<MoveParamsDecorator speed="Run" pathFindingParams="" doorClosingPolicy="LeaveOpened">
+																					<Move stopWithinDistance="2.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$checkLyingBodyData.body" destinationSpecification2="" destinationSpecification3="" speed="Run" additionalParams="$moveParams" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																				</MoveParamsDecorator>
+																				<Expression expressions="$awareness.perceptible = $perceptionInfo.perceptible" />
+																				<AtomicDecorator>
+																					<EntityContext context="crime_stimulusInitiatedByScheduler" target="">
+																						<Function_switch_handleAwareness awareness="$awareness" nodeLabel="51504040" />
+																					</EntityContext>
+																				</AtomicDecorator>
+																			</Sequence>
+																		</ForceLook>
+																		<DistanceGate Origin="$this.id" ReferencePt="$checkLyingBodyData.body" Low="$data:script_param[&apos;crime_bodyRecognitionDistance&apos;].value" High="$data:script_param[&apos;crime_bodyRecognitionDistance&apos;].value" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+																			<EntityContext context="crime_disabledRecurrentPerceptionIgnore" target="">
+																				<Sequence>
+																					<CancelPerceptionIgnore PerceptorObject="$this.id" PerceptibleObject="$__player" WasIgnoredAtLeastFor="&apos;0s&apos;" />
+																					<CancelPerceptionIgnore PerceptorObject="$this.id" PerceptibleObject="$checkLyingBodyData.body" WasIgnoredAtLeastFor="&apos;0s&apos;" />
+																					<Loop count="-1">
+																						<PerceptionSearch ComponentToBoost="BoostNothing" saveVersion="2">
+																							<Search canSkip="1">
+																								<While doFail="false" propagateChildFail="false" condition="true">
+																									<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$perceptionInfo" senderInfo="" inbox="&apos;perceptionInfo_checkLyingBody&apos;" condition="" answerVar="">
+																										<CheckWuidValid wuid="$perceptionInfo.perceptible" FailSubtMissing="false" saveVersion="2">
+																											<Then canSkip="1">
+																												<IfCondition failOnCondition="false" condition="$perceptionInfo.threshold == 1">
+																													<DismissSearchCandidate PerceptibleObject="$perceptionInfo.perceptible" />
+																												</IfCondition>
+																											</Then>
+																										</CheckWuidValid>
+																									</ProcessMessage>
+																								</While>
+																							</Search>
+																							<NoCandidate canSkip="1">
+																								<Success />
+																							</NoCandidate>
+																						</PerceptionSearch>
+																					</Loop>
+																				</Sequence>
+																			</EntityContext>
+																		</DistanceGate>
+																		<IsDeadCheck SoulWUID="$checkLyingBodyData.body" FailSubtMissing="false" saveVersion="2">
+																			<Then canSkip="1">
+																				<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																			</Then>
+																			<Else canSkip="1">
+																				<DeadUnconsciousGate Who="$checkLyingBodyData.body" State="Unconscious" Negation="false" RunLogic="KeepRunning">
+																					<DeadUnconsciousGate Who="$checkLyingBodyData.body" State="Unconscious" Negation="true" RunLogic="KeepRunning">
+																						<IsDeadCheck SoulWUID="$checkLyingBodyData.body" FailSubtMissing="false" saveVersion="2">
+																							<Then canSkip="1">
+																								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																							</Then>
+																							<Else canSkip="1">
+																								<Success />
+																							</Else>
+																						</IsDeadCheck>
+																					</DeadUnconsciousGate>
+																				</DeadUnconsciousGate>
+																			</Else>
+																		</IsDeadCheck>
+																	</Parallel>
+																</Sequence>
+															</LogToLabel>
+														</LogToLabel>
+													</AddPerceivableState>
+												</EntityContext>
+											</EntityContextElement>
+										</EntityContextPresetElement>
+									</EntityContextPreset>
+								</AnyDecorator>
+							</Sequence>
+						</EntityContext>
+					</Child>
+					<OnFail canSkip="1">
+						<Function_crime_limits_removeReactionLink information="$checkLyingBodyData.information" reactionKind="$enum:crime_reactionKind.checkLyingBody" nodeLabel="12829861" />
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="anyDecoratorPreset" comment="" />
+				<Variable name="awareness" comment="" />
+				<Variable name="moveParams" comment="" />
+				<Variable name="perceptionInfo" comment="" />
+				<Variable name="checkLyingBodyData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_getAnyDecoratorPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_getAnyDecoratorPreset>
+									<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContextPresetElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Function_crime_limits_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_crime_limits_confirmReactionLink>
+																		<Function_crime_checkInterruptInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_crime_checkInterruptInformation>
+																		<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Else>
+																						<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_crimeBark>
+																					</Else>
+																				</IsLoadedGate>
+																				<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Wait>
+																			</Sequence>
+																			<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Move>
+																					</MoveParamsDecorator>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Function_switch_handleAwareness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_switch_handleAwareness>
+																						</EntityContext>
+																					</AtomicDecorator>
+																				</Sequence>
+																			</ForceLook>
+																			<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<CancelPerceptionIgnore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</CancelPerceptionIgnore>
+																						<CancelPerceptionIgnore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</CancelPerceptionIgnore>
+																						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<PerceptionSearch hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																								<OutputBreakpoints />
+																								<Search>
+																									<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<CheckWuidValid hasInputBreakpoint="0" comment="NPC might read message AFTER the entity gets destroyed" breakpointFlags="0" saveVersion="2">
+																												<OutputBreakpoints />
+																												<Then>
+																													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<DismissSearchCandidate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</DismissSearchCandidate>
+																													</IfCondition>
+																												</Then>
+																											</CheckWuidValid>
+																										</ProcessMessage>
+																									</While>
+																								</Search>
+																								<NoCandidate>
+																									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Success>
+																								</NoCandidate>
+																							</PerceptionSearch>
+																						</Loop>
+																					</Sequence>
+																				</EntityContext>
+																			</DistanceGate>
+																			<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																				</Then>
+																				<Else>
+																					<DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<IsDeadCheck hasInputBreakpoint="0" comment="Weird #KCD2-49586" breakpointFlags="0" saveVersion="2">
+																								<OutputBreakpoints />
+																								<Then>
+																									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Wait>
+																								</Then>
+																								<Else>
+																									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Success>
+																								</Else>
+																							</IsDeadCheck>
+																						</DeadUnconsciousGate>
+																					</DeadUnconsciousGate>
+																				</Else>
+																			</IsDeadCheck>
+																		</Parallel>
+																	</Sequence>
+																</LogToLabel>
+															</LogToLabel>
+														</AddPerceivableState>
+													</EntityContext>
+												</EntityContextElement>
+											</EntityContextPresetElement>
+										</EntityContextPreset>
+									</AnyDecorator>
+								</Sequence>
+							</EntityContext>
+						</Child>
+						<OnFail>
+							<Function_crime_limits_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_limits_removeReactionLink>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

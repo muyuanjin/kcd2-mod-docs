@@ -1,0 +1,1539 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleHearingSubscriptions" is_function="1">
+		<Variables>
+			<Variable name="hearingHandled" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="hearingInfo" type="hearingInfo" values="" isPersistent="0" form="single" />
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="isBandit" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="lookAroundUpdatePosMsg" type="crime:lookAroundUpdateSoundPosition" values="" isPersistent="0" form="single" />
+			<Variable name="mySubscription" type="senderInfo" values="" isPersistent="0" form="single" />
+			<Variable name="mySubscriptions" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="soundReactionType" type="enum:crime_soundReactionType" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus" type="switch:stimulus:sound" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus_disturbance" type="switch:stimulus:disturbance" values="" isPersistent="0" form="single" />
+			<Variable name="subscriber" type="senderInfo" values="" isPersistent="0" form="single" />
+			<Variable name="subscriber_reading" type="senderInfo" values="" isPersistent="0" form="single" />
+			<Variable name="subscribers" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="subscription" type="crime:hearingSubscription" values="" isPersistent="0" form="single" />
+			<Variable name="subscriptionNotification" type="crime:hearingSubscriptionNotification" values="" isPersistent="0" form="single" />
+			<Variable name="subscriptionNotificationOut" type="crime:hearingSubscriptionNotification" values="" isPersistent="0" form="single" />
+			<Variable name="subscription_reading" type="crime:hearingSubscription" values="" isPersistent="0" form="single" />
+			<Variable name="useless" type="_int" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="consciousness" type="enum:consciousness" values="" isPersistent="0" form="single" requirementType="Reference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="false" saveVersion="2">
+					<Child canSkip="1">
+						<Parallel successMode="Any" failureMode="Any">
+							<While doFail="false" propagateChildFail="false" condition="true">
+								<DeadUnconsciousGate Who="" State="Any" Negation="true" RunLogic="Halt">
+									<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hearingInfo" senderInfo="" inbox="&apos;hearingInfo&apos;" condition="" answerVar="">
+										<EntityContextCheck context="switch_disabledHearingReaction" target="$this.id" saveVersion="2">
+											<Then canSkip="1">
+												<Success />
+											</Then>
+											<Else canSkip="1">
+												<IfCondition failOnCondition="false" condition="$consciousness == $enum:consciousness.conscious">
+													<IfElseCondition failOnCondition="false" condition="$hearingInfo.soundId == $enum:sound.decoy_distract | &#10;$hearingInfo.soundId == $enum:sound.lure_distract | &#10;$hearingInfo.soundId == $enum:sound.whistle | &#10;$hearingInfo.soundId == $enum:sound.dog_distract" saveVersion="2">
+														<Then canSkip="1">
+															<CallDecorator_switch_handleHearing>
+																<Subtree canSkip="1">
+																	<SubtreeDecorator saveVersion="2">
+																		<Init canSkip="1">
+																			<Sequence>
+																				<SuppressFailure>
+																					<LoopUntil until="Fail" attemptCount="0">
+																						<Sequence>
+																							<InstantReadMessage variable="$subscription" senderInfo="$subscriber" inbox="&apos;crime_hearingSubscription&apos;" condition="$__content.event == $enum:crime_hearingSubscription.subscribe" />
+																							<Selector>
+																								<InstantReadMessage variable="$subscription_reading" senderInfo="$subscriber_reading" inbox="&apos;crime_hearingSubscription&apos;" condition="$__content.event == $enum:crime_hearingSubscription.unsubscribe  &#10;&amp; $__senderInfo.id == $subscriber.id" />
+																								<PushToArray array="$subscribers" value="$subscriber.id" direction="Back" />
+																							</Selector>
+																						</Sequence>
+																					</LoopUntil>
+																				</SuppressFailure>
+																				<Expression expressions="$hearingHandled = false" />
+																			</Sequence>
+																		</Init>
+																		<Subtree canSkip="1">
+																			<Function_switch_handleHearing hearingInfo="$hearingInfo" nodeLabel="72158268" />
+																		</Subtree>
+																		<Cleanup canSkip="1">
+																			<IfCondition failOnCondition="false" condition="~$hearingHandled &amp; #subscribers &gt; 0">
+																				<Sequence>
+																					<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.notReacting" />
+																					<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																				</Sequence>
+																			</IfCondition>
+																		</Cleanup>
+																	</SubtreeDecorator>
+																</Subtree>
+																<SubscribeToHearing canSkip="1">
+																	<CallbackEventCatch_wuidArray>
+																		<Sequence>
+																			<CopyArray source="$wuidArray" target="$mySubscriptions" />
+																			<Expression expressions="$hearingHandled = true &#10; &#10;$subscription.hearingInfo = $hearingInfo &#10;$subscription.event = $enum:crime_hearingSubscription.subscribe" />
+																			<InstantMultiSendMessageToNPC targets="$mySubscriptions" successMode="Any" failureMode="Any" variable="$subscription" />
+																		</Sequence>
+																	</CallbackEventCatch_wuidArray>
+																</SubscribeToHearing>
+																<UpdatePosition canSkip="1">
+																	<CallbackEventCatch_empty>
+																		<Sequence>
+																			<Expression expressions="$hearingHandled = true" />
+																			<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="32306284" />
+																			<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="32958987" />
+																			<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																				<Sequence>
+																					<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.reacting" />
+																					<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																				</Sequence>
+																			</IfCondition>
+																			<SuppressFailure>
+																				<Sequence>
+																					<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;crime_reactor&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																						<LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																						<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																						<LinkDataFilter tag="&apos;crime_reactor&apos;" condition="$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.lookAround &amp; &#10;$__link_crime_reactor.information.label == &apos;motivation&apos; &amp; &#10;$__link_crime_reactor.reservation == false" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																					</GraphSearch>
+																					<CreateInformationWrapper Label="&apos;motivation&apos;" PerceivedWuid="$this.id" PositionType="positionVec3" PositionVec3="$hearingInfo.position" PositionWuid="" Information="$information" />
+																					<LinkDataExpression From="$__player" To="$this.id" Expresssion="$__link_crime_reactor.information = $information" />
+																				</Sequence>
+																			</SuppressFailure>
+																			<Expression expressions="$lookAroundUpdatePosMsg.hearingInfo = $hearingInfo" />
+																			<InstantSendMessageToNPC target="$this.id" variable="$lookAroundUpdatePosMsg" />
+																		</Sequence>
+																	</CallbackEventCatch_empty>
+																</UpdatePosition>
+																<Busy_interrupt canSkip="1">
+																	<CallbackEventCatch_empty>
+																		<Sequence>
+																			<Expression expressions="$hearingHandled = true" />
+																			<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="30963827" />
+																			<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="26015409" />
+																			<HasSeenPlayer NPC="$this.id" FullyAwareOnly="false" saveVersion="2">
+																				<Then canSkip="1">
+																					<CheckNervousnessInterval Soul="" Flag="alerted" saveVersion="2">
+																						<Then canSkip="1">
+																							<Sequence>
+																								<IsBandit Npc="$this.id" IsBandit="$isBandit" />
+																								<IfCondition failOnCondition="false" condition="~$isBandit">
+																									<Function_switch_handleStimulusDisturbance stimulus="$stimulus_disturbance" nodeLabel="45433619" />
+																								</IfCondition>
+																							</Sequence>
+																						</Then>
+																					</CheckNervousnessInterval>
+																				</Then>
+																			</HasSeenPlayer>
+																			<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																				<Sequence>
+																					<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.reacting" />
+																					<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																				</Sequence>
+																			</IfCondition>
+																		</Sequence>
+																	</CallbackEventCatch_empty>
+																</Busy_interrupt>
+																<Busy_other canSkip="1">
+																	<CallbackEventCatch_wuidArray>
+																		<Success />
+																	</CallbackEventCatch_wuidArray>
+																</Busy_other>
+																<Reacting canSkip="1">
+																	<CallbackEventCatch_empty>
+																		<Sequence>
+																			<Expression expressions="$hearingHandled = true" />
+																			<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="67634763" />
+																			<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="92533841" />
+																			<Function_crime_addHearingSubscriptionHotEntity sound="$hearingInfo.soundId" nodeLabel="55486922" />
+																			<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																				<Sequence>
+																					<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.reacting" />
+																					<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																				</Sequence>
+																			</IfCondition>
+																		</Sequence>
+																	</CallbackEventCatch_empty>
+																</Reacting>
+																<FedUp canSkip="1">
+																	<CallbackEventCatch_empty>
+																		<Sequence>
+																			<Expression expressions="$hearingHandled = true" />
+																			<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="47651393" />
+																			<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="59074171" />
+																			<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																				<Sequence>
+																					<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.fedUp" />
+																					<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																				</Sequence>
+																			</IfCondition>
+																		</Sequence>
+																	</CallbackEventCatch_empty>
+																</FedUp>
+															</CallDecorator_switch_handleHearing>
+														</Then>
+														<Else canSkip="1">
+															<Function_switch_handleHearing hearingInfo="$hearingInfo" nodeLabel="25343422" />
+														</Else>
+													</IfElseCondition>
+												</IfCondition>
+											</Else>
+										</EntityContextCheck>
+									</ProcessMessage>
+								</DeadUnconsciousGate>
+							</While>
+							<While doFail="false" propagateChildFail="false" condition="true">
+								<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$subscription" senderInfo="$subscriber" inbox="&apos;crime_hearingSubscription&apos;" condition="" answerVar="">
+									<Switch>
+										<IfCondition failOnCondition="false" condition="$subscription.event == $enum:crime_hearingSubscription.subscribe">
+											<Selector>
+												<InstantReadMessage variable="$subscription_reading" senderInfo="$subscriber_reading" inbox="&apos;crime_hearingSubscription&apos;" condition="$__content.event == $enum:crime_hearingSubscription.unsubscribe  &#10;&amp; $__senderInfo.id == $subscriber_reading.id" />
+												<Sequence>
+													<PushToArray array="$subscribers" value="$subscriber.id" direction="Back" />
+													<Selector>
+														<Sequence>
+															<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																<LinkTagFilter tag="&apos;crime_hearingSubscriptionReactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																<LinkDataFilter tag="&apos;crime_hearingSubscriptionReactor&apos;" condition="$__link_crime_hearingSubscriptionReactor.pos == $subscription.hearingInfo.position &amp; &#10;$__link_crime_hearingSubscriptionReactor.soundType == $subscription.hearingInfo.soundId" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+															</GraphSearch>
+															<SuppressFailure>
+																<Sequence>
+																	<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.reacting" />
+																	<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																</Sequence>
+															</SuppressFailure>
+														</Sequence>
+														<Sequence>
+															<Function_crime_checkFedUpWithSoundCooldown reaction="$soundReactionType" nodeLabel="69428077" />
+															<IfCondition failOnCondition="true" condition="$soundReactionType ~= $enum:crime_soundReactionType.react">
+																<SuppressFailure>
+																	<Sequence>
+																		<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.fedUp" />
+																		<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																	</Sequence>
+																</SuppressFailure>
+															</IfCondition>
+														</Sequence>
+														<Sequence>
+															<InstantReadMessage variable="$hearingInfo" senderInfo="" inbox="&apos;hearingInfo&apos;" condition="$__content.soundId == $subscription.hearingInfo.soundId &amp; &#10;$__content.position == $subscription.hearingInfo.position" />
+															<EntityContextCheck context="switch_disabledHearingReaction" target="$this.id" saveVersion="2">
+																<Then canSkip="1">
+																	<Fail />
+																</Then>
+																<Else canSkip="1">
+																	<IfCondition failOnCondition="true" condition="$consciousness == $enum:consciousness.conscious">
+																		<CallDecorator_switch_handleHearing>
+																			<Subtree canSkip="1">
+																				<SubtreeDecorator saveVersion="2">
+																					<Init canSkip="1">
+																						<Sequence>
+																							<SuppressFailure>
+																								<LoopUntil until="Fail" attemptCount="0">
+																									<Sequence>
+																										<InstantReadMessage variable="$subscription" senderInfo="$subscriber" inbox="&apos;crime_hearingSubscription&apos;" condition="$__content.event == $enum:crime_hearingSubscription.subscribe" />
+																										<PushToArray array="$subscribers" value="$subscriber.id" direction="Back" />
+																									</Sequence>
+																								</LoopUntil>
+																							</SuppressFailure>
+																							<Expression expressions="$hearingHandled = false" />
+																						</Sequence>
+																					</Init>
+																					<Subtree canSkip="1">
+																						<Function_switch_handleHearing hearingInfo="$hearingInfo" nodeLabel="11691198" />
+																					</Subtree>
+																					<Cleanup canSkip="1">
+																						<IfCondition failOnCondition="false" condition="~$hearingHandled &amp; #subscribers &gt; 0">
+																							<Sequence>
+																								<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.notReacting" />
+																								<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																							</Sequence>
+																						</IfCondition>
+																					</Cleanup>
+																				</SubtreeDecorator>
+																			</Subtree>
+																			<SubscribeToHearing canSkip="1">
+																				<CallbackEventCatch_wuidArray>
+																					<Sequence>
+																						<CopyArray source="$wuidArray" target="$mySubscriptions" />
+																						<Expression expressions="$hearingHandled = true &#10; &#10;$subscription.hearingInfo = $hearingInfo &#10;$subscription.event = $enum:crime_hearingSubscription.subscribe" />
+																						<InstantMultiSendMessageToNPC targets="$mySubscriptions" successMode="Any" failureMode="Any" variable="$subscription" />
+																					</Sequence>
+																				</CallbackEventCatch_wuidArray>
+																			</SubscribeToHearing>
+																			<UpdatePosition canSkip="1">
+																				<CallbackEventCatch_empty>
+																					<Sequence>
+																						<Expression expressions="$hearingHandled = true" />
+																						<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="53527328" />
+																						<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="40628690" />
+																						<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																							<Sequence>
+																								<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.reacting" />
+																								<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																							</Sequence>
+																						</IfCondition>
+																						<SuppressFailure>
+																							<Sequence>
+																								<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;crime_reactor&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																									<LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																									<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																									<LinkDataFilter tag="&apos;crime_reactor&apos;" condition="$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.lookAround &amp; &#10;$__link_crime_reactor.information.label == &apos;motivation&apos; &amp; &#10;$__link_crime_reactor.reservation == false" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																								</GraphSearch>
+																								<CreateInformationWrapper Label="&apos;motivation&apos;" PerceivedWuid="$this.id" PositionType="positionVec3" PositionVec3="$hearingInfo.position" PositionWuid="" Information="$information" />
+																								<LinkDataExpression From="$__player" To="$this.id" Expresssion="$__link_crime_reactor.information = $information" />
+																							</Sequence>
+																						</SuppressFailure>
+																						<Expression expressions="$lookAroundUpdatePosMsg.hearingInfo = $hearingInfo" />
+																						<InstantSendMessageToNPC target="$this.id" variable="$lookAroundUpdatePosMsg" />
+																					</Sequence>
+																				</CallbackEventCatch_empty>
+																			</UpdatePosition>
+																			<Busy_interrupt canSkip="1">
+																				<CallbackEventCatch_empty>
+																					<Sequence>
+																						<Expression expressions="$hearingHandled = true" />
+																						<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="57757084" />
+																						<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="74857719" />
+																						<HasSeenPlayer NPC="$this.id" FullyAwareOnly="false" saveVersion="2">
+																							<Then canSkip="1">
+																								<CheckNervousnessInterval Soul="" Flag="alerted" saveVersion="2">
+																									<Then canSkip="1">
+																										<Sequence>
+																											<IsBandit Npc="$this.id" IsBandit="$isBandit" />
+																											<IfCondition failOnCondition="false" condition="~$isBandit">
+																												<Function_switch_handleStimulusDisturbance stimulus="$stimulus_disturbance" nodeLabel="33856248" />
+																											</IfCondition>
+																										</Sequence>
+																									</Then>
+																								</CheckNervousnessInterval>
+																							</Then>
+																						</HasSeenPlayer>
+																						<Function_crime_addHearingSubscriptionHotEntity sound="$hearingInfo.soundId" nodeLabel="40363802" />
+																						<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																							<Sequence>
+																								<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.reacting" />
+																								<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																							</Sequence>
+																						</IfCondition>
+																					</Sequence>
+																				</CallbackEventCatch_empty>
+																			</Busy_interrupt>
+																			<Busy_other canSkip="1">
+																				<CallbackEventCatch_wuidArray>
+																					<Success />
+																				</CallbackEventCatch_wuidArray>
+																			</Busy_other>
+																			<Reacting canSkip="1">
+																				<CallbackEventCatch_empty>
+																					<Sequence>
+																						<Expression expressions="$hearingHandled = true" />
+																						<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="32296172" />
+																						<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="70903037" />
+																						<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																							<Sequence>
+																								<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.reacting" />
+																								<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																							</Sequence>
+																						</IfCondition>
+																					</Sequence>
+																				</CallbackEventCatch_empty>
+																			</Reacting>
+																			<FedUp canSkip="1">
+																				<CallbackEventCatch_empty>
+																					<Sequence>
+																						<Expression expressions="$hearingHandled = true" />
+																						<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="59520830" />
+																						<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="54058943" />
+																						<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																							<Sequence>
+																								<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.fedUp" />
+																								<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																							</Sequence>
+																						</IfCondition>
+																					</Sequence>
+																				</CallbackEventCatch_empty>
+																			</FedUp>
+																		</CallDecorator_switch_handleHearing>
+																	</IfCondition>
+																</Else>
+															</EntityContextCheck>
+														</Sequence>
+														<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+															<Sequence>
+																<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.notHeard" />
+																<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+															</Sequence>
+														</IfCondition>
+													</Selector>
+												</Sequence>
+											</Selector>
+										</IfCondition>
+										<IfCondition failOnCondition="false" condition="$subscription.event == $enum:crime_hearingSubscription.unsubscribe">
+											<EraseFromArray array="$subscribers" condition="$__value == $subscriber.id" />
+										</IfCondition>
+									</Switch>
+								</ProcessMessage>
+							</While>
+							<While doFail="false" propagateChildFail="false" condition="true">
+								<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$subscriptionNotification" senderInfo="$mySubscription" inbox="&apos;crime_hearingSubscriptionNotification&apos;" condition="" answerVar="">
+									<Sequence>
+										<FindInArray array="$mySubscriptions" keyOut="$useless" condition="$__value == $mySubscription.id" />
+										<Switch>
+											<IfCondition failOnCondition="false" condition="$subscriptionNotification.type == $enum:crime_hearingSubscriptionNotificationType.notHeard | &#10;$subscriptionNotification.type == $enum:crime_hearingSubscriptionNotificationType.notReacting | &#10;$subscriptionNotification.type == $enum:crime_hearingSubscriptionNotificationType.diedOrLostConsciousness">
+												<Sequence>
+													<EraseFromArray array="$mySubscriptions" condition="$__value == $mySubscription.id" />
+													<Expression expressions="$subscription.event = $enum:crime_hearingSubscription.unsubscribe" />
+													<InstantSendMessageToNPC target="$mySubscription.id" variable="$subscription" />
+													<IfCondition failOnCondition="false" condition="#mySubscriptions == 0">
+														<CallDecorator_switch_handleHearing>
+															<Subtree canSkip="1">
+																<Sequence>
+																	<Expression expressions="$stimulus.kind = $hearingInfo.soundId &#10;$stimulus.position = $hearingInfo.position" />
+																	<IfElseCondition failOnCondition="false" condition="$stimulus.kind == $enum:sound.dog_distract" saveVersion="2">
+																		<Then canSkip="1">
+																			<Function_crime_handleStimulusSound_reactToDogDistract forced="true" initiator="$enum:switch_interruptInitiator.switch" pos="$stimulus.position" nodeLabel="79479932" />
+																		</Then>
+																		<Else canSkip="1">
+																			<Function_crime_handleStimulusSound_reactToPebble forced="true" initiator="$enum:switch_interruptInitiator.switch" reactingBecauseAlone="false" shouldReact="true" stimulus="$stimulus" nodeLabel="85085063" />
+																		</Else>
+																	</IfElseCondition>
+																</Sequence>
+															</Subtree>
+															<SubscribeToHearing canSkip="1">
+																<CallbackEventCatch_wuidArray>
+																	<SuppressFailure>
+																		<ErrorNode Message="&apos;Something went wrong!&apos;" />
+																	</SuppressFailure>
+																</CallbackEventCatch_wuidArray>
+															</SubscribeToHearing>
+															<UpdatePosition canSkip="1">
+																<CallbackEventCatch_empty>
+																	<Sequence>
+																		<SuppressFailure>
+																			<Sequence>
+																				<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;crime_reactor&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																					<LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																					<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																					<LinkDataFilter tag="&apos;crime_reactor&apos;" condition="$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.lookAround &amp; &#10;$__link_crime_reactor.information.label == &apos;motivation&apos; &amp; &#10;$__link_crime_reactor.reservation == false" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																				</GraphSearch>
+																				<CreateInformationWrapper Label="&apos;motivation&apos;" PerceivedWuid="$this.id" PositionType="positionVec3" PositionVec3="$hearingInfo.position" PositionWuid="" Information="$information" />
+																				<LinkDataExpression From="$__player" To="$this.id" Expresssion="$__link_crime_reactor.information = $information" />
+																			</Sequence>
+																		</SuppressFailure>
+																		<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="10603178" />
+																		<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="19202876" />
+																		<Expression expressions="$lookAroundUpdatePosMsg.hearingInfo = $hearingInfo" />
+																		<InstantSendMessageToNPC target="$this.id" variable="$lookAroundUpdatePosMsg" />
+																		<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																			<Sequence>
+																				<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.reacting" />
+																				<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																			</Sequence>
+																		</IfCondition>
+																	</Sequence>
+																</CallbackEventCatch_empty>
+															</UpdatePosition>
+															<Busy_interrupt canSkip="1">
+																<CallbackEventCatch_empty>
+																	<Sequence>
+																		<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="98427174" />
+																		<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="83029941" />
+																		<HasSeenPlayer NPC="$this.id" FullyAwareOnly="false" saveVersion="2">
+																			<Then canSkip="1">
+																				<CheckNervousnessInterval Soul="" Flag="alerted" saveVersion="2">
+																					<Then canSkip="1">
+																						<Sequence>
+																							<IsBandit Npc="$this.id" IsBandit="$isBandit" />
+																							<IfCondition failOnCondition="false" condition="~$isBandit">
+																								<Function_switch_handleStimulusDisturbance stimulus="$stimulus_disturbance" nodeLabel="43138044" />
+																							</IfCondition>
+																						</Sequence>
+																					</Then>
+																				</CheckNervousnessInterval>
+																			</Then>
+																		</HasSeenPlayer>
+																		<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																			<Sequence>
+																				<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.reacting" />
+																				<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																			</Sequence>
+																		</IfCondition>
+																	</Sequence>
+																</CallbackEventCatch_empty>
+															</Busy_interrupt>
+															<Busy_other canSkip="1">
+																<CallbackEventCatch_empty>
+																	<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																		<Sequence>
+																			<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.notReacting" />
+																			<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																		</Sequence>
+																	</IfCondition>
+																</CallbackEventCatch_empty>
+															</Busy_other>
+															<Reacting canSkip="1">
+																<CallbackEventCatch_empty>
+																	<Sequence>
+																		<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="53111097" />
+																		<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="36265736" />
+																		<Function_crime_addHearingSubscriptionHotEntity sound="$hearingInfo.soundId" nodeLabel="59588978" />
+																		<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																			<Sequence>
+																				<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.reacting" />
+																				<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																			</Sequence>
+																		</IfCondition>
+																	</Sequence>
+																</CallbackEventCatch_empty>
+															</Reacting>
+															<FedUp canSkip="1">
+																<CallbackEventCatch_empty>
+																	<Sequence>
+																		<Function_crime_addHearingSubscriptionReactorLink pos="$hearingInfo.position" sound="$hearingInfo.soundId" nodeLabel="94860983" />
+																		<Function_crime_addHearingSubscriptionNervousness soundType="$hearingInfo.soundId" nodeLabel="57882058" />
+																		<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+																			<Sequence>
+																				<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.fedUp" />
+																				<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+																			</Sequence>
+																		</IfCondition>
+																	</Sequence>
+																</CallbackEventCatch_empty>
+															</FedUp>
+														</CallDecorator_switch_handleHearing>
+													</IfCondition>
+												</Sequence>
+											</IfCondition>
+											<IfCondition failOnCondition="false" condition="$subscriptionNotification.type == $enum:crime_hearingSubscriptionNotificationType.reacting | &#10;$subscriptionNotification.type == $enum:crime_hearingSubscriptionNotificationType.fedUp">
+												<Sequence>
+													<Expression expressions="$subscription.event = $enum:crime_hearingSubscription.unsubscribe" />
+													<InstantMultiSendMessageToNPC targets="$mySubscriptions" successMode="Any" failureMode="Any" variable="$subscription" />
+													<ReinitVariable variable="$mySubscriptions" />
+												</Sequence>
+											</IfCondition>
+										</Switch>
+									</Sequence>
+								</ProcessMessage>
+							</While>
+						</Parallel>
+					</Child>
+					<OnSuccess canSkip="1">
+						<Success />
+					</OnSuccess>
+					<OnFail canSkip="1">
+						<Sequence>
+							<Sequence>
+								<Expression expressions="$subscriptionNotificationOut.type = $enum:crime_hearingSubscriptionNotificationType.diedOrLostConsciousness" />
+								<IfCondition failOnCondition="false" condition="#subscribers &gt; 0">
+									<InstantMultiSendMessageToNPC targets="$subscribers" successMode="Any" failureMode="Any" variable="$subscriptionNotificationOut" />
+								</IfCondition>
+							</Sequence>
+							<Sequence>
+								<Expression expressions="$subscription.event = $enum:crime_hearingSubscription.unsubscribe" />
+								<IfCondition failOnCondition="false" condition="#mySubscriptions &gt; 0">
+									<InstantMultiSendMessageToNPC targets="$mySubscriptions" successMode="Any" failureMode="Any" variable="$subscription" />
+								</IfCondition>
+								<ReinitVariable variable="$mySubscriptions" />
+							</Sequence>
+							<ClearInbox inbox="&apos;hearingInfo&apos;" type="" condition="" />
+							<ClearInbox inbox="&apos;crime_hearingSubscription&apos;" type="" condition="" />
+							<ClearInbox inbox="&apos;crime_hearingSubscriptionNotification&apos;" type="" condition="" />
+						</Sequence>
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="hearingHandled" comment="" />
+				<Variable name="hearingInfo" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="isBandit" comment="" />
+				<Variable name="lookAroundUpdatePosMsg" comment="" />
+				<Variable name="mySubscription" comment="" />
+				<Variable name="mySubscriptions" comment="" />
+				<Variable name="soundReactionType" comment="" />
+				<Variable name="stimulus" comment="" />
+				<Variable name="stimulus_disturbance" comment="" />
+				<Variable name="subscriber" comment="" />
+				<Variable name="subscriber_reading" comment="" />
+				<Variable name="subscribers" comment="" />
+				<Variable name="subscription" comment="" />
+				<Variable name="subscriptionNotification" comment="" />
+				<Variable name="subscriptionNotificationOut" comment="" />
+				<Variable name="subscription_reading" comment="" />
+				<Variable name="useless" comment="" />
+				<Variable name="consciousness" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="on death/unco destroy all" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Success>
+												</Then>
+												<Else>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<CallDecorator_switch_handleHearing hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Subtree>
+																		<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Init>
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<InstantReadMessage hasInputBreakpoint="0" comment="find subscribers" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</InstantReadMessage>
+																								<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<InstantReadMessage hasInputBreakpoint="0" comment="find if they already unsubscribed" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</InstantReadMessage>
+																									<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</PushToArray>
+																								</Selector>
+																							</Sequence>
+																						</LoopUntil>
+																					</SuppressFailure>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Sequence>
+																			</Init>
+																			<Subtree>
+																				<Function_switch_handleHearing hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_switch_handleHearing>
+																			</Subtree>
+																			<Cleanup>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																						<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</InstantMultiSendMessageToNPC>
+																					</Sequence>
+																				</IfCondition>
+																			</Cleanup>
+																		</SubtreeDecorator>
+																	</Subtree>
+																	<SubscribeToHearing>
+																		<CallbackEventCatch_wuidArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<CopyArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</CopyArray>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</InstantMultiSendMessageToNPC>
+																			</Sequence>
+																		</CallbackEventCatch_wuidArray>
+																	</SubscribeToHearing>
+																	<UpdatePosition>
+																		<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_addHearingSubscriptionReactorLink>
+																				<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_addHearingSubscriptionNervousness>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																						<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</InstantMultiSendMessageToNPC>
+																					</Sequence>
+																				</IfCondition>
+																				<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</LinkTagFilter>
+																							<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</WUIDFilter>
+																							<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</LinkDataFilter>
+																						</GraphSearch>
+																						<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</CreateInformationWrapper>
+																						<LinkDataExpression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</LinkDataExpression>
+																					</Sequence>
+																				</SuppressFailure>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</InstantSendMessageToNPC>
+																			</Sequence>
+																		</CallbackEventCatch_empty>
+																	</UpdatePosition>
+																	<Busy_interrupt>
+																		<CallbackEventCatch_empty hasInputBreakpoint="0" comment="treat as reacting" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_addHearingSubscriptionReactorLink>
+																				<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_addHearingSubscriptionNervousness>
+																				<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																					<OutputBreakpoints />
+																					<Then>
+																						<CheckNervousnessInterval hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																							<OutputBreakpoints />
+																							<Then>
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<IsBandit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</IsBandit>
+																									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<Function_switch_handleStimulusDisturbance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Function_switch_handleStimulusDisturbance>
+																									</IfCondition>
+																								</Sequence>
+																							</Then>
+																						</CheckNervousnessInterval>
+																					</Then>
+																				</HasSeenPlayer>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																						<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</InstantMultiSendMessageToNPC>
+																					</Sequence>
+																				</IfCondition>
+																			</Sequence>
+																		</CallbackEventCatch_empty>
+																	</Busy_interrupt>
+																	<Busy_other>
+																		<CallbackEventCatch_wuidArray hasInputBreakpoint="0" comment="treat as notReacting" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Success>
+																		</CallbackEventCatch_wuidArray>
+																	</Busy_other>
+																	<Reacting>
+																		<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_addHearingSubscriptionReactorLink>
+																				<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_addHearingSubscriptionNervousness>
+																				<Function_crime_addHearingSubscriptionHotEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_addHearingSubscriptionHotEntity>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																						<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</InstantMultiSendMessageToNPC>
+																					</Sequence>
+																				</IfCondition>
+																			</Sequence>
+																		</CallbackEventCatch_empty>
+																	</Reacting>
+																	<FedUp>
+																		<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_addHearingSubscriptionReactorLink>
+																				<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_addHearingSubscriptionNervousness>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																						<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</InstantMultiSendMessageToNPC>
+																					</Sequence>
+																				</IfCondition>
+																			</Sequence>
+																		</CallbackEventCatch_empty>
+																	</FedUp>
+																</CallDecorator_switch_handleHearing>
+															</Then>
+															<Else>
+																<Function_switch_handleHearing hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_switch_handleHearing>
+															</Else>
+														</IfElseCondition>
+													</IfCondition>
+												</Else>
+											</EntityContextCheck>
+										</ProcessMessage>
+									</DeadUnconsciousGate>
+								</While>
+								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ProcessMessage hasInputBreakpoint="0" comment="TODO: when i have bth subscribe and unsubscribe messages, skip" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<InstantReadMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</InstantReadMessage>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</PushToArray>
+														<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</LinkTagFilter>
+																	<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</LinkDataFilter>
+																	<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</WUIDFilter>
+																</GraphSearch>
+																<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																		<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</InstantMultiSendMessageToNPC>
+																	</Sequence>
+																</SuppressFailure>
+															</Sequence>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_crime_checkFedUpWithSoundCooldown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_checkFedUpWithSoundCooldown>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</InstantMultiSendMessageToNPC>
+																		</Sequence>
+																	</SuppressFailure>
+																</IfCondition>
+															</Sequence>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<InstantReadMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</InstantReadMessage>
+																<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Fail>
+																	</Then>
+																	<Else>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<CallDecorator_switch_handleHearing hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Subtree>
+																					<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Init>
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<InstantReadMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</InstantReadMessage>
+																											<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</PushToArray>
+																										</Sequence>
+																									</LoopUntil>
+																								</SuppressFailure>
+																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Expression>
+																							</Sequence>
+																						</Init>
+																						<Subtree>
+																							<Function_switch_handleHearing hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_switch_handleHearing>
+																						</Subtree>
+																						<Cleanup>
+																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																									<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</InstantMultiSendMessageToNPC>
+																								</Sequence>
+																							</IfCondition>
+																						</Cleanup>
+																					</SubtreeDecorator>
+																				</Subtree>
+																				<SubscribeToHearing>
+																					<CallbackEventCatch_wuidArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<CopyArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</CopyArray>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																							<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</InstantMultiSendMessageToNPC>
+																						</Sequence>
+																					</CallbackEventCatch_wuidArray>
+																				</SubscribeToHearing>
+																				<UpdatePosition>
+																					<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																							<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_addHearingSubscriptionReactorLink>
+																							<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_addHearingSubscriptionNervousness>
+																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																									<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</InstantMultiSendMessageToNPC>
+																								</Sequence>
+																							</IfCondition>
+																							<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</LinkTagFilter>
+																										<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</WUIDFilter>
+																										<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</LinkDataFilter>
+																									</GraphSearch>
+																									<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</CreateInformationWrapper>
+																									<LinkDataExpression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</LinkDataExpression>
+																								</Sequence>
+																							</SuppressFailure>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																							<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</InstantSendMessageToNPC>
+																						</Sequence>
+																					</CallbackEventCatch_empty>
+																				</UpdatePosition>
+																				<Busy_interrupt>
+																					<CallbackEventCatch_empty hasInputBreakpoint="0" comment="treat as reacting" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																							<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_addHearingSubscriptionReactorLink>
+																							<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_addHearingSubscriptionNervousness>
+																							<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																								<OutputBreakpoints />
+																								<Then>
+																									<CheckNervousnessInterval hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																										<OutputBreakpoints />
+																										<Then>
+																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<IsBandit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</IsBandit>
+																												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Function_switch_handleStimulusDisturbance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</Function_switch_handleStimulusDisturbance>
+																												</IfCondition>
+																											</Sequence>
+																										</Then>
+																									</CheckNervousnessInterval>
+																								</Then>
+																							</HasSeenPlayer>
+																							<Function_crime_addHearingSubscriptionHotEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_addHearingSubscriptionHotEntity>
+																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																									<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</InstantMultiSendMessageToNPC>
+																								</Sequence>
+																							</IfCondition>
+																						</Sequence>
+																					</CallbackEventCatch_empty>
+																				</Busy_interrupt>
+																				<Busy_other>
+																					<CallbackEventCatch_wuidArray hasInputBreakpoint="0" comment="treat as notReacting" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Success>
+																					</CallbackEventCatch_wuidArray>
+																				</Busy_other>
+																				<Reacting>
+																					<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																							<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_addHearingSubscriptionReactorLink>
+																							<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_addHearingSubscriptionNervousness>
+																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																									<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</InstantMultiSendMessageToNPC>
+																								</Sequence>
+																							</IfCondition>
+																						</Sequence>
+																					</CallbackEventCatch_empty>
+																				</Reacting>
+																				<FedUp>
+																					<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																							<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_addHearingSubscriptionReactorLink>
+																							<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_addHearingSubscriptionNervousness>
+																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																									<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</InstantMultiSendMessageToNPC>
+																								</Sequence>
+																							</IfCondition>
+																						</Sequence>
+																					</CallbackEventCatch_empty>
+																				</FedUp>
+																			</CallDecorator_switch_handleHearing>
+																		</IfCondition>
+																	</Else>
+																</EntityContextCheck>
+															</Sequence>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																	<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</InstantMultiSendMessageToNPC>
+																</Sequence>
+															</IfCondition>
+														</Selector>
+													</Sequence>
+												</Selector>
+											</IfCondition>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</EraseFromArray>
+											</IfCondition>
+										</Switch>
+									</ProcessMessage>
+								</While>
+								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<FindInArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</FindInArray>
+											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</EraseFromArray>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</InstantSendMessageToNPC>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<CallDecorator_switch_handleHearing hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Subtree>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																		<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Function_crime_handleStimulusSound_reactToDogDistract hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_handleStimulusSound_reactToDogDistract>
+																			</Then>
+																			<Else>
+																				<Function_crime_handleStimulusSound_reactToPebble hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_handleStimulusSound_reactToPebble>
+																			</Else>
+																		</IfElseCondition>
+																	</Sequence>
+																</Subtree>
+																<SubscribeToHearing>
+																	<CallbackEventCatch_wuidArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</ErrorNode>
+																		</SuppressFailure>
+																	</CallbackEventCatch_wuidArray>
+																</SubscribeToHearing>
+																<UpdatePosition>
+																	<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</LinkTagFilter>
+																						<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</WUIDFilter>
+																						<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</LinkDataFilter>
+																					</GraphSearch>
+																					<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</CreateInformationWrapper>
+																					<LinkDataExpression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</LinkDataExpression>
+																				</Sequence>
+																			</SuppressFailure>
+																			<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_addHearingSubscriptionReactorLink>
+																			<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_addHearingSubscriptionNervousness>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</InstantSendMessageToNPC>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</InstantMultiSendMessageToNPC>
+																				</Sequence>
+																			</IfCondition>
+																		</Sequence>
+																	</CallbackEventCatch_empty>
+																</UpdatePosition>
+																<Busy_interrupt>
+																	<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_addHearingSubscriptionReactorLink>
+																			<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_addHearingSubscriptionNervousness>
+																			<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<CheckNervousnessInterval hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Then>
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<IsBandit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</IsBandit>
+																								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Function_switch_handleStimulusDisturbance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Function_switch_handleStimulusDisturbance>
+																								</IfCondition>
+																							</Sequence>
+																						</Then>
+																					</CheckNervousnessInterval>
+																				</Then>
+																			</HasSeenPlayer>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</InstantMultiSendMessageToNPC>
+																				</Sequence>
+																			</IfCondition>
+																		</Sequence>
+																	</CallbackEventCatch_empty>
+																</Busy_interrupt>
+																<Busy_other>
+																	<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</InstantMultiSendMessageToNPC>
+																			</Sequence>
+																		</IfCondition>
+																	</CallbackEventCatch_empty>
+																</Busy_other>
+																<Reacting>
+																	<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_addHearingSubscriptionReactorLink>
+																			<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_addHearingSubscriptionNervousness>
+																			<Function_crime_addHearingSubscriptionHotEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_addHearingSubscriptionHotEntity>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</InstantMultiSendMessageToNPC>
+																				</Sequence>
+																			</IfCondition>
+																		</Sequence>
+																	</CallbackEventCatch_empty>
+																</Reacting>
+																<FedUp>
+																	<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Function_crime_addHearingSubscriptionReactorLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_addHearingSubscriptionReactorLink>
+																			<Function_crime_addHearingSubscriptionNervousness hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_crime_addHearingSubscriptionNervousness>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</InstantMultiSendMessageToNPC>
+																				</Sequence>
+																			</IfCondition>
+																		</Sequence>
+																	</CallbackEventCatch_empty>
+																</FedUp>
+															</CallDecorator_switch_handleHearing>
+														</IfCondition>
+													</Sequence>
+												</IfCondition>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="someone already reacting, i dont care anymore" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</InstantMultiSendMessageToNPC>
+														<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ReinitVariable>
+													</Sequence>
+												</IfCondition>
+											</Switch>
+										</Sequence>
+									</ProcessMessage>
+								</While>
+							</Parallel>
+						</Child>
+						<OnSuccess>
+							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Success>
+						</OnSuccess>
+						<OnFail>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</InstantMultiSendMessageToNPC>
+									</IfCondition>
+								</Sequence>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<InstantMultiSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</InstantMultiSendMessageToNPC>
+									</IfCondition>
+									<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</ReinitVariable>
+								</Sequence>
+								<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</ClearInbox>
+								<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</ClearInbox>
+								<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</ClearInbox>
+							</Sequence>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

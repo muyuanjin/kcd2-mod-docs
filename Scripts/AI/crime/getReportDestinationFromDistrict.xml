@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="crime_getReportDestinationFromDistrict" is_function="1">
+    <Variables>
+      <Variable name="availableGuards" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="guard" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="guardAuthorityKind" type="enum:crime_authorityKind" values="" isPersistent="0" form="single" />
+      <Variable name="guardScore" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="lowestScore" type="_float" values="100000" isPersistent="0" form="single" />
+      <Variable name="lowestScoreGuard" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="maxRange" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="paramScore" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="reporterToGuardDistance" type="_float" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="destination" type="_wuid" values="" isPersistent="0" form="single" requirementType="Out" />
+      <Variable name="distanceConditionType" type="enum:crime_reportDestinationDistanceConditionType" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="district" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="scoreMultiplier" type="_float" values="1" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <ErrorNode Message="&apos;Function is obsolete. Use its code successor.&apos;" />
+      </Behavior>
+    </Root>
+    <ForestContainer>
+        <Sequence>
+          <SuppressFailure>
+            <Sequence>
+              <GraphSearch Origin="$district" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                <LinkTagFilter tag="&apos;crime_authority&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                <SoulIsAliveFilter Source="Child" prune="false" negprune="unknown" Parent="" Child="" />
+                <NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+                  <Child0 canSkip="1">
+                    <SoulIsUnconsciousFilter Source="Child" prune="false" negprune="unknown" Parent="" Child="" />
+                  </Child0>
+                </NegationOp>
+                <RangeFilter min="0.000000" max="$data:script_param[&apos;crime_guard_ignoreScoreThreshold&apos;].value" point="$this.id" excludeRef="true" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                <Nodalyzer Quantifiers="ForAll" Parent="" Child="$availableGuards" saveVersion="2">
+                  <Child0 canSkip="1">
+                    <RangeSorter point="$this.id" SortOrder="Ascending" Source="Child" />
+                  </Child0>
+                </Nodalyzer>
+              </GraphSearch>
+              <Expression expressions="$destination = $availableGuards[0]" />
+            </Sequence>
+          </SuppressFailure>
+          <IfCondition failOnCondition="false" condition="$destination == $__null">
+            <Sequence>
+              <Switch>
+                <IfCondition failOnCondition="false" condition="$distanceConditionType == $enum:crime_reportDestinationDistanceConditionType.close">
+                  <Expression expressions="$maxRange = $data:script_param[&apos;crime_maximumReportDistance&apos;].value" />
+                </IfCondition>
+                <IfCondition failOnCondition="false" condition="$distanceConditionType == $enum:crime_reportDestinationDistanceConditionType.far">
+                  <Expression expressions="$maxRange = $data:script_param[&apos;crime_maximumReportDistance_important&apos;].value" />
+                </IfCondition>
+                <DefaultBranch>
+                  <Expression expressions="$maxRange = 10000" />
+                </DefaultBranch>
+              </Switch>
+              <SuppressFailure>
+                <GraphSearch Origin="$district" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                  <LinkTagFilter tag="&apos;crime_authority&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                  <NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+                    <Child0 canSkip="1">
+                      <SoulIsUnconsciousFilter Source="Child" prune="false" negprune="unknown" Parent="" Child="" />
+                    </Child0>
+                  </NegationOp>
+                  <SoulIsAliveFilter Source="Child" prune="false" negprune="unknown" Parent="" Child="" />
+                  <Nodalyzer Quantifiers="ForAll" Parent="" Child="$availableGuards" saveVersion="2" />
+                  <RangeFilter min="0.000000" max="$maxRange" point="$this.id" excludeRef="true" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                </GraphSearch>
+              </SuppressFailure>
+              <Sequence>
+                <Expression expressions="$lowestScore = 100000 &#10;$lowestScoreGuard = $__null" />
+                <ForEach startIndex="0" step="1" array="$availableGuards" iterator="" value="$guard" break="">
+                  <EntityContextCheck context="crime_isGameKeeper" target="$guard" saveVersion="2">
+                    <Else canSkip="1">
+                      <CheckRelationshipInterval_SoulToSoul TargetSoul="$guard" Soul="$this.id" Flag="friend" saveVersion="2">
+                        <Then canSkip="1">
+                          <Sequence>
+                          <GetAuthorityKindByContext Target="$guard" AuthorityKind="$guardAuthorityKind" />
+                            <Switch>
+                              <IfCondition failOnCondition="false" condition="$guardAuthorityKind == $enum:crime_authorityKind.onDuty">
+                                <Expression expressions="$paramScore = $data:script_param[&apos;crime_guard_score_onDuty&apos;].value" />
+                              </IfCondition>
+                              <IfCondition failOnCondition="false" condition="$guardAuthorityKind == $enum:crime_authorityKind.stationaryDuty">
+                                <Expression expressions="$paramScore = $data:script_param[&apos;crime_guard_score_stationaryDuty&apos;].value" />
+                              </IfCondition>
+                              <IfCondition failOnCondition="false" condition="$guardAuthorityKind == $enum:crime_authorityKind.activeDuty">
+                                <Expression expressions="$paramScore = $data:script_param[&apos;crime_guard_score_activeDuty&apos;].value" />
+                              </IfCondition>
+                              <IfCondition failOnCondition="false" condition="$guardAuthorityKind == $enum:crime_authorityKind.offDuty">
+                                <Expression expressions="$paramScore = $data:script_param[&apos;crime_guard_score_offDuty&apos;].value" />
+                              </IfCondition>
+                              <IfCondition failOnCondition="false" condition="$guardAuthorityKind == $enum:crime_authorityKind.offDuty_sleeping">
+                                <Expression expressions="$paramScore = $data:script_param[&apos;crime_guard_score_offDuty_sleeping&apos;].value" />
+                              </IfCondition>
+                              <DefaultBranch>
+                                <ErrorNode Message="&apos;[$this.id;] {crime_getReportDestinationDistrict} unhandled $enum:crime_authorityKind: \&apos;$guardAuthorityKind;\&apos; &apos;" />
+                              </DefaultBranch>
+                            </Switch>
+                            <Sequence>
+                              <MeasureDistance position1="$this.id" position2="$guard" mode="ThreeDimensions" result="$reporterToGuardDistance" />
+                              <Expression expressions="$guardScore = $reporterToGuardDistance + $paramScore * $scoreMultiplier" />
+                              <IfCondition failOnCondition="false" condition="$guardScore &lt; $lowestScore">
+                                <Expression expressions="$lowestScore = $guardScore &#10;$lowestScoreGuard = $guard" />
+                              </IfCondition>
+                            </Sequence>
+                          </Sequence>
+                        </Then>
+                      </CheckRelationshipInterval_SoulToSoul>
+                    </Else>
+                  </EntityContextCheck>
+                </ForEach>
+                <Expression expressions="$destination = $lowestScoreGuard" />
+              </Sequence>
+            </Sequence>
+          </IfCondition>
+        </Sequence>
+    </ForestContainer>
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="availableGuards" comment="" />
+        <Variable name="guard" comment="" />
+        <Variable name="guardAuthorityKind" comment="" />
+        <Variable name="guardScore" comment="" />
+        <Variable name="lowestScore" comment="" />
+        <Variable name="lowestScoreGuard" comment="" />
+        <Variable name="maxRange" comment="" />
+        <Variable name="paramScore" comment="" />
+        <Variable name="reporterToGuardDistance" comment="" />
+        <Variable name="destination" comment="" />
+        <Variable name="distanceConditionType" comment="" />
+        <Variable name="district" comment="" />
+        <Variable name="scoreMultiplier" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root editorPosX="160" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+          </ErrorNode>
+        </Behavior>
+      </Root>
+      <Forest>
+        <Sequence editorPosX="830" editorPosY="510" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </LinkTagFilter>
+                  <SoulIsAliveFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </SoulIsAliveFilter>
+                  <NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Child0>
+                      <SoulIsUnconsciousFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </SoulIsUnconsciousFilter>
+                    </Child0>
+                  </NegationOp>
+                  <RangeFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </RangeFilter>
+                  <Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Child0>
+                      <RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </RangeSorter>
+                    </Child0>
+                  </Nodalyzer>
+                </GraphSearch>
+                <Expression hasInputBreakpoint="0" comment="return closest" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </Sequence>
+            </SuppressFailure>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </IfCondition>
+                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </IfCondition>
+                  <DefaultBranch>
+                    <Expression hasInputBreakpoint="0" comment="unlimited=10km, should be enough" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </DefaultBranch>
+                </Switch>
+                <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </LinkTagFilter>
+                    <NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Child0>
+                        <SoulIsUnconsciousFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </SoulIsUnconsciousFilter>
+                      </Child0>
+                    </NegationOp>
+                    <SoulIsAliveFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </SoulIsAliveFilter>
+                    <Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                    </Nodalyzer>
+                    <RangeFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </RangeFilter>
+                  </GraphSearch>
+                </SuppressFailure>
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Expression>
+                  <ForEach hasInputBreakpoint="0" comment="Find a guard with lowest score, Score = Distance + Type*Multiplier" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Else>
+                        <CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                          <OutputBreakpoints />
+                          <Then>
+                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            <GetAuthorityKindByContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                            </GetAuthorityKindByContext>
+                              <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                </IfCondition>
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                </IfCondition>
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                </IfCondition>
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                </IfCondition>
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                </IfCondition>
+                                <DefaultBranch>
+                                  <ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </ErrorNode>
+                                </DefaultBranch>
+                              </Switch>
+                              <Sequence hasInputBreakpoint="0" comment="Calculate score for given guard and check if it&apos;s the lowest" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </MeasureDistance>
+                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </Expression>
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                </IfCondition>
+                              </Sequence>
+                            </Sequence>
+                          </Then>
+                        </CheckRelationshipInterval_SoulToSoul>
+                      </Else>
+                    </EntityContextCheck>
+                  </ForEach>
+                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Expression>
+                </Sequence>
+              </Sequence>
+            </IfCondition>
+          </Sequence>
+      </Forest>
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

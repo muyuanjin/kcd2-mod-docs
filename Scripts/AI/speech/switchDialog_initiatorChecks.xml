@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="speech_switchDialog_initiatorChecks" is_function="1">
+		<Variables>
+			<Variable name="inArea" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="inCrimeInterrupt" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="nearPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="perception" type="perceptionInfo" values="" isPersistent="0" form="single" />
+			<Variable name="sawPlayer" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="initiatorChecksPassed" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="switchDialog" type="speech:switchDialog" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Parallel successMode="Any" failureMode="Any">
+					<IfElseCondition failOnCondition="false" condition="$switchDialog.percievingPlayer" saveVersion="2">
+						<Then canSkip="1">
+							<HasSeenPlayer NPC="$this.id" FullyAwareOnly="false" saveVersion="2">
+								<Then canSkip="1">
+									<Sequence>
+										<Expression expressions="$sawPlayer = true" />
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</Then>
+								<Else canSkip="1">
+									<Loop count="-1">
+										<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$perception" senderInfo="" inbox="&apos;perceptionInfo&apos;" condition="" answerVar="">
+											<IfCondition failOnCondition="false" condition="$perception.perceptible == $__player">
+												<IfCondition failOnCondition="false" condition="$perception.threshold == 1">
+													<IfCondition failOnCondition="false" condition="$perception.isInsideRecognitionBorder">
+														<Expression expressions="$sawPlayer = true" />
+													</IfCondition>
+												</IfCondition>
+											</IfCondition>
+										</ProcessMessage>
+									</Loop>
+								</Else>
+							</HasSeenPlayer>
+						</Then>
+						<Else canSkip="1">
+							<Sequence>
+								<Expression expressions="$sawPlayer = true" />
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Sequence>
+						</Else>
+					</IfElseCondition>
+					<IfElseCondition failOnCondition="false" condition="$switchDialog.playerDistance &gt; 0" saveVersion="2">
+						<Then canSkip="1">
+							<Loop count="-1">
+								<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="$switchDialog.playerDistance" High="$switchDialog.playerDistance" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+									<Sequence>
+										<Expression expressions="$nearPlayer = true" />
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</DistanceGate>
+							</Loop>
+						</Then>
+						<Else canSkip="1">
+							<Sequence>
+								<Expression expressions="$nearPlayer = true" />
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Sequence>
+						</Else>
+					</IfElseCondition>
+					<IfElseCondition failOnCondition="false" condition="$switchDialog.playerInArea ~= $__null  &#10;&amp; &#10;$switchDialog.playerInArea ~= $__land" saveVersion="2">
+						<Then canSkip="1">
+							<Loop count="-1">
+								<AreaPresenceGate aiObjects="$__player" area="$switchDialog.playerInArea" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+									<Sequence>
+										<Expression expressions="$inArea = true" />
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</AreaPresenceGate>
+							</Loop>
+						</Then>
+						<Else canSkip="1">
+							<Sequence>
+								<Expression expressions="$inArea = true" />
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Sequence>
+						</Else>
+					</IfElseCondition>
+					<Loop count="-1">
+						<Sequence>
+							<EntityContextBarrier context="crime_interrupt" target="" Negation="false" RunLogic="Halt">
+								<EntityContextCheck context="combat_fightInQuestSkirmish" target="" saveVersion="2">
+									<Then canSkip="1">
+										<EntityContextBarrier context="combat_fightInQuestSkirmish" target="" Negation="true" RunLogic="KeepRunning">
+											<Success />
+										</EntityContextBarrier>
+									</Then>
+									<Else canSkip="1">
+										<Sequence>
+											<Expression expressions="$inCrimeInterrupt = true" />
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Sequence>
+									</Else>
+								</EntityContextCheck>
+							</EntityContextBarrier>
+							<Expression expressions="$inCrimeInterrupt = false" />
+						</Sequence>
+					</Loop>
+					<ContinuousSwitch>
+						<IfCondition failOnCondition="false" condition="$inArea &amp; $nearPlayer &amp; $sawPlayer &amp; !$inCrimeInterrupt">
+							<Sequence>
+								<Expression expressions="$initiatorChecksPassed = true" />
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Sequence>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="!$inArea | !$nearPlayer | !$sawPlayer | $inCrimeInterrupt">
+							<Sequence>
+								<Expression expressions="$initiatorChecksPassed = false" />
+								<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+							</Sequence>
+						</IfCondition>
+					</ContinuousSwitch>
+				</Parallel>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Parallel successMode="Any" failureMode="Any">
+				<Success />
+				<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="$switchDialog.playerDistance" High="$switchDialog.playerDistance" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+					<AreaPresenceGate aiObjects="$__player" area="$switchDialog.playerInArea" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+						<IfElseCondition failOnCondition="false" condition="$switchDialog.context ~= &apos;&apos; &amp; $switchDialog.context ~= $__null" saveVersion="2">
+							<Then canSkip="1">
+								<EntityContextBarrier context="$switchDialog.context" target="$this.id" Negation="false" RunLogic="Halt">
+									<Sequence>
+										<Expression expressions="$runDialogue = true" />
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</EntityContextBarrier>
+							</Then>
+							<Else canSkip="1">
+								<Sequence>
+									<Expression expressions="$runDialogue = true" />
+									<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+								</Sequence>
+							</Else>
+						</IfElseCondition>
+					</AreaPresenceGate>
+				</DistanceGate>
+			</Parallel>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="inArea" comment="" />
+				<Variable name="inCrimeInterrupt" comment="" />
+				<Variable name="nearPlayer" comment="" />
+				<Variable name="perception" comment="" />
+				<Variable name="sawPlayer" comment="" />
+				<Variable name="initiatorChecksPassed" comment="" />
+				<Variable name="switchDialog" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="20" editorPosY="40" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</Then>
+									<Else>
+										<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</IfCondition>
+													</IfCondition>
+												</IfCondition>
+											</ProcessMessage>
+										</Loop>
+									</Else>
+								</HasSeenPlayer>
+							</Then>
+							<Else>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Sequence>
+							</Else>
+						</IfElseCondition>
+						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</DistanceGate>
+								</Loop>
+							</Then>
+							<Else>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Sequence>
+							</Else>
+						</IfElseCondition>
+						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</AreaPresenceGate>
+								</Loop>
+							</Then>
+							<Else>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Sequence>
+							</Else>
+						</IfElseCondition>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Success>
+											</EntityContextBarrier>
+										</Then>
+										<Else>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Sequence>
+										</Else>
+									</EntityContextCheck>
+								</EntityContextBarrier>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Sequence>
+						</Loop>
+						<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Sequence>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Wait>
+								</Sequence>
+							</IfCondition>
+						</ContinuousSwitch>
+					</Parallel>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Parallel editorPosX="2750" editorPosY="-70" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Success hasInputBreakpoint="0" comment="percepce stejna" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Success>
+					<DistanceGate hasInputBreakpoint="0" comment="if 0, nastav ze vzdalenost &lt; 9999999" comment_box="Alternative_hacky_approach" comment_box_color="216,38,38,255" breakpointFlags="0">
+						<OutputBreakpoints />
+						<AreaPresenceGate hasInputBreakpoint="0" comment="if null vymen za land" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Then>
+									<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</EntityContextBarrier>
+								</Then>
+								<Else>
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</Sequence>
+								</Else>
+							</IfElseCondition>
+						</AreaPresenceGate>
+					</DistanceGate>
+				</Parallel>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

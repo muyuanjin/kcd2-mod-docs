@@ -1,0 +1,117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Database xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="brambora">
+	<Skald>
+		<Module Name="hudba">
+			<Ports>
+				<Port Name="quest_active" Direction="In" Type="bool">
+					<DesignName StringName="hudba_quest_active_6n52" Text="Quest active" />
+				</Port>
+				<Port Name="hrac_zacal_vyjednavat" Direction="In" Type="trigger">
+					<DesignName StringName="hudba_hrac_zacal_vyjednav_2ANg" Text="Hráč začal vyjednávat" />
+				</Port>
+				<Port Name="pavlena_podrizla_oldricha" Direction="In" Type="trigger">
+					<DesignName StringName="hudba_oldrich_nahnevanej__mufv" Text="Pavlena podřizla Oldřicha" />
+				</Port>
+				<Port Name="ukoncit_questovu_hudbu__s_countdown" Direction="In" Type="trigger">
+					<DesignName StringName="hudba_ukoncit_questovu_hu_EKDI" Text="Ukončit questovu hudbu - s countdown" />
+				</Port>
+				<Port Name="ukoncit_questovu_hudbu__insta" Direction="In" Type="trigger">
+					<DesignName StringName="hudba_zacina_combat_KPUi" Text="Ukončit questovu hudbu - insta" />
+				</Port>
+			</Ports>
+			<Definitions>
+				<Definition File="hudba/musicstates.xml" />
+			</Definitions>
+			<Nodes>
+				<Function Name="and11" PositionY="80" PositionX="30" MethodName="math::boolean::And" DeclaringType="math::boolean">
+					<Edge From="musicInCave.None" To="B" />
+					<Edge From="quest_active" To="A">
+						<Vertex>vertex6</Vertex>
+					</Edge>
+				</Function>
+				<Function Name="and15" PositionY="-140" PositionX="540" MethodName="math::boolean::And" DeclaringType="math::boolean">
+					<Edge From="quest_active" To="B">
+						<Vertex>vertex6</Vertex>
+					</Edge>
+					<Edge From="playerNearCave.True" To="A" />
+				</Function>
+				<AreaTrigger Name="areatrigger10" PositionY="80" PositionX="300">
+					<Asset Name="Souls" Alias="player" />
+					<Asset Name="Areas" Alias="beforeCaveArea" />
+					<Edge From="and11.bool" To="IsActive" />
+				</AreaTrigger>
+				<constants Name="constants" PositionY="820" PositionX="-1320" Namespace="korenarkazachrana" />
+				<DistanceTrigger Name="distancetrigger12" PositionY="-390" PositionX="-850">
+					<Asset Name="Origin" Alias="dialogWithPavlenaInCave" />
+					<Asset Name="Target" Alias="player" />
+					<Constant Name="Operator" Value="LessEquals" />
+					<Edge From="quest_active" To="IsActive" />
+					<Edge From="constants.vzdalensot_pro_hrani_hudby_v_okoli_jeskyne" To="Distance" />
+				</DistanceTrigger>
+				<If Name="if9" PositionY="640" PositionX="-1150">
+					<Edge From="ukoncit_questovu_hudbu__s_countdown" To="Exec" />
+					<Edge From="pavlena_podrizla_oldricha" To="Exec" />
+					<Edge From="musicStopCountdown.Stopped" To="Condition">
+						<Vertex>vertex4</Vertex>
+						<Vertex>vertex5</Vertex>
+					</Edge>
+				</If>
+				<State Name="musicInCave" PositionY="230" PositionX="-440" TypeT="MusicInCave">
+					<Edge From="hrac_zacal_vyjednavat" To="SetNegotiation" />
+					<Edge From="pavlena_podrizla_oldricha" To="SetPlavlenaKillsOldrich" />
+					<Edge From="ukoncit_questovu_hudbu__insta" To="SetFinished" />
+					<Edge From="musicStopCountdown.OnFinished" To="SetFinished" />
+					<Edge From="areatrigger10.OnAllEnter" To="SetPlayerCloseToCave">
+						<Vertex>vertex8</Vertex>
+						<Vertex>vertex9</Vertex>
+					</Edge>
+				</State>
+				<musicstates Name="musicstates" PositionY="500" PositionX="830">
+					<Edge From="switch6.Value1" To="tension_escalating_0" />
+					<Edge From="switch6_1.Value1" To="tension_escalating_1" />
+					<Edge From="musicInCave.PlavlenaKillsOldrich" To="tension_escalating_2" />
+					<Edge From="and15.bool" To="Awake" />
+				</musicstates>
+				<Timer Name="musicStopCountdown" PositionY="640" PositionX="-900">
+					<Constant Name="TimeType" Value="GameTime" />
+					<Edge From="constants.countdown_pro_ukonceni_questove_hudby" To="Duration" />
+					<Edge From="if9.True" To="SetRunning" />
+				</Timer>
+				<State Name="playerNearCave" PositionY="-510" PositionX="-360" TypeT="Tribool">
+					<Edge From="distancetrigger12.OnMatch" To="SetTrue" />
+					<Edge From="distancetrigger12.OnUnmatch" To="SetFalse" />
+				</State>
+				<Switch Name="switch6" PositionY="670" PositionX="180" TypeT="MusicInCave" ValueTypes="bool" SwitchValues="Negotiation PlavlenaKillsOldrich PlayerCloseToCave">
+					<Constant Name="NegotiationValue1" Value="true" />
+					<Constant Name="PlavlenaKillsOldrichValue1" Value="true" />
+					<Constant Name="PlayerCloseToCaveValue1" Value="true" />
+					<Constant Name="DefaultValue1" Value="false" />
+					<Edge From="musicInCave.State" To="Switch" />
+				</Switch>
+				<Switch Name="switch6_1" PositionY="920" PositionX="180" TypeT="MusicInCave" ValueTypes="bool" SwitchValues="Negotiation PlavlenaKillsOldrich">
+					<Constant Name="NegotiationValue1" Value="true" />
+					<Constant Name="PlavlenaKillsOldrichValue1" Value="true" />
+					<Constant Name="DefaultValue1" Value="false" />
+					<Edge From="musicInCave.State" To="Switch" />
+				</Switch>
+			</Nodes>
+			<EdgeVertices>
+				<EdgeVertex Name="vertex4" PositionY="620" PositionX="-670" />
+				<EdgeVertex Name="vertex5" PositionY="620" PositionX="-1100" />
+				<EdgeVertex Name="vertex6" PositionY="-17" PositionX="-24" />
+				<EdgeVertex Name="vertex8" PositionY="47" PositionX="535" />
+				<EdgeVertex Name="vertex9" PositionY="52" PositionX="-441" />
+			</EdgeVertices>
+			<Types>
+				<Type TypeName="MusicInCave">
+					<StateTypeEnumeration Name="None" ObjectiveValueType="None" />
+					<StateTypeEnumeration Name="PlayerCloseToCave" ObjectiveValueType="None" />
+					<StateTypeEnumeration Name="Negotiation" ObjectiveValueType="None" />
+					<StateTypeEnumeration Name="PlavlenaKillsOldrich" ObjectiveValueType="None" />
+					<StateTypeEnumeration Name="Finished" ObjectiveValueType="None" />
+				</Type>
+			</Types>
+			<Text StringName="hudba_9Xj2" Text="Hudba" />
+		</Module>
+	</Skald>
+</Database>

@@ -1,0 +1,612 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="onUpdate" is_function="0">
+		<Variables>
+			<Variable name="bowl" type="kettle:bowlFill" values="" isPersistent="0" form="single" />
+			<Variable name="bowlIndex" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="bowlMinTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="bowl_list" type="kettle:bowlFill" values="" isPersistent="1" form="array" />
+			<Variable name="buffApplied" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="buffBreak" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="buffChangeTimestamp" type="kettle:buffChangeTimestamp" values="" isPersistent="0" form="single" />
+			<Variable name="buffChangeTimestamp_list" type="kettle:buffChangeTimestamp" values="" isPersistent="1" form="array" />
+			<Variable name="buffEraseTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="buffSearchEnabled" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="buffUserIndex" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="buff_user" type="kettle:buffUser" values="" isPersistent="0" form="single" />
+			<Variable name="buff_userList" type="kettle:buffUser" values="" isPersistent="1" form="array" />
+			<Variable name="crimeWaitTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="crimeWaitTimeString" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="init_sequenceTriggers" type="_wuid" values="" isPersistent="0" form="associative" />
+			<Variable name="isWineBarrel" type="_bool" values="true" isPersistent="0" form="single" />
+			<Variable name="kettleOwner" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="kettleType" type="enum:kettleType" values="" isPersistent="0" form="single" />
+			<Variable name="persistentStorage" type="kettle:persistentStorage" values="" isPersistent="1" form="single" />
+			<Variable name="signal_onBowlFilled" type="kettle:signal:onBowlFilled" values="" isPersistent="0" form="single" />
+			<Variable name="signal_onBuffAdd" type="kettle:signal:onBuffAdd" values="" isPersistent="0" form="single" />
+			<Variable name="signal_onBuffCrimeNotice" type="kettle:signal:onBuffCrimeNotice" values="" isPersistent="0" form="single" />
+			<Variable name="signal_onCooking" type="kettle:signal:onCooking" values="" isPersistent="0" form="single" />
+			<Variable name="signal_onInteraction" type="interactionModule:onInteraction" values="" isPersistent="0" form="single" />
+			<Variable name="signal_onMLODRefresh" type="kettle:signal:onMLODRefresh" values="" isPersistent="0" form="single" />
+			<Variable name="signal_onNPCEating" type="kettle:signal:onNPCEating" values="" isPersistent="0" form="single" />
+			<Variable name="signal_onPlayerEating" type="kettle:signal:onPlayerEating" values="" isPersistent="0" form="single" />
+			<Variable name="time_currentTick" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="volumeParams" type="perceptibleParams" values="" isPersistent="0" form="single" />
+			<Variable name="volumeWuid" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;kettleTrigger&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+						<EvaLLyzer Expresion="$init_sequenceTriggers[$__link_kettleTrigger] = $__to" Quantifiers="ForAll" saveVersion="2" />
+					</GraphSearch>
+					<IsLoadedGate saveVersion="2">
+						<Then canSkip="1">
+							<IfCondition failOnCondition="false" condition="$persistentStorage.crimeNotice">
+								<SmartObjSetBehaviorState behaviors="&apos;use&apos;" state="Disabled" />
+							</IfCondition>
+						</Then>
+						<Else canSkip="1">
+							<GetTime TimeType="WorldTime" OutVar="$persistentStorage.lastOnCookingTick" Delta="" />
+						</Else>
+					</IsLoadedGate>
+					<Expression expressions="$kettleType = $enum:kettleType.wineBarrel" />
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<Parallel successMode="Any" failureMode="Any">
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$signal_onInteraction" senderInfo="" inbox="&apos;interactionModule&apos;" condition="" answerVar="">
+							<IfElseCondition failOnCondition="false" condition="$signal_onInteraction.isHoldAction" saveVersion="2">
+								<Then canSkip="1">
+									<IfCondition failOnCondition="false" condition="$signal_onInteraction.usedItem ~= $__null">
+										<AddInterrupt_player_applyBuff usedItem="$signal_onInteraction.usedItem" Target="$__player" Host="$this.id" Behavior="&apos;player_applyBuff&apos;" Priority="1" IgnorePriorityOnPreviousInterrupt="false" urgency="Default" Aliveness="Alive" Privileged="false" FastForward="false" />
+									</IfCondition>
+								</Then>
+								<Else canSkip="1">
+									<AddInterrupt Target="$__player" Host="$this.id" Behavior="&apos;player_eating&apos;" Priority="1" IgnorePriorityOnPreviousInterrupt="false" urgency="Default" Aliveness="Alive" Privileged="false" FastForward="false" />
+								</Else>
+							</IfElseCondition>
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$signal_onBuffAdd" senderInfo="" inbox="&apos;kettleInbox&apos;" condition="" answerVar="">
+							<IncludeTree File="&apos;world/so_fireplace.xml&apos;" Name="&apos;onBuffAddSignalArrive&apos;" nodeLabel="49773158" />
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$signal_onPlayerEating" senderInfo="" inbox="&apos;kettleInbox&apos;" condition="" answerVar="">
+							<Sequence>
+								<Expression expressions="$persistentStorage.playerEatingCount += 1, &#10;$volumeParams.visibility = 0.005, &#10;$volumeParams.conspicuousness = 1," />
+								<GetTime TimeType="WorldTime" OutVar="$time_currentTick" Delta="" />
+								<GetOwner Object="$this.id" Owner="$kettleOwner" />
+								<Success />
+							</Sequence>
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$signal_onMLODRefresh" senderInfo="" inbox="&apos;kettleInbox&apos;" condition="" answerVar="">
+							<Sequence>
+								<GetTime TimeType="WorldTime" OutVar="$time_currentTick" Delta="" />
+								<IfCondition failOnCondition="false" condition="$time_currentTick &gt;= $persistentStorage.lastOnCookingTick + $data:script_param[&apos;kettle_timeToShutdown&apos;].value">
+									<Expression expressions="$persistentStorage.state = $enum:kettleState.empty" />
+								</IfCondition>
+							</Sequence>
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$signal_onNPCEating" senderInfo="" inbox="&apos;kettleInbox&apos;" condition="" answerVar="">
+							<IncludeTree File="&apos;world/so_fireplace.xml&apos;" Name="&apos;onEatingSignalArrive&apos;" nodeLabel="55799345" />
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$signal_onBuffCrimeNotice" senderInfo="" inbox="&apos;kettleInbox&apos;" condition="" answerVar="">
+							<IfCondition failOnCondition="false" condition="#buffChangeTimestamp_list &gt; 0">
+								<Sequence>
+									<GetTime TimeType="WorldTime" OutVar="$persistentStorage.lastCrimeNoticeTime" Delta="" />
+									<Expression expressions="$persistentStorage.crimeNotice = true" />
+									<SmartObjSetBehaviorState behaviors="&apos;use&apos;" state="Disabled" />
+								</Sequence>
+							</IfCondition>
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<IfGate atomic="false" condition="$persistentStorage.crimeNotice" RunLogic="KeepRunning">
+							<Sequence>
+								<GetTime TimeType="WorldTime" OutVar="$time_currentTick" Delta="" />
+								<Expression expressions="$crimeWaitTime = $time_currentTick - $persistentStorage.lastCrimeNoticeTime + $data:script_param[&apos;kettle_timeToBuffDisable&apos;].value" />
+								<IfCondition failOnCondition="false" condition="$crimeWaitTime &gt; 0">
+									<Sequence>
+										<Concatenation OutString="$crimeWaitTimeString" Pattern="&apos;$crimeWaitTime;ms&apos;" />
+										<Wait duration="$crimeWaitTimeString" timeType="WorldTime" doFail="false" variation="" />
+									</Sequence>
+								</IfCondition>
+								<GetTime TimeType="WorldTime" OutVar="$time_currentTick" Delta="" />
+								<EraseFromArray array="$buffChangeTimestamp_list" condition="$time_currentTick - $__value.time &gt;= $data:script_param[&apos;kettle_timeToBuffDisable&apos;].value" />
+								<Expression expressions="$persistentStorage.crimeNotice = false" />
+								<SmartObjSetBehaviorState behaviors="&apos;use&apos;" state="Enabled" />
+							</Sequence>
+						</IfGate>
+					</While>
+				</Parallel>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<IfCondition failOnCondition="false" condition="$kettleOwner ~= $__player">
+				<Sequence>
+					<SpawnExpiringPerceptibleVolume Expiration="&apos;2s&apos;" TimerType="GameTime" Position="$init_sequenceTriggers[&apos;trigger&apos;]" Radius="1.000000" Height="1.000000" Label="&apos;crime_kettleEating&apos;" OnlyVisiblePointsFromCenter="true" PerceptibleParams="$volumeParams" OutWuid="$volumeWuid" />
+					<AddLink From="$volumeWuid" To="$volumeWuid" Tag="&apos;kettle_volumeData&apos;" Data="target($this.id),type($kettleType)" LinkOpHandleMode="OverWrite" />
+				</Sequence>
+			</IfCondition>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="bowl" comment="" />
+				<Variable name="bowlIndex" comment="" />
+				<Variable name="bowlMinTime" comment="" />
+				<Variable name="bowl_list" comment="" />
+				<Variable name="buffApplied" comment="" />
+				<Variable name="buffBreak" comment="" />
+				<Variable name="buffChangeTimestamp" comment="" />
+				<Variable name="buffChangeTimestamp_list" comment="" />
+				<Variable name="buffEraseTime" comment="" />
+				<Variable name="buffSearchEnabled" comment="" />
+				<Variable name="buffUserIndex" comment="" />
+				<Variable name="buff_user" comment="" />
+				<Variable name="buff_userList" comment="" />
+				<Variable name="crimeWaitTime" comment="" />
+				<Variable name="crimeWaitTimeString" comment="" />
+				<Variable name="init_sequenceTriggers" comment="" />
+				<Variable name="isWineBarrel" comment="" />
+				<Variable name="kettleOwner" comment="" />
+				<Variable name="kettleType" comment="" />
+				<Variable name="persistentStorage" comment="" />
+				<Variable name="signal_onBowlFilled" comment="" />
+				<Variable name="signal_onBuffAdd" comment="" />
+				<Variable name="signal_onBuffCrimeNotice" comment="" />
+				<Variable name="signal_onCooking" comment="" />
+				<Variable name="signal_onInteraction" comment="" />
+				<Variable name="signal_onMLODRefresh" comment="" />
+				<Variable name="signal_onNPCEating" comment="" />
+				<Variable name="signal_onPlayerEating" comment="" />
+				<Variable name="time_currentTick" comment="" />
+				<Variable name="volumeParams" comment="" />
+				<Variable name="volumeWuid" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+							<EvaLLyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+							</EvaLLyzer>
+						</GraphSearch>
+						<IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<SmartObjSetBehaviorState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</SmartObjSetBehaviorState>
+								</IfCondition>
+							</Then>
+							<Else>
+								<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</GetTime>
+							</Else>
+						</IsLoadedGate>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<AddInterrupt_player_applyBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</AddInterrupt_player_applyBuff>
+										</IfCondition>
+									</Then>
+									<Else>
+										<AddInterrupt hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</AddInterrupt>
+									</Else>
+								</IfElseCondition>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IncludeTree hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</IncludeTree>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetTime>
+									<GetOwner hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetOwner>
+									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Success>
+								</Sequence>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetTime>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</IfCondition>
+								</Sequence>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IncludeTree hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</IncludeTree>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="because there is no cooking, we can check if there is any valid buff before disable" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetTime>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<SmartObjSetBehaviorState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</SmartObjSetBehaviorState>
+									</Sequence>
+								</IfCondition>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetTime>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Concatenation>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</IfCondition>
+									<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetTime>
+									<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</EraseFromArray>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<SmartObjSetBehaviorState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</SmartObjSetBehaviorState>
+								</Sequence>
+							</IfGate>
+						</While>
+					</Parallel>
+				</Behavior>
+			</Root>
+			<Forest>
+				<IfCondition editorPosX="1440" editorPosY="330" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<SpawnExpiringPerceptibleVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</SpawnExpiringPerceptibleVolume>
+						<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</AddLink>
+					</Sequence>
+				</IfCondition>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="onRequest" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<IfCondition failOnCondition="false" condition="$__bodyInfo.isMonsterLod">
+					<DistanceCondition Origin="$this.id" ReferencePt="$__bodyInfo.id" Low="80.000000" High="40000.000000" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+						<Switch>
+							<IfCondition failOnCondition="false" condition="$__behaviorName == &apos;use&apos;">
+								<InstantSendMessageToNPC target="$this.id" type="&apos;kettle:signal:onNPCEating&apos;" values="user($__bodyInfo.id),inMLOD(true)" />
+							</IfCondition>
+							<DefaultBranch>
+								<Success />
+							</DefaultBranch>
+						</Switch>
+					</DistanceCondition>
+				</IfCondition>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root editorPosX="-40" editorPosY="90" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<DistanceCondition hasInputBreakpoint="0" comment="we want NPCs to &quot;use&quot; this object only if they are nearby. We dont want to poison NPC on his way from other side of map!" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</InstantSendMessageToNPC>
+								</IfCondition>
+								<DefaultBranch>
+									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Success>
+								</DefaultBranch>
+							</Switch>
+						</DistanceCondition>
+					</IfCondition>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="onMLWakeUp" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<InstantSendMessageToNPC target="$this.id" type="&apos;kettle:signal:onMLODRefresh&apos;" values="" />
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</InstantSendMessageToNPC>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="use" is_function="0">
+		<Variables>
+			<Variable name="prefabType" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<ExecuteLua code="local soEntity = XGenAIModule.GetEntityByWUID(data.__object.id); &#10;data.prefabType = EntityUtils.GetScriptProperty(soEntity,&apos;type&apos;);" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<EntityContextElement context="speech_readyForSwitchDialog" enabled="true">
+					<Sequence>
+						<Switch>
+							<IfCondition failOnCondition="false" condition="$prefabType == &apos;wine&apos;">
+								<UnstanceAction unstance="camper_wineDrinking" locationObject="$__object.id" slaveObject="" />
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$prefabType == &apos;pigRoast&apos;">
+								<UnstanceAction unstance="camper_wineDrinking" locationObject="$__object.id" slaveObject="" />
+							</IfCondition>
+						</Switch>
+						<InstantSendMessageToNPC target="$__object.id" type="&apos;kettle:signal:onNPCEating&apos;" values="user($this.id),bowl($__null)" />
+						<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" />
+					</Sequence>
+				</EntityContextElement>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="prefabType" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</ExecuteLua>
+				</OnInit>
+				<Behavior>
+					<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</UnstanceAction>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</UnstanceAction>
+								</IfCondition>
+							</Switch>
+							<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</InstantSendMessageToNPC>
+							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Wait>
+						</Sequence>
+					</EntityContextElement>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="player_applyBuff" is_function="0">
+		<Variables>
+			<Variable name="buff" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="prefabType" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="usedItem" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<AtomicDecorator>
+					<Sequence>
+						<GetItemProperty itemId="$usedItem" property="ConsumableBuff" result="$buff" />
+						<InstantSendMessageToNPC target="$__object.id" type="&apos;kettle:signal:onBuffAdd&apos;" values="guid($buff)" />
+						<RemoveItem Item="$usedItem" ItemGUID="" Source="$__player" Amount="1" FailOnDoesntExist="false" NotifyUI="true" />
+					</Sequence>
+				</AtomicDecorator>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="buff" comment="" />
+				<Variable name="prefabType" comment="" />
+				<Variable name="usedItem" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</GetItemProperty>
+							<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</InstantSendMessageToNPC>
+							<RemoveItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</RemoveItem>
+						</Sequence>
+					</AtomicDecorator>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="player_eating" is_function="0">
+		<Variables>
+			<Variable name="eatItemOverride" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="playerUseCreatedItem" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="prefabType" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<InstantSendMessageToNPC target="$__object.id" type="&apos;kettle:signal:onNPCEating&apos;" values="user($this.id),bowl($__null)" />
+					<InstantSendMessageToNPC target="$__object.id" type="&apos;kettle:signal:onPlayerEating&apos;" values="" />
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="eatItemOverride" comment="" />
+				<Variable name="playerUseCreatedItem" comment="" />
+				<Variable name="prefabType" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-20" editorPosY="10" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</InstantSendMessageToNPC>
+						<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</InstantSendMessageToNPC>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

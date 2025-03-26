@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_checking_poison" is_function="1">
+		<Variables>
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="followupKettleData" type="crime:followUpBehavior:markKettleAsPoisoned" values="" isPersistent="0" form="single" />
+			<Variable name="lastUsedKettle" type="kettle:link:lastUsedKettle" values="" isPersistent="0" form="single" />
+			<Variable name="lastUsedKettleData_arr" type="kettle:link:lastUsedKettle" values="" isPersistent="0" form="array" />
+			<Variable name="lastUsedKettleData_val" type="kettle:link:lastUsedKettle" values="" isPersistent="0" form="single" />
+			<Variable name="lowestTimeDiff" type="_int64" values="0" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="isPoisoned" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<BuffTagCheck SoulId="$this.id" buffAITagId="3" FailWithSubtreeMissing="false" saveVersion="2">
+						<Then canSkip="1">
+							<Expression expressions="$isPoisoned = true" />
+						</Then>
+						<Else canSkip="1">
+							<Expression expressions="$isPoisoned = false" />
+						</Else>
+					</BuffTagCheck>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<DeadUnconsciousGate Who="$this.id" State="Any" Negation="true" RunLogic="Halt">
+							<EntityContextBarrier context="crime_suppressPoisoningCheck" target="" Negation="true" RunLogic="Halt">
+								<IfGate atomic="false" condition="$isPoisoned" RunLogic="Halt">
+									<EntityContextBarrier context="crime_delayPoisoningReactionUntilContextRemoved" target="" Negation="true" RunLogic="KeepRunning">
+										<Parallel successMode="Any" failureMode="Any">
+											<Sequence>
+												<EntityContextCheck context="crime_delayPoisoningReactionUntilContextRemoved" target="" saveVersion="2">
+													<Else canSkip="1">
+														<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+													</Else>
+												</EntityContextCheck>
+												<Loop count="-1">
+													<Sequence>
+														<RandomGate opensWithChance="0.750000" saveVersion="2">
+															<Then canSkip="1">
+																<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;NPC_SI_STEZUJE_NA_OTRAVU&apos;" priority="$enum:crime_barkPriority.flavor" nodeLabel="85368936" />
+															</Then>
+															<Else canSkip="1">
+																<Success />
+															</Else>
+														</RandomGate>
+														<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" />
+													</Sequence>
+												</Loop>
+											</Sequence>
+											<Sequence>
+												<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" />
+												<AtomicDecorator>
+													<SuppressFailure>
+														<Sequence>
+															<Sequence>
+																<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																	<LinkTagFilter tag="&apos;kettle_lastUsed&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																	<Datalyzer Tag="&apos;kettle_lastUsed&apos;" Quantifiers="ForAll" Parent="" Child="" Data="$lastUsedKettleData_arr" saveVersion="2" />
+																</GraphSearch>
+																<Expression expressions="$lowestTimeDiff = $data:script_param[&apos;crime_kettle_lastUsed_threshold&apos;].value &#10;$lastUsedKettle.target = $__null" />
+																<GetTime TimeType="WorldTime" OutVar="$currentTime" Delta="" />
+																<ForEach startIndex="0" step="1" array="$lastUsedKettleData_arr" iterator="" value="$lastUsedKettleData_val" break="">
+																	<IfElseCondition failOnCondition="false" condition="$currentTime - $lastUsedKettleData_val.time &lt;= $lowestTimeDiff" saveVersion="2">
+																		<Then canSkip="1">
+																			<Expression expressions="$lastUsedKettle = $lastUsedKettleData_val &#10;$lowestTimeDiff = $currentTime - $lastUsedKettleData_val.time" />
+																		</Then>
+																		<Else canSkip="1">
+																			<RemoveLink From="$this.id" To="$lastUsedKettleData_val.target" Tag="&apos;kettle_lastUsed&apos;" LinkOpHandleMode="OverWrite" />
+																		</Else>
+																	</IfElseCondition>
+																</ForEach>
+															</Sequence>
+															<IfCondition failOnCondition="false" condition="$lastUsedKettle.target ~= $__null">
+																<Sequence>
+																	<Expression expressions="$followupKettleData.kettle = $lastUsedKettle.target &#10;$followupKettleData.kettleType = $lastUsedKettle.type &#10;$followupKettleData.realizedPoisonAfterEating = true &#10;$followupKettleData.active = true" />
+																	<AddLink From="$this.id" To="$lastUsedKettle.target" Tag="&apos;crime_followUpBehavior_markKettleAsPoisoned&apos;" Data="$followupKettleData" LinkOpHandleMode="OverWrite" />
+																	<Function_callInterrupt_markKettleAsPoisoned ignorePriority="false" initiator="$enum:switch_interruptInitiator.switch" kettle="$lastUsedKettle.target" kettleType="$lastUsedKettle.type" previousReaction="$enum:crime_reactionKind.unknown" realizedPoisonAfterEating="true" stimulusKind="$enum:crime_stimulusKind.unknown" nodeLabel="90699147" />
+																</Sequence>
+															</IfCondition>
+														</Sequence>
+													</SuppressFailure>
+												</AtomicDecorator>
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Sequence>
+										</Parallel>
+									</EntityContextBarrier>
+								</IfGate>
+							</EntityContextBarrier>
+						</DeadUnconsciousGate>
+					</While>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="currentTime" comment="" />
+				<Variable name="followupKettleData" comment="" />
+				<Variable name="lastUsedKettle" comment="" />
+				<Variable name="lastUsedKettleData_arr" comment="" />
+				<Variable name="lastUsedKettleData_val" comment="" />
+				<Variable name="lowestTimeDiff" comment="" />
+				<Variable name="isPoisoned" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<BuffTagCheck hasInputBreakpoint="0" comment="Check before first loop, message might not contain this info" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Then>
+							<Else>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Else>
+						</BuffTagCheck>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Else>
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</Else>
+													</EntityContextCheck>
+													<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_crime_crimeBark>
+																</Then>
+																<Else>
+																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Success>
+																</Else>
+															</RandomGate>
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</Sequence>
+													</Loop>
+												</Sequence>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+													<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</LinkTagFilter>
+																		<Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																		</Datalyzer>
+																	</GraphSearch>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																	<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetTime>
+																	<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Then>
+																			<Else>
+																				<RemoveLink hasInputBreakpoint="0" comment="Filter out old links we don&apos;t care about" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</RemoveLink>
+																			</Else>
+																		</IfElseCondition>
+																	</ForEach>
+																</Sequence>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="Add Followup" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																		<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</AddLink>
+																		<Function_callInterrupt_markKettleAsPoisoned hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_callInterrupt_markKettleAsPoisoned>
+																	</Sequence>
+																</IfCondition>
+															</Sequence>
+														</SuppressFailure>
+													</AtomicDecorator>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Sequence>
+											</Parallel>
+										</EntityContextBarrier>
+									</IfGate>
+								</EntityContextBarrier>
+							</DeadUnconsciousGate>
+						</While>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

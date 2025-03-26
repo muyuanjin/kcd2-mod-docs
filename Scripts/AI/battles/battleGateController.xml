@@ -1,0 +1,746 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="bashGate" is_function="0">
+    <Variables />
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables />
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+          </Wait>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+  <BehaviorTree name="onUpdate" is_function="0">
+    <Variables>
+      <Variable name="gatePoint" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="gatePonits" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="groupController" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="isSenderDead" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="linkTag" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="npcsToWake" type="_int" values="0" isPersistent="0" form="single" />
+      <Variable name="particle" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="requestedNpc" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="sender" type="senderInfo" values="" isPersistent="0" form="single" />
+      <Variable name="wakeAll" type="_bool" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$linkTag" senderInfo="" inbox="&apos;battle_groupController_init&apos;" condition="" answerVar="">
+          <Sequence>
+            <GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+              <LinkTagFilter tag="&apos;groupController&apos;" prune="true" negprune="unknown" Parent="" Child="$groupController" Data="" />
+            </GraphSearch>
+            <GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+              <LinkTagFilter tag="&apos;gateTp&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+              <Nodalyzer Quantifiers="ForAll" Parent="" Child="$gatePonits" saveVersion="2">
+                <Child0 canSkip="1">
+                  <RangeSorter point="$this.id" SortOrder="Ascending" Source="Child" />
+                </Child0>
+              </Nodalyzer>
+            </GraphSearch>
+            <Expression expressions="$npcsToWake = #gatePonits" />
+            <Parallel successMode="Any" failureMode="Any">
+              <LinkGate from="$this.id" to="$this.id" tag="&apos;battleGate_startWaking&apos;" amount="AtLeastOne" presence="Present" RunLogic="Halt">
+                <While doFail="false" propagateChildFail="false" condition="$npcsToWake &gt; 0 | $wakeAll">
+                  <FuseBox StatusPropagation="Child" OneCleanup="false" saveVersion="2">
+                    <Child canSkip="1">
+                      <Sequence>
+                        <RequestBattleNPC TargetObject="$groupController" ReferencePoint="$gatePonits[0]" Priority="High" RequestedNPCVarOut="$requestedNpc" />
+                        <Wait duration="&apos;200&apos;" timeType="GameTime" doFail="false" variation="" />
+                        <AddLink From="$requestedNpc" To="$gatePonits[0]" Tag="&apos;battle_crashGateTp&apos;" Data="" LinkOpHandleMode="Error" />
+                        <IfCondition failOnCondition="false" condition="!$wakeAll">
+                          <PopFromArray array="$gatePonits" valueOut="$gatePonits[0]" direction="Front" />
+                        </IfCondition>
+                        <Expression expressions="$npcsToWake -= 1" />
+                        <IfGate atomic="false" condition="$npcsToWake &gt; 0 | $wakeAll" RunLogic="KeepRunning">
+                          <Success />
+                        </IfGate>
+                      </Sequence>
+                    </Child>
+                    <OnFail canSkip="1">
+                      <Expression expressions="$npcsToWake = 0 &#10;$wakeAll = false" />
+                    </OnFail>
+                  </FuseBox>
+                </While>
+              </LinkGate>
+              <Loop count="-1">
+                <ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$isSenderDead" senderInfo="$sender" inbox="&apos;battle_behaviorCompleted&apos;" condition="" answerVar="">
+                  <IfCondition failOnCondition="false" condition="$isSenderDead">
+                    <Sequence>
+                      <GraphSearch Origin="$sender.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                        <LinkTagFilter tag="&apos;battle_crashGateTp&apos;" prune="true" negprune="unknown" Parent="" Child="$gatePoint" Data="" />
+                      </GraphSearch>
+                      <PushToArray array="$gatePonits" value="$gatePoint" direction="Back" />
+                      <Expression expressions="$npcsToWake += 1" />
+                    </Sequence>
+                  </IfCondition>
+                </ProcessMessage>
+              </Loop>
+              <Loop count="-1">
+                <LinkGate from="$this.id" to="$this.id" tag="&apos;battleGate_wakeAll&apos;" amount="AtLeastOne" presence="Present" RunLogic="Halt">
+                  <Sequence>
+                    <PushToArray array="$gatePonits" value="$this.id" direction="Back" />
+                    <Expression expressions="$wakeAll = true" />
+                    <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+                  </Sequence>
+                </LinkGate>
+              </Loop>
+              <Loop count="-1">
+                <LinkGate from="$this.id" to="$this.id" tag="&apos;particleEffect&apos;" amount="AtLeastOne" presence="Present" RunLogic="Halt">
+                  <FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+                    <Child canSkip="1">
+                      <Sequence>
+                        <GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                          <LinkTagFilter tag="&apos;particle&apos;" prune="true" negprune="unknown" Parent="" Child="$particle" Data="" />
+                        </GraphSearch>
+                        <ParticleEffectControl ParticleWuid="$particle" StartStopChoice="Start" />
+                        <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+                      </Sequence>
+                    </Child>
+                    <OnSuccess canSkip="1">
+                      <ParticleEffectControl ParticleWuid="$particle" StartStopChoice="Stop" />
+                    </OnSuccess>
+                  </FuseBox>
+                </LinkGate>
+              </Loop>
+            </Parallel>
+            <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+          </Sequence>
+        </ProcessMessage>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="gatePoint" comment="" />
+        <Variable name="gatePonits" comment="" />
+        <Variable name="groupController" comment="" />
+        <Variable name="isSenderDead" comment="" />
+        <Variable name="linkTag" comment="" />
+        <Variable name="npcsToWake" comment="" />
+        <Variable name="particle" comment="" />
+        <Variable name="requestedNpc" comment="" />
+        <Variable name="sender" comment="" />
+        <Variable name="wakeAll" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root editorPosX="-390" editorPosY="-40" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </LinkTagFilter>
+              </GraphSearch>
+              <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </LinkTagFilter>
+                <Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                  <OutputBreakpoints />
+                  <Child0>
+                    <RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </RangeSorter>
+                  </Child0>
+                </Nodalyzer>
+              </GraphSearch>
+              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+              </Expression>
+              <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Child>
+                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <RequestBattleNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </RequestBattleNPC>
+                          <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Wait>
+                          <AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </AddLink>
+                          <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <PopFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </PopFromArray>
+                          </IfCondition>
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                          <IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </Success>
+                          </IfGate>
+                        </Sequence>
+                      </Child>
+                      <OnFail>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                      </OnFail>
+                    </FuseBox>
+                  </While>
+                </LinkGate>
+                <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </LinkTagFilter>
+                        </GraphSearch>
+                        <PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </PushToArray>
+                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </Expression>
+                      </Sequence>
+                    </IfCondition>
+                  </ProcessMessage>
+                </Loop>
+                <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </PushToArray>
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                      <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Wait>
+                    </Sequence>
+                  </LinkGate>
+                </Loop>
+                <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Child>
+                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                            </LinkTagFilter>
+                          </GraphSearch>
+                          <ParticleEffectControl hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </ParticleEffectControl>
+                          <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Wait>
+                        </Sequence>
+                      </Child>
+                      <OnSuccess>
+                        <ParticleEffectControl hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </ParticleEffectControl>
+                      </OnSuccess>
+                    </FuseBox>
+                  </LinkGate>
+                </Loop>
+              </Parallel>
+              <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+              </Wait>
+            </Sequence>
+          </ProcessMessage>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+  <BehaviorTree name="wakeAndBashGate" is_function="0">
+    <Variables>
+      <Variable name="axe" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="behaviorSuccess" type="_bool" values="false" isPersistent="0" form="single" />
+      <Variable name="burningOil" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="gateTps" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="hitCount" type="_int" values="0" isPersistent="0" form="single" />
+      <Variable name="hitReaction" type="hitReaction" values="" isPersistent="0" form="single" />
+      <Variable name="isSpawned" type="_bool" values="" isPersistent="0" form="single" />
+      <Variable name="shield" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="tpIndex" type="_int" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+          <Child canSkip="1">
+            <Sequence>
+              <GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                <LinkTagFilter tag="&apos;gateTp&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                <Nodalyzer Quantifiers="ForAll" Parent="" Child="$gateTps" saveVersion="2">
+                  <Child0 canSkip="1">
+                    <RangeSorter point="$this.id" SortOrder="Ascending" Source="Child" />
+                  </Child0>
+                </Nodalyzer>
+              </GraphSearch>
+              <ForEach startIndex="0" step="1" array="$gateTps" iterator="$tpIndex" value="" break="">
+                <Semaphore SemaphoreCount="1" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;0s&apos;" LockManagerType="Local" SemaphoreName="&apos;$gateTps[$tpIndex]&apos;">
+                  <LoopUntil until="Success" attemptCount="0">
+                    <EntityContextElement context="combat_disabledAsTarget" enabled="true">
+                      <MeleeGuardAutomationDecorator GuardMode="forceDisable" active="true">
+                        <HandContentElement hand="Right" item="$axe" allowAny="false" decisionLabel="battle_axe" useDecision="true" enabled="true" saveVersion="2">
+                          <Search canSkip="1">
+                            <Sequence>
+                              <GetWeaponsFromWeaponSet WeaponSet="Primary" LeftHand="$shield" RightHand="$axe" UseTorchWhenAppropriate="true" />
+                              <AtomicDecorator>
+                                <IfCondition failOnCondition="false" condition="$shield ~= $__null">
+                                  <Sequence>
+                                    <CreateItem ItemGUID="&apos;818d0dde-d4f1-4bdb-b8d3-9754d52f5799&apos;" Amount="1" CreatedItem="$axe" Target="$this.id" NotifyUI="false" />
+                                    <Expression expressions="$isSpawned = true" />
+                                  </Sequence>
+                                </IfCondition>
+                              </AtomicDecorator>
+                            </Sequence>
+                          </Search>
+                          <Exec canSkip="1">
+                            <Selector>
+                              <Sequence>
+                                <SyncWithTrackview NPC="$this.id" />
+                                <MoveParamsDecorator speed="Run" pathFindingParams="" doorClosingPolicy="Automatic">
+                                  <UnstanceElement unstance="GateAttackAlign" locationObject="$gateTps[$tpIndex]" slaveObject="" enabled="true">
+                                    <FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+                                      <Child canSkip="1">
+                                        <Parallel successMode="Any" failureMode="Any">
+                                          <EntityContext context="combat_actorSupressHitreactionAnimation" target="">
+                                            <Loop count="-1">
+                                              <Sequence>
+                                                <IfCondition failOnCondition="false" condition="$burningOil">
+                                                  <Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+                                                </IfCondition>
+                                                <UnstanceAction unstance="GateAttackAlign" locationObject="$gateTps[$tpIndex]" slaveObject="" />
+                                                <Wait duration="&apos;4s&apos;" timeType="GameTime" doFail="false" variation="&apos;1s&apos;" />
+                                              </Sequence>
+                                            </Loop>
+                                          </EntityContext>
+                                          <LinkGate from="$__object.id" to="$__object.id" tag="&apos;burningOil&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+                                            <Sequence>
+                                              <Expression expressions="$burningOil = true" />
+                                              <AnimationAction fragment="&apos;GateAttack_VAR&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+                                              <SendAIConceptSignal_battleTrigger group="$__object.id" success="true" />
+                                            </Sequence>
+                                          </LinkGate>
+                                        </Parallel>
+                                      </Child>
+                                      <OnSuccess canSkip="1">
+                                        <IsUnconsciousCheck SoulWUID="$this.id" FailSubtMissing="false" saveVersion="2">
+                                          <Then canSkip="1">
+                                            <Sequence>
+                                              <Expression expressions="$behaviorSuccess = true" />
+                                              <ExecuteLua code="local ent = XGenAIModule.GetEntityByWUID(entity.this.id) &#10; &#10;ent.soul:DealDamage(200, 200, entity.this.id, false, &apos;Head&apos;)" />
+                                            </Sequence>
+                                          </Then>
+                                          <Else canSkip="1">
+                                            <Sequence>
+                                              <Expression expressions="$behaviorSuccess = true" />
+                                              <IfCondition failOnCondition="false" condition="$burningOil">
+                                                <ExecuteLua code="local ent = XGenAIModule.GetEntityByWUID(entity.this.id) &#10; &#10;ent.soul:DealDamage(200, 200, entity.this.id, false, &apos;Head&apos;)" />
+                                              </IfCondition>
+                                            </Sequence>
+                                          </Else>
+                                        </IsUnconsciousCheck>
+                                      </OnSuccess>
+                                    </FuseBox>
+                                  </UnstanceElement>
+                                </MoveParamsDecorator>
+                              </Sequence>
+                              <Sequence>
+                                <ForgetDecision decisionLabel="battle_axe" />
+                                <IfCondition failOnCondition="false" condition="$isSpawned">
+                                  <RemoveItem Item="$axe" ItemGUID="" Source="" Amount="1" FailOnDoesntExist="false" NotifyUI="false" />
+                                </IfCondition>
+                                <Fail />
+                              </Sequence>
+                            </Selector>
+                          </Exec>
+                        </HandContentElement>
+                      </MeleeGuardAutomationDecorator>
+                    </EntityContextElement>
+                  </LoopUntil>
+                </Semaphore>
+              </ForEach>
+              <Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+            </Sequence>
+          </Child>
+          <OnSuccess canSkip="1">
+            <Sequence>
+              <InstantSendMessageToNPC target="$__object.id" variable="$behaviorSuccess" />
+              <ForgetDecision decisionLabel="battle_axe" />
+              <WaitAction />
+              <IfCondition failOnCondition="false" condition="$isSpawned">
+                <RemoveItem Item="$axe" ItemGUID="" Source="" Amount="1" FailOnDoesntExist="false" NotifyUI="false" />
+              </IfCondition>
+            </Sequence>
+          </OnSuccess>
+        </FuseBox>
+      </Behavior>
+    </Root>
+    <ForestContainer>
+      <IfCondition failOnCondition="false" condition="$hitReaction.hitType &gt;= $enum:HitReactionType.Stone | &#10;$hitCount &gt;= 5 | &#10;$burningOil" />
+      <While doFail="false" propagateChildFail="false" condition="$hitCount &lt; 5">
+        <DecoratorBuff BuffId="&apos;730503bf-735a-4f47-baae-c2d84ee77524&apos;" SoulWUID="$this.id">
+          <ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hitReaction" senderInfo="" inbox="&apos;hitReaction&apos;" condition="" answerVar="">
+            <IfElseCondition failOnCondition="false" condition="$hitReaction.hitType &gt;= $enum:HitReactionType.Stone" saveVersion="2">
+              <Then canSkip="1">
+                <Fail />
+              </Then>
+              <Else canSkip="1">
+                <Switch>
+                  <IfCondition failOnCondition="false" condition="$hitReaction.hitStrength == $enum:HitReactionStrength.Unpleasant">
+                    <Expression expressions="$hitCount = $hitCount+1" />
+                  </IfCondition>
+                  <IfCondition failOnCondition="false" condition="$hitReaction.hitStrength == $enum:HitReactionStrength.Exhausting">
+                    <Expression expressions="$hitCount = $hitCount+2" />
+                  </IfCondition>
+                  <IfCondition failOnCondition="false" condition="$hitReaction.hitStrength == $enum:HitReactionStrength.MinorInjury">
+                    <Expression expressions="$hitCount = $hitCount+3" />
+                  </IfCondition>
+                  <IfCondition failOnCondition="false" condition="$hitReaction.hitStrength == $enum:HitReactionStrength.MajorInjury">
+                    <Expression expressions="$hitCount = $hitCount+4" />
+                  </IfCondition>
+                  <IfCondition failOnCondition="false" condition="$hitReaction.hitStrength == $enum:HitReactionStrength.Fatal">
+                    <Expression expressions="$hitCount = $hitCount+5" />
+                  </IfCondition>
+                  <DefaultBranch>
+                    <Success />
+                  </DefaultBranch>
+                </Switch>
+              </Else>
+            </IfElseCondition>
+          </ProcessMessage>
+        </DecoratorBuff>
+      </While>
+      <DistanceCondition Origin="$this.id" ReferencePt="$gateTps[$tpIndex]" Low="1.000000" High="1.000000" Negation="true" ValueOnMiddle="false" failOnCondition="false">
+        <Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$gateTps[$tpIndex]" destinationSpecification2="" destinationSpecification3="" speed="Run" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+      </DistanceCondition>
+    </ForestContainer>
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="axe" comment="" />
+        <Variable name="behaviorSuccess" comment="" />
+        <Variable name="burningOil" comment="" />
+        <Variable name="gateTps" comment="" />
+        <Variable name="hitCount" comment="" />
+        <Variable name="hitReaction" comment="" />
+        <Variable name="isSpawned" comment="" />
+        <Variable name="shield" comment="" />
+        <Variable name="tpIndex" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root editorPosX="-640" editorPosY="-20" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+            <OutputBreakpoints />
+            <Child>
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </LinkTagFilter>
+                  <Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                    <OutputBreakpoints />
+                    <Child0>
+                      <RangeSorter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </RangeSorter>
+                    </Child0>
+                  </Nodalyzer>
+                </GraphSearch>
+                <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Semaphore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <MeleeGuardAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <HandContentElement hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                            <Search>
+                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <GetWeaponsFromWeaponSet hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </GetWeaponsFromWeaponSet>
+                                <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <CreateItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </CreateItem>
+                                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </Expression>
+                                    </Sequence>
+                                  </IfCondition>
+                                </AtomicDecorator>
+                              </Sequence>
+                            </Search>
+                            <Exec>
+                              <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <SyncWithTrackview hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </SyncWithTrackview>
+                                  <MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <UnstanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                        <OutputBreakpoints />
+                                        <Child>
+                                          <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                            <EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                              <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                    <OutputBreakpoints />
+                                                    <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                      <OutputBreakpoints />
+                                                    </Wait>
+                                                  </IfCondition>
+                                                  <UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                    <OutputBreakpoints />
+                                                  </UnstanceAction>
+                                                  <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                    <OutputBreakpoints />
+                                                  </Wait>
+                                                </Sequence>
+                                              </Loop>
+                                            </EntityContext>
+                                            <LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </Expression>
+                                                <AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </AnimationAction>
+                                                <SendAIConceptSignal_battleTrigger hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </SendAIConceptSignal_battleTrigger>
+                                              </Sequence>
+                                            </LinkGate>
+                                          </Parallel>
+                                        </Child>
+                                        <OnSuccess>
+                                          <IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                            <OutputBreakpoints />
+                                            <Then>
+                                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </Expression>
+                                                <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </ExecuteLua>
+                                              </Sequence>
+                                            </Then>
+                                            <Else>
+                                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </Expression>
+                                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                  <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                    <OutputBreakpoints />
+                                                  </ExecuteLua>
+                                                </IfCondition>
+                                              </Sequence>
+                                            </Else>
+                                          </IsUnconsciousCheck>
+                                        </OnSuccess>
+                                      </FuseBox>
+                                    </UnstanceElement>
+                                  </MoveParamsDecorator>
+                                </Sequence>
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <ForgetDecision hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </ForgetDecision>
+                                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <RemoveItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </RemoveItem>
+                                  </IfCondition>
+                                  <Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Fail>
+                                </Sequence>
+                              </Selector>
+                            </Exec>
+                          </HandContentElement>
+                        </MeleeGuardAutomationDecorator>
+                      </EntityContextElement>
+                    </LoopUntil>
+                  </Semaphore>
+                </ForEach>
+                <Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Wait>
+              </Sequence>
+            </Child>
+            <OnSuccess>
+              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </InstantSendMessageToNPC>
+                <ForgetDecision hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </ForgetDecision>
+                <WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </WaitAction>
+                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <RemoveItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </RemoveItem>
+                </IfCondition>
+              </Sequence>
+            </OnSuccess>
+          </FuseBox>
+        </Behavior>
+      </Root>
+      <Forest>
+        <IfCondition editorPosX="2100" editorPosY="630" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+          <OutputBreakpoints />
+        </IfCondition>
+        <While editorPosX="2480" editorPosY="-1160" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+          <OutputBreakpoints />
+          <DecoratorBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                <OutputBreakpoints />
+                <Then>
+                  <Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Fail>
+                </Then>
+                <Else>
+                  <Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </IfCondition>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </IfCondition>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </IfCondition>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </IfCondition>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                    </IfCondition>
+                    <DefaultBranch>
+                      <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Success>
+                    </DefaultBranch>
+                  </Switch>
+                </Else>
+              </IfElseCondition>
+            </ProcessMessage>
+          </DecoratorBuff>
+        </While>
+        <DistanceCondition editorPosX="2650" editorPosY="-1020" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+          <OutputBreakpoints />
+          <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+          </Move>
+        </DistanceCondition>
+      </Forest>
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

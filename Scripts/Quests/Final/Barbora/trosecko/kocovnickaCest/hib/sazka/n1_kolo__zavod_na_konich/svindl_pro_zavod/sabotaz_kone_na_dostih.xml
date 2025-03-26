@@ -1,0 +1,157 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Database xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="brambora">
+	<Skald>
+		<Gameplay Name="sabotaz_kone_na_dostih">
+			<Ports>
+				<Port Name="aranka_zadava_hraci_svindl_pro_zavod_a_dava_mu_lektvar" Direction="In" Type="trigger">
+					<DesignName StringName="nakrm_kon_mam_zadani_G5dG" Text="Aranka zadává hráči švindl pro závod a dává mu lektvar" />
+				</Port>
+				<Port Name="tiboruv_kun_byl_na_zavod_uspesne_otraven" Direction="Out" Type="bool">
+					<DesignName StringName="sabotaz_k_byl_kun_uspesne_Pl6z" Text="Tiborův kůň byl na závod úspěsně otráven" />
+				</Port>
+				<Port Name="zavod_zacina" Direction="In" Type="trigger">
+					<DesignName StringName="sabotaz_k_jezdecka_soutez_Ebdq" Text="Závod začíná" />
+				</Port>
+				<Port Name="fail" Direction="In" Type="trigger">
+					<DesignName StringName="sabotaz_k_fail_DdX7" Text="&lt;fail&gt;" />
+				</Port>
+				<Port Name="abort" Direction="In" Type="trigger">
+					<DesignName StringName="sabotaz_k_abort_5DcC" Text="&lt;abort&gt;" />
+				</Port>
+			</Ports>
+			<Definitions>
+				<Definition File="sabotaz_kone_na_dostih/interakce_otraveni_tiborova_kone.xml" />
+			</Definitions>
+			<Nodes>
+				<State Name="betContest_horseSabotage" PositionY="-430" PositionX="-80" RequiredForOutput="trosecko" TypeT="BetContest_HorseSabotage">
+					<Edge From="aranka_zadava_hraci_svindl_pro_zavod_a_dava_mu_lektvar" To="SetPoisonHorse">
+						<Vertex>vertex16</Vertex>
+						<Vertex>vertex15</Vertex>
+					</Edge>
+					<Edge From="interakce_otraveni_tiborova_kone.hrac_nalil_lektvar_koni_do_zlabu" To="SetStartRace">
+						<Vertex>vertex6</Vertex>
+						<Vertex>vertex7</Vertex>
+					</Edge>
+					<Edge From="ifFail.True" To="SetFailed" />
+					<Edge From="ifAbort.True" To="SetAborted" />
+					<Edge From="ifRaceShouldBeStarted.True" To="SetDone" />
+					<Edge From="itemclasstrigger_playerinventory.ontargetamoutlose" To="SetPotionLost">
+						<Vertex>f4IHqrWP</Vertex>
+						<Vertex>obuLUzcX</Vertex>
+					</Edge>
+					<Edge From="itemclasstrigger_playerinventory_1.ontargetamountacquire" To="SetPoisonHorse">
+						<Vertex>DY3P9TIY</Vertex>
+						<Vertex>BntnIomJ</Vertex>
+						<Vertex>61xUVp7R</Vertex>
+					</Edge>
+					<Edge From="ifRaceShouldBeStarted.False" To="SetFailed" />
+				</State>
+				<Function Name="betContest_horseSabotage_active" PositionY="-270" PositionX="360" MethodName="math::boolean::Or" DeclaringType="math::boolean">
+					<Edge From="betContest_horseSabotage.PoisonHorse" To="A">
+						<Vertex>3g6wNyLs</Vertex>
+					</Edge>
+					<Edge From="betContest_horseSabotage.StartRace" To="B" />
+					<Edge From="betContest_horseSabotage.PotionLost" To="C" />
+				</Function>
+				<EventFunction Name="createplayerreward19" PositionY="-1050" PositionX="-200" MethodName="wh::entitymodule::CreatePlayerReward" DeclaringType="wh::entitymodule">
+					<Constant Name="ItemClass" Value="d7647722-61db-4250-bd1b-0091be96a16e" />
+					<Edge From="aranka_zadava_hraci_svindl_pro_zavod_a_dava_mu_lektvar" To="Exec">
+						<Vertex>vertex16</Vertex>
+						<Vertex>vertex15</Vertex>
+					</Edge>
+				</EventFunction>
+				<Timer Name="horsePotionIsEffective" PositionY="-20" PositionX="890">
+					<Constant Name="Duration" Value="24h" />
+					<Constant Name="TimeType" Value="WorldTime" />
+					<Edge From="interakce_otraveni_tiborova_kone.hrac_nalil_lektvar_koni_do_zlabu" To="SetRunning" />
+				</Timer>
+				<If Name="ifAbort" PositionY="240" PositionX="-590">
+					<Edge From="betContest_horseSabotage_active.bool" To="Condition">
+						<Vertex>1SNFPsyr</Vertex>
+						<Vertex>py7gaJHJ</Vertex>
+						<Vertex>hN507Y3D</Vertex>
+					</Edge>
+					<Edge From="abort" To="Exec" />
+				</If>
+				<If Name="ifFail" PositionY="90" PositionX="-590">
+					<Edge From="betContest_horseSabotage_active.bool" To="Condition">
+						<Vertex>1SNFPsyr</Vertex>
+						<Vertex>py7gaJHJ</Vertex>
+						<Vertex>hN507Y3D</Vertex>
+					</Edge>
+					<Edge From="fail" To="Exec" />
+					<Edge From="horsePotionIsEffective.OnFinished" To="Exec">
+						<Vertex>jv0MIAQS</Vertex>
+						<Vertex>bASp7x3m</Vertex>
+					</Edge>
+				</If>
+				<If Name="ifRaceShouldBeStarted" PositionY="-180" PositionX="-590">
+					<Edge From="betContest_horseSabotage.StartRace" To="Condition">
+						<Vertex>HVNpAb5w</Vertex>
+						<Vertex>TCsDj7Ay</Vertex>
+					</Edge>
+					<Edge From="ifSabotageActive.True" To="Exec" />
+				</If>
+				<If Name="ifSabotageActive" PositionY="-180" PositionX="-880">
+					<Edge From="zavod_zacina" To="Exec" />
+					<Edge From="betContest_horseSabotage_active.bool" To="Condition">
+						<Vertex>1SNFPsyr</Vertex>
+						<Vertex>py7gaJHJ</Vertex>
+						<Vertex>hN507Y3D</Vertex>
+					</Edge>
+				</If>
+				<interakce_otraveni_tiborova_kone Name="interakce_otraveni_tiborova_kone" PositionY="-40" PositionX="360">
+					<Edge From="betContest_horseSabotage.PoisonHorse" To="hrac_muze_nalit_lektvar_do_zlabu">
+						<Vertex>3g6wNyLs</Vertex>
+					</Edge>
+				</interakce_otraveni_tiborova_kone>
+				<itemclasstrigger_playerinventory Name="itemclasstrigger_playerinventory" PositionY="-660" PositionX="360" Namespace="utils.item">
+					<Constant Name="itemclass" Value="d7647722-61db-4250-bd1b-0091be96a16e" />
+					<Constant Name="amount" Value="1" />
+					<Edge From="betContest_horseSabotage.PoisonHorse" To="isactive">
+						<Vertex>3g6wNyLs</Vertex>
+					</Edge>
+				</itemclasstrigger_playerinventory>
+				<itemclasstrigger_playerinventory Name="itemclasstrigger_playerinventory_1" PositionY="230" PositionX="360" Namespace="utils.item">
+					<Constant Name="itemclass" Value="d7647722-61db-4250-bd1b-0091be96a16e" />
+					<Constant Name="amount" Value="1" />
+					<Edge From="betContest_horseSabotage.PotionLost" To="isactive" />
+				</itemclasstrigger_playerinventory>
+				<BetContest_HorseSabotage Name="objectiveVisual2" PositionY="-860" PositionX="360" RequiredForOutput="trosecko">
+					<Edge From="betContest_horseSabotage.State" To="Progress" />
+				</BetContest_HorseSabotage>
+				<Output Name="Output">
+					<Edge From="betContest_horseSabotage.Done" To="tiboruv_kun_byl_na_zavod_uspesne_otraven" />
+				</Output>
+			</Nodes>
+			<EdgeVertices>
+				<EdgeVertex Name="1SNFPsyr" PositionY="-180" PositionX="750" />
+				<EdgeVertex Name="3g6wNyLs" PositionY="-180" PositionX="280" />
+				<EdgeVertex Name="61xUVp7R" PositionY="-210" PositionX="-180" />
+				<EdgeVertex Name="bASp7x3m" PositionY="740" PositionX="-620" />
+				<EdgeVertex Name="BntnIomJ" PositionY="620" PositionX="-180" />
+				<EdgeVertex Name="DY3P9TIY" PositionY="629" PositionX="684" />
+				<EdgeVertex Name="f4IHqrWP" PositionY="-680" PositionX="690" />
+				<EdgeVertex Name="hN507Y3D" PositionY="680" PositionX="-570" />
+				<EdgeVertex Name="HVNpAb5w" PositionY="-490" PositionX="170" />
+				<EdgeVertex Name="jv0MIAQS" PositionY="750" PositionX="1110" />
+				<EdgeVertex Name="obuLUzcX" PositionY="-680" PositionX="-70" />
+				<EdgeVertex Name="py7gaJHJ" PositionY="690" PositionX="740" />
+				<EdgeVertex Name="TCsDj7Ay" PositionY="-490" PositionX="-600" />
+				<EdgeVertex Name="vertex15" PositionY="-330" PositionX="-390" />
+				<EdgeVertex Name="vertex16" PositionY="-330" PositionX="-890" />
+				<EdgeVertex Name="vertex6" PositionY="200" PositionX="670" />
+				<EdgeVertex Name="vertex7" PositionY="200" PositionX="-110" />
+			</EdgeVertices>
+			<Text StringName="nakrm_kone_projimadlem_S8BY" Text="Sabotáž koně na dostih" />
+			<Elements>
+				<GameplayActionElement>
+					<Text StringName="nakrm_kon_bude_mit_marker_dtCh" Text="Bude mít marker na jeden konkrétní žlab nebo kupku sena, kde parkuje Tiborův kůň. " />
+				</GameplayActionElement>
+				<GameplayActionElement>
+					<Text StringName="nakrm_kon_pujde_to_udelat_kKYH" Text="Půjde to udělat až se zadáním questu. " />
+				</GameplayActionElement>
+			</Elements>
+		</Gameplay>
+	</Skald>
+</Database>

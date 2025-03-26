@@ -1,0 +1,800 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="onUpdate" is_function="0">
+		<Variables>
+			<Variable name="area" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="areas" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="bed" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="checkIn" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="chest" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="door" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="kettel" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="leaveArea" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="lockIt" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="lockSequence" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="objects" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="playerIsOwner" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerIsRenting" type="playerIsRenting" values="" isPersistent="0" form="single" />
+			<Variable name="rentRoom" type="switch:rentRoom" values="" isPersistent="0" form="single" />
+			<Variable name="rentRoomCheckIn" type="rentRoomCheckIn" values="" isPersistent="0" form="single" />
+			<Variable name="rentRoomCheckOut" type="rentRoomCheckOut" values="" isPersistent="0" form="single" />
+			<Variable name="rentRoomOwner" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="seenResult" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="timespan" type="_int64" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<SuppressFailure>
+						<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+							<LinkTagFilter tag="&apos;leaveArea&apos;" prune="true" negprune="unknown" Parent="" Child="$leaveArea" Data="" />
+						</GraphSearch>
+					</SuppressFailure>
+					<SuppressFailure>
+						<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+							<LinkTagFilter tag="&apos;bed&apos;" prune="true" negprune="unknown" Parent="" Child="$bed" Data="" />
+						</GraphSearch>
+					</SuppressFailure>
+					<SuppressFailure>
+						<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+							<LinkTagFilter tag="&apos;door&apos;" prune="true" negprune="unknown" Parent="" Child="$door" Data="" />
+						</GraphSearch>
+					</SuppressFailure>
+					<SuppressFailure>
+						<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+							<LinkTagFilter tag="&apos;antitrespassArea&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+							<Nodalyzer Quantifiers="ForAll" Parent="" Child="$areas" saveVersion="2" />
+						</GraphSearch>
+					</SuppressFailure>
+					<Parallel successMode="Any" failureMode="Any">
+						<Loop count="-1">
+							<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$rentRoomCheckIn" senderInfo="" inbox="&apos;rentRoom_checkIn&apos;" condition="" answerVar="">
+								<AtomicDecorator>
+									<Sequence>
+										<IfCondition failOnCondition="false" condition="$door ~= $__null">
+											<ExecuteLua code="local rentDoor = XGenAIModule.GetEntityByWUID(data.door) &#10;rentDoor:Unlock()" />
+										</IfCondition>
+										<ForEach startIndex="0" step="1" array="$areas" iterator="" value="$area" break="">
+											<AddAreaLabel Area="$area" Label="&apos;antitrespass&apos;" />
+										</ForEach>
+									</Sequence>
+								</AtomicDecorator>
+							</ProcessMessage>
+						</Loop>
+						<Loop count="-1">
+							<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$rentRoomCheckOut" senderInfo="" inbox="&apos;rentRoom_checkOut&apos;" condition="" answerVar="">
+								<AddLink From="$this.id" To="$this.id" Tag="&apos;lockSequence&apos;" Data="" LinkOpHandleMode="Error" />
+							</ProcessMessage>
+						</Loop>
+						<Loop count="-1">
+							<LinkGate from="$this.id" to="$this.id" tag="&apos;lockSequence&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+								<Sequence>
+									<Expression expressions="$lockSequence = true" />
+									<IfElseCondition failOnCondition="false" condition="$leaveArea == $__null" saveVersion="2">
+										<Then canSkip="1">
+											<Sequence>
+												<RemoveLink From="$this.id" To="$this.id" Tag="&apos;lockSequence&apos;" LinkOpHandleMode="Error" />
+												<Expression expressions="$lockSequence = false" />
+											</Sequence>
+										</Then>
+										<Else canSkip="1">
+											<While doFail="false" propagateChildFail="false" condition="$lockSequence">
+												<AreaPresenceGate aiObjects="$__player" area="$leaveArea" amount="AtLeastOne" presence="NotThere" RunLogic="KeepRunning">
+													<Sequence>
+														<IfElseCondition failOnCondition="false" condition="$door ~= $__null" saveVersion="2">
+															<Then canSkip="1">
+																<Sequence>
+																	<DistanceCondition Origin="$__player" ReferencePt="$door" Low="30.000000" High="30.000000" Negation="true" ValueOnMiddle="false" failOnCondition="false">
+																		<Expression expressions="$lockIt = true" />
+																	</DistanceCondition>
+																	<CalculateLookDotProduct npc="$__player" position="$door" result="$seenResult" />
+																	<IfCondition failOnCondition="false" condition="$seenResult &lt; 0.5">
+																		<Expression expressions="$lockIt = true" />
+																	</IfCondition>
+																</Sequence>
+															</Then>
+															<Else canSkip="1">
+																<Expression expressions="$lockIt = true" />
+															</Else>
+														</IfElseCondition>
+														<IfCondition failOnCondition="false" condition="$lockIt">
+															<IsInsideArea Origin="$__player" Area="$leaveArea" FailSubtMissing="false" saveVersion="2">
+																<Then canSkip="1">
+																	<Success />
+																</Then>
+																<Else canSkip="1">
+																	<Sequence>
+																		<IfCondition failOnCondition="false" condition="$door ~= $__null">
+																			<ExecuteLua code="local rentDoor = XGenAIModule.GetEntityByWUID(data.door) &#10;rentDoor:Lock()" />
+																		</IfCondition>
+																		<RemoveLink From="$this.id" To="$this.id" Tag="&apos;lockSequence&apos;" LinkOpHandleMode="Error" />
+																		<Expression expressions="$lockSequence = false &#10;$lockIt = false" />
+																	</Sequence>
+																</Else>
+															</IsInsideArea>
+														</IfCondition>
+														<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+													</Sequence>
+												</AreaPresenceGate>
+											</While>
+										</Else>
+									</IfElseCondition>
+									<ForEach startIndex="0" step="1" array="$areas" iterator="" value="$area" break="">
+										<RemoveAreaLabel Area="$area" Label="&apos;antitrespass&apos;" />
+									</ForEach>
+								</Sequence>
+							</LinkGate>
+						</Loop>
+					</Parallel>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<ExecuteLua code="local ent = XGenAIModule.GetEntityByWUID(data.sack) &#10; &#10;ent.soul:DealDamage(110, 100)" />
+			<ExecuteLua code="local rentDoor = XGenAIModule.GetEntityByWUID(data.door) &#10;rentDoor:Lock()" />
+			<Sequence>
+				<SuppressFailure>
+					<Sequence>
+						<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+							<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+							<LinkTagFilter tag="&apos;playerIsRenting&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$playerIsRenting" />
+						</GraphSearch>
+						<Expression expressions="$checkIn = true" />
+					</Sequence>
+				</SuppressFailure>
+				<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+				<Parallel successMode="All" failureMode="All">
+					<Loop count="-1">
+						<IfGate atomic="false" condition="!$playerIsOwner" RunLogic="Halt">
+							<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$rentRoom" senderInfo="" inbox="&apos;rentRoom&apos;" condition="" answerVar="">
+								<Sequence>
+									<GetTime TimeType="WorldTime" OutVar="$playerIsRenting.rentStartedTimestamp" Delta="" />
+									<IfCondition failOnCondition="false" condition="$rentRoom.untilEndOfTheGame">
+										<Expression expressions="$playerIsRenting.infiniteRent = $rentRoom.untilEndOfTheGame" />
+									</IfCondition>
+									<AddLink From="$__player" To="$this.id" Tag="&apos;playerIsRenting&apos;" Data="$playerIsRenting" LinkOpHandleMode="OverWrite" />
+									<Expression expressions="$checkIn = true &#10;$playerIsOwner = true" />
+								</Sequence>
+							</ProcessMessage>
+						</IfGate>
+					</Loop>
+					<Loop count="-1">
+						<IfGate atomic="false" condition="$checkIn" RunLogic="Halt">
+							<Sequence>
+								<SuppressFailure>
+									<Sequence>
+										<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;bed&apos;" prune="true" negprune="unknown" Parent="" Child="$bed" Data="" />
+										</GraphSearch>
+										<AddLink From="$__player" To="$bed" Tag="&apos;owner&apos;" Data="" LinkOpHandleMode="OverWrite" />
+									</Sequence>
+								</SuppressFailure>
+								<SuppressFailure>
+									<Sequence>
+										<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;chest&apos;" prune="true" negprune="unknown" Parent="" Child="$chest" Data="" />
+										</GraphSearch>
+										<AddLink From="$__player" To="$chest" Tag="&apos;owner&apos;" Data="" LinkOpHandleMode="OverWrite" />
+									</Sequence>
+								</SuppressFailure>
+								<SuppressFailure>
+									<Sequence>
+										<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;kettel&apos;" prune="true" negprune="unknown" Parent="" Child="$kettel" Data="" />
+										</GraphSearch>
+										<AddLink From="$__player" To="$kettel" Tag="&apos;owner&apos;" Data="" LinkOpHandleMode="OverWrite" />
+									</Sequence>
+								</SuppressFailure>
+								<SuppressFailure>
+									<Sequence>
+										<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;door&apos;" prune="true" negprune="unknown" Parent="" Child="$door" Data="" />
+										</GraphSearch>
+										<ExecuteLua code="local rentDoor = XGenAIModule.GetEntityByWUID(data.door) &#10;rentDoor:Unlock()" />
+									</Sequence>
+								</SuppressFailure>
+								<SuppressFailure>
+									<Sequence>
+										<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;owners&apos;" prune="true" negprune="unknown" Parent="" Child="$rentRoomOwner" Data="" />
+										</GraphSearch>
+										<Expression expressions="$rentRoomCheckIn.untilEndOfTheGame = $rentRoom.untilEndOfTheGame" />
+										<InstantSendMessageToNPC target="$rentRoomOwner" variable="$rentRoomCheckIn" />
+									</Sequence>
+								</SuppressFailure>
+								<Expression expressions="$playerIsOwner = true &#10;$checkIn = false" />
+							</Sequence>
+						</IfGate>
+					</Loop>
+					<Loop count="-1">
+						<IfGate atomic="false" condition="$playerIsOwner &amp; !$playerIsRenting.infiniteRent" RunLogic="Halt">
+							<ContinuousSwitch>
+								<TimerBox startTime="&apos;8:00:00&apos;" endTime="&apos;8:10:00&apos;" variation="" duration="">
+									<Sequence>
+										<GetTime TimeType="WorldTime" OutVar="$currentTime" Delta="" />
+										<IfElseCondition failOnCondition="false" condition="$currentTime - $playerIsRenting.rentStartedTimestamp &gt; 28800000" saveVersion="2">
+											<Then canSkip="1">
+												<Sequence>
+													<SuppressFailure>
+														<RemoveLink From="$__player" To="$bed" Tag="&apos;owner&apos;" LinkOpHandleMode="Success" />
+													</SuppressFailure>
+													<SuppressFailure>
+														<CheckWuidValid wuid="$chest" FailSubtMissing="false" saveVersion="2">
+															<Then canSkip="1">
+																<RemoveLink From="$__player" To="$chest" Tag="&apos;owner&apos;" LinkOpHandleMode="Success" />
+															</Then>
+														</CheckWuidValid>
+													</SuppressFailure>
+													<SuppressFailure>
+														<CheckWuidValid wuid="$kettel" FailSubtMissing="false" saveVersion="2">
+															<Then canSkip="1">
+																<RemoveLink From="$__player" To="$kettel" Tag="&apos;owner&apos;" LinkOpHandleMode="Success" />
+															</Then>
+														</CheckWuidValid>
+													</SuppressFailure>
+													<SuppressFailure>
+														<RemoveLink From="$__player" To="$this.id" Tag="&apos;playerIsRenting&apos;" LinkOpHandleMode="Success" />
+													</SuppressFailure>
+													<ClearInbox inbox="&apos;rentRoom&apos;" type="" condition="" />
+													<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+														<LinkTagFilter tag="&apos;owners&apos;" prune="true" negprune="unknown" Parent="" Child="$rentRoomOwner" Data="" />
+													</GraphSearch>
+													<InstantSendMessageToNPC target="$rentRoomOwner" variable="$rentRoomCheckOut" />
+													<Expression expressions="$playerIsOwner = false &#10;$lockSequence = true" />
+												</Sequence>
+											</Then>
+											<Else canSkip="1">
+												<Wait duration="&apos;1h&apos;" timeType="WorldTime" doFail="false" variation="" />
+											</Else>
+										</IfElseCondition>
+									</Sequence>
+								</TimerBox>
+								<TimerBox startTime="&apos;8:10:00&apos;" endTime="&apos;8:00:00&apos;" variation="" duration="">
+									<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+								</TimerBox>
+							</ContinuousSwitch>
+						</IfGate>
+					</Loop>
+					<Loop count="-1">
+						<IfGate atomic="false" condition="$lockSequence" RunLogic="KeepRunning">
+							<AreaPresenceGate aiObjects="$__player" area="$area" amount="AtLeastOne" presence="NotThere" RunLogic="KeepRunning">
+								<Sequence>
+									<CalculateLookDotProduct npc="$__player" position="$door" result="$seenResult" />
+									<IfCondition failOnCondition="false" condition="$seenResult &lt; 0.5">
+										<Sequence>
+											<ExecuteLua code="local rentDoor = XGenAIModule.GetEntityByWUID(data.door) &#10;rentDoor:Lock()" />
+											<Expression expressions="$lockSequence = false" />
+										</Sequence>
+									</IfCondition>
+									<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+								</Sequence>
+							</AreaPresenceGate>
+						</IfGate>
+					</Loop>
+				</Parallel>
+			</Sequence>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="area" comment="" />
+				<Variable name="areas" comment="" />
+				<Variable name="bed" comment="" />
+				<Variable name="checkIn" comment="" />
+				<Variable name="chest" comment="" />
+				<Variable name="currentTime" comment="" />
+				<Variable name="door" comment="" />
+				<Variable name="kettel" comment="" />
+				<Variable name="leaveArea" comment="" />
+				<Variable name="lockIt" comment="" />
+				<Variable name="lockSequence" comment="" />
+				<Variable name="objects" comment="" />
+				<Variable name="playerIsOwner" comment="" />
+				<Variable name="playerIsRenting" comment="" />
+				<Variable name="rentRoom" comment="" />
+				<Variable name="rentRoomCheckIn" comment="" />
+				<Variable name="rentRoomCheckOut" comment="" />
+				<Variable name="rentRoomOwner" comment="" />
+				<Variable name="seenResult" comment="" />
+				<Variable name="timespan" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</LinkTagFilter>
+							</GraphSearch>
+						</SuppressFailure>
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</LinkTagFilter>
+							</GraphSearch>
+						</SuppressFailure>
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</LinkTagFilter>
+							</GraphSearch>
+						</SuppressFailure>
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</LinkTagFilter>
+								<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+								</Nodalyzer>
+							</GraphSearch>
+						</SuppressFailure>
+						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</ExecuteLua>
+											</IfCondition>
+											<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<AddAreaLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</AddAreaLabel>
+											</ForEach>
+										</Sequence>
+									</AtomicDecorator>
+								</ProcessMessage>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+								</ProcessMessage>
+							</Loop>
+							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</RemoveLink>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Sequence>
+											</Then>
+											<Else>
+												<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</DistanceCondition>
+																		<CalculateLookDotProduct hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</CalculateLookDotProduct>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</IfCondition>
+																	</Sequence>
+																</Then>
+																<Else>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Else>
+															</IfElseCondition>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IsInsideArea hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Success>
+																	</Then>
+																	<Else>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</ExecuteLua>
+																			</IfCondition>
+																			<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</RemoveLink>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Sequence>
+																	</Else>
+																</IsInsideArea>
+															</IfCondition>
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</Sequence>
+													</AreaPresenceGate>
+												</While>
+											</Else>
+										</IfElseCondition>
+										<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<RemoveAreaLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RemoveAreaLabel>
+										</ForEach>
+									</Sequence>
+								</LinkGate>
+							</Loop>
+						</Parallel>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest>
+				<ExecuteLua editorPosX="5380" editorPosY="680" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</ExecuteLua>
+				<ExecuteLua editorPosX="5440" editorPosY="790" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</ExecuteLua>
+				<Sequence editorPosX="5410" editorPosY="550" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</WUIDFilter>
+								<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</LinkTagFilter>
+							</GraphSearch>
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</Sequence>
+					</SuppressFailure>
+					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Wait>
+					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetTime>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</IfCondition>
+										<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</AddLink>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Sequence>
+								</ProcessMessage>
+							</IfGate>
+						</Loop>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="CHECK IN" breakpointFlags="0">
+									<OutputBreakpoints />
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+											<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</AddLink>
+										</Sequence>
+									</SuppressFailure>
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+											<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</AddLink>
+										</Sequence>
+									</SuppressFailure>
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+											<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</AddLink>
+										</Sequence>
+									</SuppressFailure>
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="open door" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+											<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</ExecuteLua>
+										</Sequence>
+									</SuppressFailure>
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</InstantSendMessageToNPC>
+										</Sequence>
+									</SuppressFailure>
+									<Expression hasInputBreakpoint="0" comment="stav pro SO" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+								</Sequence>
+							</IfGate>
+						</Loop>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<TimerBox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetTime>
+											<IfElseCondition hasInputBreakpoint="0" comment="hrac je uz ubytovany vice nez 8 hodin" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Sequence hasInputBreakpoint="0" comment="CHECKOUT" breakpointFlags="0">
+														<OutputBreakpoints />
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</RemoveLink>
+														</SuppressFailure>
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</RemoveLink>
+																</Then>
+															</CheckWuidValid>
+														</SuppressFailure>
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</RemoveLink>
+																</Then>
+															</CheckWuidValid>
+														</SuppressFailure>
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</RemoveLink>
+														</SuppressFailure>
+														<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ClearInbox>
+														<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</LinkTagFilter>
+														</GraphSearch>
+														<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</InstantSendMessageToNPC>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Sequence>
+												</Then>
+												<Else>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Else>
+											</IfElseCondition>
+										</Sequence>
+									</TimerBox>
+									<TimerBox hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</TimerBox>
+								</ContinuousSwitch>
+							</IfGate>
+						</Loop>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AreaPresenceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<CalculateLookDotProduct hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</CalculateLookDotProduct>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</ExecuteLua>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Sequence>
+										</IfCondition>
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</Sequence>
+								</AreaPresenceGate>
+							</IfGate>
+						</Loop>
+					</Parallel>
+				</Sequence>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="onRequest" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2" />
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="onRelease" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2" />
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="onMLWakeUp" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2" />
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

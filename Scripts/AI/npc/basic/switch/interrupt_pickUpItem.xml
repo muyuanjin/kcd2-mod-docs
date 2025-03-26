@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_pickUpItem" is_function="0">
+		<Variables>
+			<Variable name="_chickenGuid" type="_string" values="&apos;18ff9093-2cc4-4ab3-9f34-7cb0dd7cd30a&apos;" isPersistent="0" form="single" />
+			<Variable name="actionFailed" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="anchor" type="crime:anchor" values="" isPersistent="0" form="single" />
+			<Variable name="anchorTooFar" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="isInInventory" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="itemGuid" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="myDistanceToAnchor" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="quitLock" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="readyToPickup" type="_bool" values="false" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="pickUpItemData" type="switch:interruptData:pickUpItem" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Concatenation OutString="$quitLock" Pattern="&apos;pickupitem_$pickUpItemData.item;&apos;" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<EntityContext context="crime_preventDespawn" target="">
+							<AnyDecorator preset="crime_keepState" enabled="true">
+								<EntityContextElement context="crime_interrupt" enabled="true">
+									<EntityContext context="crime_interruptPickUpItem" target="">
+										<EntityContext context="soliloquy_disable" target="">
+											<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+												<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:pickUpItem&apos;">
+													<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$pickUpItemData.stimulusKind&apos;">
+														<Parallel successMode="Any" failureMode="Any">
+															<LogToLabel Name="&apos;quitlock&apos;" Wuid="" Message="&apos;QuitLock: $quitLock&apos;">
+																<ExternalLock atomic="true" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;$quitLock&apos;" RunLogic="KeepRunning">
+																	<Success />
+																</ExternalLock>
+															</LogToLabel>
+															<Sequence>
+																<Function_crime_limits_confirmReactionLink reactionKind="$enum:crime_reactionKind.pickUpItem" nodeLabel="88721917" />
+																<CheckWuidValid wuid="$pickUpItemData.item" FailSubtMissing="false" saveVersion="2">
+																	<Then canSkip="1">
+																		<GetItemProperty itemId="$pickUpItemData.item" property="Guid" result="$itemGuid" />
+																	</Then>
+																</CheckWuidValid>
+																<Function_crime_getAnchor anchor="$anchor" nodeLabel="13074318" />
+																<WaitAction />
+																<IsLoadedGate saveVersion="2">
+																	<Else canSkip="1">
+																		<Sequence>
+																			<MeasureDistance position1="$this.id" position2="$anchor.position" mode="ThreeDimensions" result="$myDistanceToAnchor" />
+																			<IfCondition failOnCondition="false" condition="$myDistanceToAnchor &lt; $data:script_param[&apos;crime_pickUpItem_maxAnchorDistance&apos;].value &amp; &#10;$itemGuid ~= $_chickenGuid">
+																				<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$pickUpItemData.item" metarole="&apos;NPC_VIDI_PREDMET_KTERY_SE_ROZHONE_SEBRAT&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="99073225" />
+																			</IfCondition>
+																		</Sequence>
+																	</Else>
+																</IsLoadedGate>
+																<Sequence>
+																	<Parallel successMode="Any" failureMode="Any">
+																		<Loop count="-1">
+																			<Sequence>
+																				<GetItemProperty itemId="$pickUpItemData.item" property="InInventory" result="$isInInventory" />
+																				<Wait duration="&apos;200ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																			</Sequence>
+																		</Loop>
+																		<Loop count="-1">
+																			<Sequence>
+																				<MeasureDistance position1="$this.id" position2="$anchor.position" mode="ThreeDimensions" result="$myDistanceToAnchor" />
+																				<IfCondition failOnCondition="false" condition="$myDistanceToAnchor &gt; $data:script_param[&apos;crime_pickUpItem_maxAnchorDistance&apos;].value">
+																					<Expression expressions="$anchorTooFar = true" />
+																				</IfCondition>
+																				<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+																			</Sequence>
+																		</Loop>
+																		<IfGate atomic="false" condition="~$isInInventory &amp; ~$anchorTooFar" RunLogic="Halt">
+																			<Sequence>
+																				<Move stopWithinDistance="0.300000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$pickUpItemData.item" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																				<Expression expressions="$readyToPickup = true" />
+																			</Sequence>
+																		</IfGate>
+																	</Parallel>
+																	<IfCondition failOnCondition="false" condition="$readyToPickup">
+																		<Selector>
+																			<Sequence>
+																				<PickToInventoryAction hand="Right" item="$pickUpItemData.item" autoAdjustHand="true" />
+																				<IfCondition failOnCondition="false" condition="$itemGuid ~= $_chickenGuid">
+																					<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$pickUpItemData.item" metarole="&apos;NPC_SBIRA_NALEZENY_PREDMET&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="21593549" />
+																				</IfCondition>
+																			</Sequence>
+																			<Expression expressions="$actionFailed = true" />
+																		</Selector>
+																	</IfCondition>
+																</Sequence>
+																<AtomicDecorator>
+																	<Sequence>
+																		<RemoveLink From="$this.id" To="$pickUpItemData.item" Tag="&apos;crime_pickUpItemReserved&apos;" LinkOpHandleMode="Success" />
+																		<RemoveLink From="$this.id" To="$pickUpItemData.item" Tag="&apos;crime_followUpBehavior_pickUpItem&apos;" LinkOpHandleMode="Success" />
+																		<Function_callFollowUpBehavior previousReaction="$enum:crime_reactionKind.pickUpItem" nodeLabel="79405294" />
+																	</Sequence>
+																</AtomicDecorator>
+															</Sequence>
+														</Parallel>
+													</LogToLabel>
+												</LogToLabel>
+											</AddPerceivableState>
+										</EntityContext>
+									</EntityContext>
+								</EntityContextElement>
+							</AnyDecorator>
+						</EntityContext>
+					</Child>
+					<OnFail canSkip="1">
+						<AtomicDecorator>
+							<Sequence>
+								<RemoveLink From="$this.id" To="$pickUpItemData.item" Tag="&apos;crime_pickUpItemReserved&apos;" LinkOpHandleMode="Success" />
+								<Function_crime_limits_removeReactionLink information="$pickUpItemData.information" reactionKind="$enum:crime_reactionKind.pickUpItem" nodeLabel="51761042" />
+							</Sequence>
+						</AtomicDecorator>
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<SuppressFailure>
+				<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+					<LinkTagFilter tag="&apos;crime_pickUpItemReserved_reverse&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+					<Nodalyzer Quantifiers="ForAll" Parent="" Child="$reservedItems" saveVersion="2" />
+				</GraphSearch>
+			</SuppressFailure>
+			<Parallel successMode="Any" failureMode="Any">
+				<IfGate atomic="false" condition="~$isInInventory &amp; ~$anchorTooFar" RunLogic="Halt">
+					<Sequence>
+						<Move stopWithinDistance="0.250000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="false" fastForwardIncludesMove="false" destinationSpecification="$pickUpItemData.item" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="$moveParams" pathFindingParams="" staminaPolicy="" pathInfo="" />
+						<Expression expressions="$pickedUpItem = true" />
+					</Sequence>
+				</IfGate>
+			</Parallel>
+		</ForestContainer>
+		<EditorData Signature="pickUpItem" EventSet="">
+			<Variables>
+				<Variable name="_chickenGuid" comment="" />
+				<Variable name="actionFailed" comment="" />
+				<Variable name="anchor" comment="" />
+				<Variable name="anchorTooFar" comment="" />
+				<Variable name="isInInventory" comment="" />
+				<Variable name="itemGuid" comment="" />
+				<Variable name="myDistanceToAnchor" comment="" />
+				<Variable name="quitLock" comment="" />
+				<Variable name="readyToPickup" comment="" />
+				<Variable name="pickUpItemData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Concatenation>
+				</OnInit>
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<ExternalLock hasInputBreakpoint="0" comment="Force quit from outside" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Success>
+																	</ExternalLock>
+																</LogToLabel>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Function_crime_limits_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_crime_limits_confirmReactionLink>
+																	<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</GetItemProperty>
+																		</Then>
+																	</CheckWuidValid>
+																	<Function_crime_getAnchor hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_crime_getAnchor>
+																	<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</WaitAction>
+																	<IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Else>
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</MeasureDistance>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_crime_crimeBark>
+																				</IfCondition>
+																			</Sequence>
+																		</Else>
+																	</IsLoadedGate>
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GetItemProperty>
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																				</Sequence>
+																			</Loop>
+																			<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</MeasureDistance>
+																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</IfCondition>
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																				</Sequence>
+																			</Loop>
+																			<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Move>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Sequence>
+																			</IfGate>
+																		</Parallel>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<PickToInventoryAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</PickToInventoryAction>
+																					<IfCondition hasInputBreakpoint="0" comment="KCD2-411537" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_crimeBark>
+																					</IfCondition>
+																				</Sequence>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Selector>
+																		</IfCondition>
+																	</Sequence>
+																	<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</RemoveLink>
+																			<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</RemoveLink>
+																			<Function_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_callFollowUpBehavior>
+																		</Sequence>
+																	</AtomicDecorator>
+																</Sequence>
+															</Parallel>
+														</LogToLabel>
+													</LogToLabel>
+												</AddPerceivableState>
+											</EntityContext>
+										</EntityContext>
+									</EntityContextElement>
+								</AnyDecorator>
+							</EntityContext>
+						</Child>
+						<OnFail>
+							<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RemoveLink>
+									<Function_crime_limits_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_limits_removeReactionLink>
+								</Sequence>
+							</AtomicDecorator>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest>
+				<SuppressFailure editorPosX="4350" editorPosY="-890" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</LinkTagFilter>
+						<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+						</Nodalyzer>
+					</GraphSearch>
+				</SuppressFailure>
+				<Parallel editorPosX="4530" editorPosY="420" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Move>
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</Sequence>
+					</IfGate>
+				</Parallel>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

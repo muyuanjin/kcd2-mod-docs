@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleInformationDiff" is_function="1">
+		<Variables>
+			<Variable name="crimeLevel" type="enum:crime_crimeLevel" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus" type="switch:stimulus:information" values="" isPersistent="0" form="single" />
+			<Variable name="useless" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="who_soul" type="cast:wuid_soul" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="informationDiff" type="informationDiff" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="informationDiffSender" type="senderInfo" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<IfElseCondition failOnCondition="false" condition="$informationDiff.information.label == &apos;animal_alarm&apos;" saveVersion="2">
+					<Then canSkip="1">
+						<Success />
+					</Then>
+					<Else canSkip="1">
+						<Sequence>
+							<IfCondition failOnCondition="false" condition="$informationDiff.status ~= &apos;Deleted&apos;">
+								<RetrieveInformation PerceivedWuid="$informationDiff.information.perceivedWuid" label="$informationDiff.information.label" OutVariable="$useless" />
+							</IfCondition>
+							<Expression expressions="$who_soul.value = $this.id" />
+							<IfCondition failOnCondition="false" condition="$data:crime[$informationDiff.information.label].isCrime">
+								<GetCrimeLevelByLabel Label="$informationDiff.information.label" CrimeLevel="$crimeLevel" />
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="~$informationDiff.updated">
+								<Function_crime_sendInformationDiffNotification information="$informationDiff.information" statusString="$informationDiff.status" nodeLabel="40015201" />
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$informationDiff.information.label == &apos;theft&apos;">
+								<Function_crime_sendLearnedTheftNotifications information="$informationDiff.information" statusString="$informationDiff.status" nodeLabel="28396858" />
+							</IfCondition>
+							<Switch>
+								<IfCondition failOnCondition="false" condition="$informationDiff.status == &apos;Created&apos;">
+									<Sequence>
+										<SendAIConceptSignal_NPCLearnsInformationNotification who="$who_soul" label="$informationDiff.information.label" perceivedWuid="$informationDiff.information.perceivedWuid" isCrime="$data:crime[$informationDiff.information.label].isCrime" crimeLevel="$crimeLevel" />
+										<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+											<Then canSkip="1">
+												<EntityContextCheck context="crime_bff" target="" saveVersion="2">
+													<Else canSkip="1">
+														<IfCondition failOnCondition="false" condition="$informationDiff.status == &apos;Created&apos; | &#10;$informationDiff.status == &apos;Received&apos;">
+															<ExecuteReputationHitFaction Npc="$this.id" Information="$informationDiff.information" />
+														</IfCondition>
+													</Else>
+												</EntityContextCheck>
+											</Then>
+										</EntityContextCheck>
+									</Sequence>
+								</IfCondition>
+								<IfCondition failOnCondition="false" condition="$informationDiff.status == &apos;Received&apos;">
+									<IfCondition failOnCondition="false" condition="$informationDiffSender.id ~= $__null">
+										<CheckRelationshipInterval_SoulToSoul TargetSoul="$informationDiffSender.id" Soul="$this.id" Flag="friend" saveVersion="2">
+											<Then canSkip="1">
+												<Sequence>
+													<Expression expressions="$stimulus.information = $informationDiff.information &#10;$stimulus.sender = $informationDiffSender.id &#10;$stimulus.updated = $informationDiff.updated" />
+													<SendAIConceptSignal_NPCLearnsInformationNotification who="$who_soul" label="$informationDiff.information.label" perceivedWuid="$informationDiff.information.perceivedWuid" isCrime="$data:crime[$informationDiff.information.label].isCrime" crimeLevel="$crimeLevel" />
+													<EntityContextCheck context="crime_bff" target="" saveVersion="2">
+														<Else canSkip="1">
+															<Sequence>
+																<Function_switch_handleStimulusInformation stimulus="$stimulus" nodeLabel="74078336" />
+																<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+																	<Then canSkip="1">
+																		<IfCondition failOnCondition="false" condition="$informationDiff.status == &apos;Created&apos; | &#10;$informationDiff.status == &apos;Received&apos;">
+																			<ExecuteReputationHitFaction Npc="$this.id" Information="$informationDiff.information" />
+																		</IfCondition>
+																	</Then>
+																</EntityContextCheck>
+															</Sequence>
+														</Else>
+													</EntityContextCheck>
+												</Sequence>
+											</Then>
+											<Else canSkip="1">
+												<DestroyInformationFromHolder Information="$informationDiff.information" />
+											</Else>
+										</CheckRelationshipInterval_SoulToSoul>
+									</IfCondition>
+								</IfCondition>
+								<DefaultBranch>
+									<Success />
+								</DefaultBranch>
+							</Switch>
+						</Sequence>
+					</Else>
+				</IfElseCondition>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="crimeLevel" comment="" />
+				<Variable name="stimulus" comment="" />
+				<Variable name="useless" comment="" />
+				<Variable name="who_soul" comment="" />
+				<Variable name="informationDiff" comment="" />
+				<Variable name="informationDiffSender" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-180" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Then>
+							<Success hasInputBreakpoint="0" comment="just ignore" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Success>
+						</Then>
+						<Else>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</RetrieveInformation>
+								</IfCondition>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GetCrimeLevelByLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetCrimeLevelByLabel>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_sendInformationDiffNotification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_sendInformationDiffNotification>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_sendLearnedTheftNotifications hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_sendLearnedTheftNotifications>
+								</IfCondition>
+								<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<SendAIConceptSignal_NPCLearnsInformationNotification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</SendAIConceptSignal_NPCLearnsInformationNotification>
+											<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Else>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<ExecuteReputationHitFaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</ExecuteReputationHitFaction>
+															</IfCondition>
+														</Else>
+													</EntityContextCheck>
+												</Then>
+											</EntityContextCheck>
+										</Sequence>
+									</IfCondition>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<SendAIConceptSignal_NPCLearnsInformationNotification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</SendAIConceptSignal_NPCLearnsInformationNotification>
+														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Else>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Function_switch_handleStimulusInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_switch_handleStimulusInformation>
+																	<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<ExecuteReputationHitFaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</ExecuteReputationHitFaction>
+																			</IfCondition>
+																		</Then>
+																	</EntityContextCheck>
+																</Sequence>
+															</Else>
+														</EntityContextCheck>
+													</Sequence>
+												</Then>
+												<Else>
+													<DestroyInformationFromHolder hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</DestroyInformationFromHolder>
+												</Else>
+											</CheckRelationshipInterval_SoulToSoul>
+										</IfCondition>
+									</IfCondition>
+									<DefaultBranch>
+										<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Success>
+									</DefaultBranch>
+								</Switch>
+							</Sequence>
+						</Else>
+					</IfElseCondition>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

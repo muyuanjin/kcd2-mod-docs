@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="player_svotiDebug" is_function="1">
+		<Variables>
+			<Variable name="_dummyWuid" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="skyColor" type="_float" values="" isPersistent="0" form="array" />
+			<Variable name="skyColor_current" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="step" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="steps" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="sunGI" type="_float" values="" isPersistent="0" form="array" />
+			<Variable name="sunGI_current" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="t" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="time" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="wait" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="waitString" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Loop count="-1">
+					<GameContextBarrier context="debug_svoti" Negation="false" RunLogic="Halt">
+						<Sequence>
+							<Expression expressions="$skyColor[0] = $data:script_param[&apos;debug_svoTI_SkyColorMultiplier_outside&apos;].value &#10;$skyColor[1] = $data:script_param[&apos;debug_svoTI_SkyColorMultiplier_inside&apos;].value &#10; &#10;$sunGI[0] = $data:script_param[&apos;debug_svoTI_SunGIMultiplierWH_outside&apos;].value &#10;$sunGI[1] = $data:script_param[&apos;debug_svoTI_SunGIMultiplierWH_inside&apos;].value &#10; &#10;$steps = $data:script_param[&apos;debug_svoTI_steps&apos;].value &#10;$time = $data:script_param[&apos;debug_svoTI_time&apos;].value &#10;$wait = $time/$steps &#10; &#10;$step = 1.0/$steps // step for interpolation" />
+							<Concatenation OutString="$waitString" Pattern="&apos;$wait;ms&apos;" />
+							<IsInsideAreaWithLabel Position="$__player" Label="&apos;interior&apos;" Area="$_dummyWuid" FailSubtMissing="false" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$t = 1.0" />
+								</Then>
+								<Else canSkip="1">
+									<Expression expressions="$t = 0.0" />
+								</Else>
+							</IsInsideAreaWithLabel>
+							<Expression expressions="$skyColor_current = $skyColor[0] * (1 - $t) + $skyColor[1] * $t  &#10;$sunGI_current = $sunGI[0] * (1 - $t) + $sunGI[1] * $t" />
+							<Sequence>
+								<ExecuteLua code="System.SetCVar(&apos;e_svoTI_SkyColorMultiplier&apos;, data.skyColor_current) &#10;System.SetCVar(&apos;e_svoTI_SunGIMultiplierWH&apos;, data.sunGI_current) &#10; &#10;Dump(&quot;Setting both to default value&quot;) &#10; &#10;Dump(&quot;Current value e_svoTI_SkyColorMultiplier = &quot; .. data.skyColor_current) &#10;Dump(&quot;Current value e_svoTI_SunGIMultiplierWH = &quot; .. data.sunGI_current) &#10;Dump(&quot;====&quot;)" />
+								<Parallel successMode="Any" failureMode="Any">
+									<Loop count="-1">
+										<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;interior&apos;" Negation="false" RunLogic="Halt">
+											<Sequence>
+												<While doFail="false" propagateChildFail="false" condition="$t &lt; 1.0">
+													<Sequence>
+														<Expression expressions="$t += $step" />
+														<Clamp value="$t" lowerBoundary="0.000000" upperBoundary="1.000000" result="$t" />
+														<Expression expressions="$skyColor_current = $skyColor[0] * (1 - $t) + $skyColor[1] * $t  &#10;$sunGI_current = $sunGI[0] * (1 - $t) + $sunGI[1] * $t" />
+														<ExecuteLua code="System.SetCVar(&apos;e_svoTI_SkyColorMultiplier&apos;, data.skyColor_current) &#10;System.SetCVar(&apos;e_svoTI_SunGIMultiplierWH&apos;, data.sunGI_current) &#10; &#10;Dump(&quot;Current value e_svoTI_SkyColorMultiplier = &quot; .. data.skyColor_current) &#10;Dump(&quot;Current value e_svoTI_SunGIMultiplierWH = &quot; .. data.sunGI_current) &#10;Dump(&quot;====&quot;)" />
+														<Wait duration="$waitString" timeType="GameTime" doFail="false" variation="" />
+													</Sequence>
+												</While>
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Sequence>
+										</IsInsideAreaWithLabelBarrier>
+									</Loop>
+									<Loop count="-1">
+										<IsInsideAreaWithLabelBarrier Who="$__player" Label="&apos;interior&apos;" Negation="true" RunLogic="Halt">
+											<Sequence>
+												<While doFail="false" propagateChildFail="false" condition="$t &gt; 0">
+													<Sequence>
+														<Expression expressions="$t -= $step" />
+														<Clamp value="$t" lowerBoundary="0.000000" upperBoundary="1.000000" result="$t" />
+														<Expression expressions="$skyColor_current = $skyColor[0] * (1 - $t) + $skyColor[1] * $t  &#10;$sunGI_current = $sunGI[0] * (1 - $t) + $sunGI[1] * $t" />
+														<ExecuteLua code="System.SetCVar(&apos;e_svoTI_SkyColorMultiplier&apos;, data.skyColor_current) &#10;System.SetCVar(&apos;e_svoTI_SunGIMultiplierWH&apos;, data.sunGI_current) &#10; &#10;Dump(&quot;Current value e_svoTI_SkyColorMultiplier = &quot; .. data.skyColor_current) &#10;Dump(&quot;Current value e_svoTI_SunGIMultiplierWH = &quot; .. data.sunGI_current) &#10;Dump(&quot;====&quot;)" />
+														<Wait duration="$waitString" timeType="GameTime" doFail="false" variation="" />
+													</Sequence>
+												</While>
+												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+											</Sequence>
+										</IsInsideAreaWithLabelBarrier>
+									</Loop>
+								</Parallel>
+							</Sequence>
+						</Sequence>
+					</GameContextBarrier>
+				</Loop>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Expression expressions="Interpolate cvars: &#10;e_svoTI_SkyColorMultiplier = 0.05 &#10;e_svoTI_SunGIMultiplierWH = 0.1 &#10; &#10;lerp(a,b,t) return a * (1-t) + b * t" />
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="_dummyWuid" comment="" />
+				<Variable name="skyColor" comment="" />
+				<Variable name="skyColor_current" comment="" />
+				<Variable name="step" comment="" />
+				<Variable name="steps" comment="" />
+				<Variable name="sunGI" comment="" />
+				<Variable name="sunGI_current" comment="" />
+				<Variable name="t" comment="" />
+				<Variable name="time" comment="" />
+				<Variable name="wait" comment="" />
+				<Variable name="waitString" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GameContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="Init vals" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+								<Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Concatenation>
+								<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+									<Else>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Else>
+								</IsInsideAreaWithLabel>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</ExecuteLua>
+									<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<Clamp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Clamp>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</ExecuteLua>
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</Sequence>
+													</While>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Sequence>
+											</IsInsideAreaWithLabelBarrier>
+										</Loop>
+										<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IsInsideAreaWithLabelBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<Clamp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Clamp>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</ExecuteLua>
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</Sequence>
+													</While>
+													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Wait>
+												</Sequence>
+											</IsInsideAreaWithLabelBarrier>
+										</Loop>
+									</Parallel>
+								</Sequence>
+							</Sequence>
+						</GameContextBarrier>
+					</Loop>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Expression editorPosX="330" editorPosY="-320" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</Expression>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

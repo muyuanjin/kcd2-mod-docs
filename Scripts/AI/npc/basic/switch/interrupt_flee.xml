@@ -1,0 +1,1061 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_flee" is_function="0">
+		<Variables>
+			<Variable name="additionalMoveParams" type="additionalMoveParams" values="destChangedThreshold(&apos;1s&apos;),continueWhenHalting(false)" isPersistent="0" form="single" />
+			<Variable name="anyDecoratorPreset" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="breakCheckNotifications" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="const_false" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="cooperationNotification" type="enum:crime_cooperationNotification" values="" isPersistent="0" form="single" />
+			<Variable name="crimeLevel" type="enum:crime_crimeLevel" values="" isPersistent="0" form="single" />
+			<Variable name="currentPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="customFlee_area" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="customFlee_tagpoint" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="customFlee_tagpoints" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="customTagPointFound" type="_bool" values="" isPersistent="1" form="single" />
+			<Variable name="distanceMeTarget" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="distanceToFlee" type="_float" values="120" isPersistent="0" form="single" />
+			<Variable name="distanceToFlee_int" type="_int" values="120" isPersistent="0" form="single" />
+			<Variable name="dotPlayerMePoint" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="emittingInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="endFlee" type="_bool" values="" isPersistent="1" form="single" />
+			<Variable name="greyOutE" type="_bool" values="true" isPersistent="1" form="single" />
+			<Variable name="highestDot_point" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="highestDot_val" type="_float" values="-1" isPersistent="0" form="single" />
+			<Variable name="keepMinimalDistance" type="_float" values="0" isPersistent="1" form="single" />
+			<Variable name="myHealth" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="myPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="nextMostImportantInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="pathFindingParams" type="pathFindingParams" values="" isPersistent="0" form="single" />
+			<Variable name="pointPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="runFromPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="shouldEmitAlarm" type="_bool" values="true" isPersistent="0" form="single" />
+			<Variable name="stayOnHorse" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="targetPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="vecTargetToMe" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="vecTargetToPoint" type="vec3" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="fleeData" type="switch:interruptData:flee" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<Sequence>
+					<GenerateRandomInteger lowerBoundary="100" upperBoundary="140" result="$distanceToFlee_int" />
+					<Expression expressions="$pathFindingParams.usePaths = false &#10;$pathFindingParams.useGeneratedNSO = true &#10; &#10;$distanceToFlee = $distanceToFlee_int" />
+				</Sequence>
+			</OnInit>
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<Parallel successMode="Any" failureMode="Any">
+							<EntityContextElement context="crime_interrupt" enabled="true">
+								<Sequence>
+									<Function_crime_getAnyDecoratorPreset tryToKeepItems="false" tryToKeepSecondaryWeapon="true" presetString="$anyDecoratorPreset" nodeLabel="96292125" />
+									<ActorStateCheck Who="$this.id" State="horse" FailWithSubtreeMissing="false" saveVersion="2">
+										<Then canSkip="1">
+											<Expression expressions="$stayOnHorse = true" />
+										</Then>
+									</ActorStateCheck>
+									<AnyDecorator preset="$anyDecoratorPreset" enabled="true">
+										<AnyDecorator preset="crime_keepStance" enabled="$stayOnHorse">
+											<EntityContext context="combat_alwaysWithdrawSkirmish" target="$this.id">
+												<EntityContext context="switch_suppressTransitionsToMercyWhenHit" target="">
+													<EntityContext context="crime_disableArrowFlyByReaction" target="$this.id">
+														<EntityContext context="crime_interruptFlee" target="$this.id">
+															<EntityContext context="crime_suppressShockReactionFromSwitch" target="$this.id">
+																<EntityContext context="combat_flee" target="$this.id">
+																	<EntityContext context="crime_disableReport" target="$this.id">
+																		<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+																			<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:flee&apos;">
+																				<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$fleeData.stimulusKind&apos;">
+																					<UrgencyDecorator Urgency="Fast">
+																						<Sequence>
+																							<Function_crime_limits_confirmReactionLink reactionKind="$enum:crime_reactionKind.flee" nodeLabel="13845368" />
+																							<Function_crime_checkInterruptInformation information="$fleeData.information" nodeLabel="29083699" />
+																							<RemoveBuffs SoulWUID="" BuffGUID="&apos;ffc20522-134d-4811-8bc5-e933b74b7081&apos;" BuffTagId="-1" />
+																							<IfElseCondition failOnCondition="false" condition="$fleeData.information.label == &apos;&apos; | &#10;$fleeData.information.label == &apos;nonAttributedCrime&apos; | &#10;$fleeData.information.label == &apos;motivation&apos;" saveVersion="2">
+																								<Then canSkip="1">
+																									<GetCrimeLevelByStimulusKind StimulusKind="$fleeData.stimulusKind" CrimeLevel="$crimeLevel" />
+																								</Then>
+																								<Else canSkip="1">
+																									<GetCrimeLevelByLabel Label="$fleeData.information.label" CrimeLevel="$crimeLevel" />
+																								</Else>
+																							</IfElseCondition>
+																							<IfCondition failOnCondition="false" condition="$fleeData.isIndifferent">
+																								<Expression expressions="$shouldEmitAlarm = false" />
+																							</IfCondition>
+																							<IfCondition failOnCondition="false" condition="$fleeData.target ~= $__null">
+																								<EnsureWuidValid Wuid="$fleeData.target" RunLogic="Halt">
+																									<SubtreeDecorator saveVersion="2">
+																										<Init canSkip="1">
+																											<AddBuff SoulWUID="" BuffGUID="&apos;1951e0bc-532d-4813-a64d-38ef635b3fd5&apos;" />
+																										</Init>
+																										<Subtree canSkip="1">
+																											<Parallel successMode="Any" failureMode="Any">
+																												<Sequence>
+																													<IfCondition failOnCondition="false" condition="$fleeData.previousReaction ~= $enum:crime_reactionKind.mercy">
+																														<IsLoadedGate saveVersion="2">
+																															<Else canSkip="1">
+																																<Function_crime_flee_startBark fleeData="$fleeData" nodeLabel="71188142" />
+																															</Else>
+																														</IsLoadedGate>
+																													</IfCondition>
+																													<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																												</Sequence>
+																												<Sequence>
+																													<IfCondition failOnCondition="false" condition="$fleeData.isIndifferent">
+																														<EntityContext context="crime_indifferentFlee" target="">
+																															<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																														</EntityContext>
+																													</IfCondition>
+																													<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																												</Sequence>
+																												<While doFail="false" propagateChildFail="false" condition="~$breakCheckNotifications">
+																													<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$cooperationNotification" senderInfo="" inbox="&apos;crime_cooperationNotification&apos;" condition="" answerVar="">
+																														<Switch>
+																															<IfCondition failOnCondition="false" condition="$cooperationNotification == $enum:crime_cooperationNotification.crimeResolved | &#10;$cooperationNotification == $enum:crime_cooperationNotification.informationTransformed">
+																																<Selector>
+																																	<CheckInformationKnowledge Information="$fleeData.information" Holder="$this.id" />
+																																	<Sequence>
+																																		<ReinitVariable variable="$nextMostImportantInformation" />
+																																		<GetMostImportantCrimeInformation Npc="$this.id" OnlyRelated="true" MostImportantInformation="$nextMostImportantInformation" />
+																																		<IfElseCondition failOnCondition="false" condition="$nextMostImportantInformation.label == &apos;&apos;" saveVersion="2">
+																																			<Then canSkip="1">
+																																				<Sequence>
+																																					<ReinitVariable variable="$emittingInformation" />
+																																					<Expression expressions="$breakCheckNotifications = true" />
+																																				</Sequence>
+																																			</Then>
+																																			<Else canSkip="1">
+																																				<Sequence>
+																																					<Expression expressions="$fleeData.information = $nextMostImportantInformation" />
+																																					<LinkDataExpression From="$__player" To="$this.id" Expresssion="$__link_crime_reactor.information = $nextMostImportantInformation" />
+																																					<Expression expressions="$emittingInformation = $nextMostImportantInformation" />
+																																				</Sequence>
+																																			</Else>
+																																		</IfElseCondition>
+																																	</Sequence>
+																																</Selector>
+																															</IfCondition>
+																															<DefaultBranch>
+																																<Success />
+																															</DefaultBranch>
+																														</Switch>
+																													</ProcessMessage>
+																												</While>
+																												<Sequence>
+																													<Expression expressions="$emittingInformation = $fleeData.information" />
+																													<IfCondition failOnCondition="false" condition="$fleeData.information.label == &apos;murder&apos; | &#10;$fleeData.information.label == &apos;murderByDog&apos; | &#10;$fleeData.information.label == &apos;corpseViolation&apos; | &#10;$fleeData.information.label == &apos;corpse&apos;">
+																														<Function_crime_addCorpseLink corpse="$fleeData.information.perceivedWuid" corpseState="$enum:corpseState.discovered" mateReacting="false" resolve="false" storeTime="false" nodeLabel="21228652" />
+																													</IfCondition>
+																													<IfCondition failOnCondition="false" condition="$keepMinimalDistance == 0">
+																														<SuppressFailure>
+																															<Sequence>
+																																<GetLastNavmeshPosition Target="$this.id" OutPos="$currentPos" TrackingMode="NPCPos" />
+																																<GetSpatialInfo In="$fleeData.target" Out="$runFromPos" What="Position" />
+																																<NumericalOperation In1VariableName="currentPos" In2VariableName="runFromPos" In3VariableName="" OutVariableName="$keepMinimalDistance" Operation="distance2d" />
+																															</Sequence>
+																														</SuppressFailure>
+																													</IfCondition>
+																													<IfCondition failOnCondition="false" condition="$keepMinimalDistance &gt; 2">
+																														<Expression expressions="$keepMinimalDistance = 2" />
+																													</IfCondition>
+																													<EntityContextCheck context="actorCondition_forcedInjured" target="" saveVersion="2">
+																														<Then canSkip="1">
+																															<Expression expressions="$pathFindingParams.useGeneratedNSO = false" />
+																														</Then>
+																														<Else canSkip="1">
+																															<Sequence>
+																																<ExecuteLua code="data.myHealth = entity.soul:GetState(&apos;health&apos;)" />
+																																<IfCondition failOnCondition="false" condition="$myHealth &lt; $data:script_param[&apos;crime_flee_dontUseLedgesMaxHealth&apos;].value">
+																																	<Expression expressions="$pathFindingParams.useGeneratedNSO = false" />
+																																</IfCondition>
+																															</Sequence>
+																														</Else>
+																													</EntityContextCheck>
+																													<IfElseCondition failOnCondition="false" condition="$fleeData.leaveLevel" saveVersion="2">
+																														<Then canSkip="1">
+																															<Function_crime_fleeLeaveLevel fleeData="$fleeData" emittingInformation="$emittingInformation" shouldEmitAlarm="$shouldEmitAlarm" nodeLabel="68758578" />
+																														</Then>
+																														<Else canSkip="1">
+																															<IsInsideAreaWithLabel Position="$this.id" Label="&apos;customFleeArea&apos;" Area="$customFlee_area" FailSubtMissing="false" saveVersion="2">
+																																<Then canSkip="1">
+																																	<Sequence>
+																																		<SuppressFailure>
+																																			<GraphSearch Origin="$customFlee_area" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																																				<LinkTagFilter tag="&apos;crime_customFlee_tagpoint&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																																				<Nodalyzer Quantifiers="ForAll" Parent="" Child="$customFlee_tagpoints" saveVersion="2" />
+																																			</GraphSearch>
+																																		</SuppressFailure>
+																																		<IsFastForwarded failOnCondition="false" saveVersion="2">
+																																			<Else canSkip="1">
+																																				<IsLoadedGate saveVersion="2">
+																																					<Else canSkip="1">
+																																						<Function_crime_playStartleAnimation assaultData="$fleeData.assaultData" crimeLevel="$crimeLevel" freshlyAttributedCrime="$fleeData.freshlyAttributedCrime" information="$fleeData.information" initiator="$fleeData.initiatedBy" previousReaction="$fleeData.previousReaction" reactionKind="$enum:crime_reactionKind.flee" shockSource="$__player" source="$fleeData.source" stimulusKind="$fleeData.stimulusKind" nodeLabel="74979722" />
+																																					</Else>
+																																				</IsLoadedGate>
+																																			</Else>
+																																		</IsFastForwarded>
+																																		<IfElseCondition failOnCondition="false" condition="#customFlee_tagpoints &gt; 0" saveVersion="2">
+																																			<Then canSkip="1">
+																																				<While doFail="false" propagateChildFail="false" condition="~$endFlee">
+																																					<Sequence>
+																																						<IfCondition failOnCondition="false" condition="~$customTagPointFound">
+																																							<Sequence>
+																																								<GetSpatialInfo In="$this.id" Out="$myPos" What="Position" />
+																																								<GetSpatialInfo In="$fleeData.target" Out="$targetPos" What="Position" />
+																																								<Expression expressions="$vecTargetToMe.x = $myPos.x - $targetPos.x &#10;$vecTargetToMe.y = $myPos.y - $targetPos.y &#10;$vecTargetToMe.z = $myPos.z - $targetPos.z &#10; &#10;$highestDot_val = -1 &#10;$highestDot_point = $__null" />
+																																								<NumericalOperation In1VariableName="vecTargetToMe" In2VariableName="" In3VariableName="" OutVariableName="$vecTargetToMe" Operation="normalize" />
+																																								<ForEach startIndex="0" step="1" array="$customFlee_tagpoints" iterator="" value="$customFlee_tagpoint" break="">
+																																									<DistanceCondition Origin="$this.id" ReferencePt="$customFlee_tagpoint" Low="$data:script_param[&apos;crime_flee_customAreaPointsDistanceFilter&apos;].value" High="$data:script_param[&apos;crime_flee_customAreaPointsDistanceFilter&apos;].value" Negation="true" ValueOnMiddle="false" failOnCondition="false">
+																																										<Sequence>
+																																											<GetSpatialInfo In="$customFlee_tagpoint" Out="$pointPos" What="Position" />
+																																											<Expression expressions="$vecTargetToPoint.x = $pointPos.x - $targetPos.x &#10;$vecTargetToPoint.y = $pointPos.y - $targetPos.y &#10;$vecTargetToPoint.z = $pointPos.z - $targetPos.z" />
+																																											<NumericalOperation In1VariableName="vecTargetToPoint" In2VariableName="" In3VariableName="" OutVariableName="$vecTargetToPoint" Operation="normalize" />
+																																											<NumericalOperation In1VariableName="vecTargetToMe" In2VariableName="vecTargetToPoint" In3VariableName="" OutVariableName="$dotPlayerMePoint" Operation="dot" />
+																																											<IfCondition failOnCondition="false" condition="$highestDot_val &lt; $dotPlayerMePoint">
+																																												<Expression expressions="$highestDot_val = $dotPlayerMePoint &#10;$highestDot_point = $customFlee_tagpoint" />
+																																											</IfCondition>
+																																										</Sequence>
+																																									</DistanceCondition>
+																																								</ForEach>
+																																								<IfElseCondition failOnCondition="false" condition="$highestDot_point ~= $__null" saveVersion="2">
+																																									<Then canSkip="1">
+																																										<Expression expressions="$customTagPointFound = true" />
+																																									</Then>
+																																									<Else canSkip="1">
+																																										<Expression expressions="$highestDot_point = (#customFlee_tagpoints &gt; 0) ? $customFlee_tagpoints[0] : $__null" />
+																																									</Else>
+																																								</IfElseCondition>
+																																							</Sequence>
+																																						</IfCondition>
+																																						<Parallel successMode="Any" failureMode="Any">
+																																							<MoveParamsDecorator speed="Sprint" pathFindingParams="$pathFindingParams" doorClosingPolicy="LeaveOpened">
+																																								<Move stopWithinDistance="2.500000" stopDistanceVariation="2.500000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$highestDot_point" destinationSpecification2="" destinationSpecification3="" speed="SlowSprint" additionalParams="$additionalMoveParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+																																							</MoveParamsDecorator>
+																																							<Loop count="-1">
+																																								<IfGate atomic="false" condition="$emittingInformation.label ~= &apos;&apos;" RunLogic="Halt">
+																																									<Function_crime_emitInformation crimeInformation="$emittingInformation" emitCrimeInformation="true" longDistanceModeEnabled="$const_false" reactionKind="$enum:crime_reactionKind.flee" emitAlarmInformation="$shouldEmitAlarm" nodeLabel="45586496" />
+																																								</IfGate>
+																																							</Loop>
+																																							<Loop count="-1">
+																																								<Sequence>
+																																									<Wait duration="&apos;8s&apos;" timeType="GameTime" doFail="false" variation="" />
+																																									<Function_crime_flee_runningBark fleeData="$fleeData" nodeLabel="20945583" />
+																																								</Sequence>
+																																							</Loop>
+																																						</Parallel>
+																																						<Parallel successMode="Any" failureMode="Any">
+																																							<DistanceGate Origin="$this.id" ReferencePt="$fleeData.target" Low="$data:script_param[&apos;crime_flee_minimalDistance&apos;].value" High="$data:script_param[&apos;crime_flee_minimalDistance&apos;].value" Negation="true" OpenInMiddle="false" RunLogic="KeepRunning">
+																																								<EntityContext context="npcSchedulerPriorityBoostPrevention" target="">
+																																									<SubtreeDecorator saveVersion="2">
+																																										<Init canSkip="1">
+																																											<Expression expressions="$greyOutE = $fleeData.target ~= $__player" />
+																																										</Init>
+																																										<Subtree canSkip="1">
+																																											<Sequence>
+																																												<UnstanceAction unstance="FleeLookingAround" locationObject="" slaveObject="" />
+																																												<Function_crime_waitMiliseconds miliseconds="$data:script_param[&apos;crime_flee_stayFledDuration&apos;].value" nodeLabel="90343417" />
+																																												<Expression expressions="$endFlee = true" />
+																																											</Sequence>
+																																										</Subtree>
+																																										<Cleanup canSkip="1">
+																																											<Expression expressions="$greyOutE = true" />
+																																										</Cleanup>
+																																									</SubtreeDecorator>
+																																								</EntityContext>
+																																							</DistanceGate>
+																																							<DistanceGate Origin="$this.id" ReferencePt="$fleeData.target" Low="10.000000" High="10.000000" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+																																								<Expression expressions="$customTagPointFound = false" />
+																																							</DistanceGate>
+																																						</Parallel>
+																																					</Sequence>
+																																				</While>
+																																			</Then>
+																																			<Else canSkip="1">
+																																				<ErrorNode Message="&apos;[$this.name;] using customFlee but no tagPoints linked to this area (use link `crime_customFlee_tagpoint`)&apos;" />
+																																			</Else>
+																																		</IfElseCondition>
+																																	</Sequence>
+																																</Then>
+																																<Else canSkip="1">
+																																	<While doFail="false" propagateChildFail="false" condition="~$endFlee">
+																																		<IfElseCondition failOnCondition="false" condition="$fleeData.target == $__null" saveVersion="2">
+																																			<Then canSkip="1">
+																																				<Expression expressions="$endFlee = true" />
+																																			</Then>
+																																			<Else canSkip="1">
+																																				<Sequence>
+																																					<MeasureDistance position1="$this.id" position2="$fleeData.target" mode="ThreeDimensions" result="$distanceMeTarget" />
+																																					<Parallel successMode="Any" failureMode="Any">
+																																						<While doFail="false" propagateChildFail="true" condition="$distanceMeTarget &lt; $data:script_param[&apos;crime_flee_minimalDistance&apos;].value">
+																																							<Sequence>
+																																								<GetSpatialInfo In="$fleeData.target" Out="$runFromPos" What="Position" />
+																																								<MoveParamsDecorator speed="Sprint" pathFindingParams="$pathFindingParams" doorClosingPolicy="LeaveOpened">
+																																									<Move stopWithinDistance="2.500000" stopDistanceVariation="2.500000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$runFromPos" destinationSpecification2="$distanceToFlee" destinationSpecification3="$keepMinimalDistance" speed="SlowSprint" additionalParams="$additionalMoveParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+																																								</MoveParamsDecorator>
+																																								<MeasureDistance position1="$this.id" position2="$fleeData.target" mode="ThreeDimensions" result="$distanceMeTarget" />
+																																							</Sequence>
+																																						</While>
+																																						<Loop count="-1">
+																																							<IfGate atomic="false" condition="$emittingInformation.label ~= &apos;&apos;" RunLogic="Halt">
+																																								<Function_crime_emitInformation crimeInformation="$emittingInformation" emitCrimeInformation="true" longDistanceModeEnabled="$const_false" reactionKind="$enum:crime_reactionKind.flee" emitAlarmInformation="$shouldEmitAlarm" nodeLabel="40872660" />
+																																							</IfGate>
+																																						</Loop>
+																																						<Loop count="-1">
+																																							<Sequence>
+																																								<Wait duration="&apos;8s&apos;" timeType="GameTime" doFail="false" variation="" />
+																																								<Function_crime_flee_runningBark fleeData="$fleeData" nodeLabel="67048391" />
+																																							</Sequence>
+																																						</Loop>
+																																					</Parallel>
+																																					<DistanceGate Origin="$this.id" ReferencePt="$fleeData.target" Low="$data:script_param[&apos;crime_flee_minimalDistance&apos;].value" High="$data:script_param[&apos;crime_flee_minimalDistance&apos;].value" Negation="true" OpenInMiddle="false" RunLogic="Halt">
+																																						<EntityContext context="npcSchedulerPriorityBoostPrevention" target="">
+																																							<SubtreeDecorator saveVersion="2">
+																																								<Init canSkip="1">
+																																									<Expression expressions="$greyOutE = $fleeData.target == $__player" />
+																																								</Init>
+																																								<Subtree canSkip="1">
+																																									<Sequence>
+																																										<UnstanceAction unstance="FleeLookingAround" locationObject="" slaveObject="" />
+																																										<Function_crime_waitMiliseconds miliseconds="$data:script_param[&apos;crime_flee_stayFledDuration&apos;].value" nodeLabel="22128639" />
+																																										<Expression expressions="$endFlee = true" />
+																																									</Sequence>
+																																								</Subtree>
+																																								<Cleanup canSkip="1">
+																																									<Expression expressions="$greyOutE = true" />
+																																								</Cleanup>
+																																							</SubtreeDecorator>
+																																						</EntityContext>
+																																					</DistanceGate>
+																																				</Sequence>
+																																			</Else>
+																																		</IfElseCondition>
+																																	</While>
+																																</Else>
+																															</IsInsideAreaWithLabel>
+																														</Else>
+																													</IfElseCondition>
+																												</Sequence>
+																											</Parallel>
+																										</Subtree>
+																										<Cleanup canSkip="1">
+																											<RemoveBuffs SoulWUID="" BuffGUID="&apos;1951e0bc-532d-4813-a64d-38ef635b3fd5&apos;" BuffTagId="-1" />
+																										</Cleanup>
+																									</SubtreeDecorator>
+																								</EnsureWuidValid>
+																							</IfCondition>
+																							<Function_callFollowUpBehavior previousReaction="$enum:crime_reactionKind.flee" nodeLabel="23572328" />
+																						</Sequence>
+																					</UrgencyDecorator>
+																				</LogToLabel>
+																			</LogToLabel>
+																		</AddPerceivableState>
+																	</EntityContext>
+																</EntityContext>
+															</EntityContext>
+														</EntityContext>
+													</EntityContext>
+												</EntityContext>
+											</EntityContext>
+										</AnyDecorator>
+									</AnyDecorator>
+								</Sequence>
+							</EntityContextElement>
+							<ContinuousSwitch>
+								<IfCondition failOnCondition="false" condition="$greyOutE">
+									<EntityContextPreset preset="crime_greyOutEAndDisableChat" target="$this.id">
+										<EntityContextPresetElement contextPreset="crime_greyOutEAndDisableChat" enabled="true">
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</EntityContextPresetElement>
+									</EntityContextPreset>
+								</IfCondition>
+								<IfCondition failOnCondition="false" condition="true">
+									<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+								</IfCondition>
+							</ContinuousSwitch>
+						</Parallel>
+					</Child>
+					<OnFail canSkip="1">
+						<Sequence>
+							<Function_crime_addLeavingInterruptCooldown nodeLabel="44593411" />
+							<Function_crime_limits_removeReactionLink information="$fleeData.information" reactionKind="$enum:crime_reactionKind.flee" nodeLabel="67144906" />
+							<RemoveLink From="$this.id" To="$this.id" Tag="&apos;combat_questFightStatus&apos;" LinkOpHandleMode="Success" />
+						</Sequence>
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<SuppressFailure>
+				<Sequence>
+					<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+						<LinkTagFilter tag="&apos;combat_questFightStatus&apos;" prune="true" negprune="unknown" Parent="" Child="$shooter" Data="" />
+					</GraphSearch>
+				</Sequence>
+			</SuppressFailure>
+		</ForestContainer>
+		<EditorData Signature="flee" EventSet="">
+			<Variables>
+				<Variable name="additionalMoveParams" comment="" />
+				<Variable name="anyDecoratorPreset" comment="" />
+				<Variable name="breakCheckNotifications" comment="" />
+				<Variable name="const_false" comment="" />
+				<Variable name="cooperationNotification" comment="" />
+				<Variable name="crimeLevel" comment="" />
+				<Variable name="currentPos" comment="" />
+				<Variable name="customFlee_area" comment="" />
+				<Variable name="customFlee_tagpoint" comment="" />
+				<Variable name="customFlee_tagpoints" comment="" />
+				<Variable name="customTagPointFound" comment="" />
+				<Variable name="distanceMeTarget" comment="" />
+				<Variable name="distanceToFlee" comment="" />
+				<Variable name="distanceToFlee_int" comment="" />
+				<Variable name="dotPlayerMePoint" comment="" />
+				<Variable name="emittingInformation" comment="" />
+				<Variable name="endFlee" comment="" />
+				<Variable name="greyOutE" comment="" />
+				<Variable name="highestDot_point" comment="" />
+				<Variable name="highestDot_val" comment="" />
+				<Variable name="keepMinimalDistance" comment="" />
+				<Variable name="myHealth" comment="" />
+				<Variable name="myPos" comment="" />
+				<Variable name="nextMostImportantInformation" comment="" />
+				<Variable name="pathFindingParams" comment="" />
+				<Variable name="pointPos" comment="" />
+				<Variable name="runFromPos" comment="" />
+				<Variable name="shouldEmitAlarm" comment="" />
+				<Variable name="stayOnHorse" comment="" />
+				<Variable name="targetPos" comment="" />
+				<Variable name="vecTargetToMe" comment="" />
+				<Variable name="vecTargetToPoint" comment="" />
+				<Variable name="fleeData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-3020" editorPosY="550" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GenerateRandomInteger hasInputBreakpoint="0" comment="Can&apos;t pass float variable to result" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GenerateRandomInteger>
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+					</Sequence>
+				</OnInit>
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Function_crime_getAnyDecoratorPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_getAnyDecoratorPreset>
+										<ActorStateCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Then>
+										</ActorStateCheck>
+										<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Function_crime_limits_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_crime_limits_confirmReactionLink>
+																								<Function_crime_checkInterruptInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_crime_checkInterruptInformation>
+																								<RemoveBuffs hasInputBreakpoint="0" comment="rm drunkeness" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</RemoveBuffs>
+																								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																									<OutputBreakpoints />
+																									<Then>
+																										<GetCrimeLevelByStimulusKind hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</GetCrimeLevelByStimulusKind>
+																									</Then>
+																									<Else>
+																										<GetCrimeLevelByLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</GetCrimeLevelByLabel>
+																									</Else>
+																								</IfElseCondition>
+																								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</Expression>
+																								</IfCondition>
+																								<IfCondition hasInputBreakpoint="0" comment="KCD2-519670 if the threat is despawned, do not bother" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<EnsureWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																											<OutputBreakpoints />
+																											<Init>
+																												<AddBuff hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</AddBuff>
+																											</Init>
+																											<Subtree>
+																												<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																<OutputBreakpoints />
+																																<Else>
+																																	<Function_crime_flee_startBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</Function_crime_flee_startBark>
+																																</Else>
+																															</IsLoadedGate>
+																														</IfCondition>
+																														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Wait>
+																													</Sequence>
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																</Wait>
+																															</EntityContext>
+																														</IfCondition>
+																														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Wait>
+																													</Sequence>
+																													<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<CheckInformationKnowledge hasInputBreakpoint="0" comment="This node fails if we don&apos;t known the information anymore" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</CheckInformationKnowledge>
+																																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																			<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																			</ReinitVariable>
+																																			<GetMostImportantCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																			</GetMostImportantCrimeInformation>
+																																			<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																				<OutputBreakpoints />
+																																				<Then>
+																																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																						<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</ReinitVariable>
+																																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</Expression>
+																																					</Sequence>
+																																				</Then>
+																																				<Else>
+																																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																						<Expression hasInputBreakpoint="0" comment="Update information to the next most critical one" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</Expression>
+																																						<LinkDataExpression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</LinkDataExpression>
+																																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</Expression>
+																																					</Sequence>
+																																				</Else>
+																																			</IfElseCondition>
+																																		</Sequence>
+																																	</Selector>
+																																</IfCondition>
+																																<DefaultBranch>
+																																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</Success>
+																																</DefaultBranch>
+																															</Switch>
+																														</ProcessMessage>
+																													</While>
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Expression>
+																														<IfCondition hasInputBreakpoint="0" comment="(must be after startbark)" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</Function_crime_addCorpseLink>
+																														</IfCondition>
+																														<IfCondition hasInputBreakpoint="0" comment="Save&amp;load" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<GetLastNavmeshPosition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</GetLastNavmeshPosition>
+																																	<GetSpatialInfo hasInputBreakpoint="0" comment="Add start distance" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</GetSpatialInfo>
+																																	<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</NumericalOperation>
+																																</Sequence>
+																															</SuppressFailure>
+																														</IfCondition>
+																														<IfCondition hasInputBreakpoint="0" comment="keep away distance max 2m" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</Expression>
+																														</IfCondition>
+																														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																															<OutputBreakpoints />
+																															<Then>
+																																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																</Expression>
+																															</Then>
+																															<Else>
+																																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																	</ExecuteLua>
+																																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Expression>
+																																	</IfCondition>
+																																</Sequence>
+																															</Else>
+																														</EntityContextCheck>
+																														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																															<OutputBreakpoints />
+																															<Then>
+																																<Function_crime_fleeLeaveLevel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																</Function_crime_fleeLeaveLevel>
+																															</Then>
+																															<Else>
+																																<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																	<OutputBreakpoints />
+																																	<Then>
+																																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																			<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																				<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																					<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																					</LinkTagFilter>
+																																					<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																						<OutputBreakpoints />
+																																					</Nodalyzer>
+																																				</GraphSearch>
+																																			</SuppressFailure>
+																																			<IsFastForwarded hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																				<OutputBreakpoints />
+																																				<Else>
+																																					<IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																						<OutputBreakpoints />
+																																						<Else>
+																																							<Function_crime_playStartleAnimation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																							</Function_crime_playStartleAnimation>
+																																						</Else>
+																																					</IsLoadedGate>
+																																				</Else>
+																																			</IsFastForwarded>
+																																			<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																				<OutputBreakpoints />
+																																				<Then>
+																																					<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</GetSpatialInfo>
+																																									<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</GetSpatialInfo>
+																																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</Expression>
+																																									<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</NumericalOperation>
+																																									<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																										<DistanceCondition hasInputBreakpoint="0" comment="KCD2-356795" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																												<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<OutputBreakpoints />
+																																												</GetSpatialInfo>
+																																												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<OutputBreakpoints />
+																																												</Expression>
+																																												<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<OutputBreakpoints />
+																																												</NumericalOperation>
+																																												<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<OutputBreakpoints />
+																																												</NumericalOperation>
+																																												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<OutputBreakpoints />
+																																													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																														<OutputBreakpoints />
+																																													</Expression>
+																																												</IfCondition>
+																																											</Sequence>
+																																										</DistanceCondition>
+																																									</ForEach>
+																																									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																										<OutputBreakpoints />
+																																										<Then>
+																																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</Expression>
+																																										</Then>
+																																										<Else>
+																																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</Expression>
+																																										</Else>
+																																									</IfElseCondition>
+																																								</Sequence>
+																																							</IfCondition>
+																																							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</Move>
+																																								</MoveParamsDecorator>
+																																								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																										<Function_crime_emitInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																										</Function_crime_emitInformation>
+																																									</IfGate>
+																																								</Loop>
+																																								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																										</Wait>
+																																										<Function_crime_flee_runningBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																										</Function_crime_flee_runningBark>
+																																									</Sequence>
+																																								</Loop>
+																																							</Parallel>
+																																							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																										<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																											<OutputBreakpoints />
+																																											<Init>
+																																												<Expression hasInputBreakpoint="0" comment="if not running from player, allow E" breakpointFlags="0">
+																																													<OutputBreakpoints />
+																																												</Expression>
+																																											</Init>
+																																											<Subtree>
+																																												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<OutputBreakpoints />
+																																													<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																														<OutputBreakpoints />
+																																													</UnstanceAction>
+																																													<Function_crime_waitMiliseconds hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																														<OutputBreakpoints />
+																																													</Function_crime_waitMiliseconds>
+																																													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																														<OutputBreakpoints />
+																																													</Expression>
+																																												</Sequence>
+																																											</Subtree>
+																																											<Cleanup>
+																																												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<OutputBreakpoints />
+																																												</Expression>
+																																											</Cleanup>
+																																										</SubtreeDecorator>
+																																									</EntityContext>
+																																								</DistanceGate>
+																																								<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<Expression hasInputBreakpoint="0" comment="Let&apos;s go agaaaane" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</Expression>
+																																								</DistanceGate>
+																																							</Parallel>
+																																						</Sequence>
+																																					</While>
+																																				</Then>
+																																				<Else>
+																																					<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																					</ErrorNode>
+																																				</Else>
+																																			</IfElseCondition>
+																																		</Sequence>
+																																	</Then>
+																																	<Else>
+																																		<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																			<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																				<OutputBreakpoints />
+																																				<Then>
+																																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																					</Expression>
+																																				</Then>
+																																				<Else>
+																																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																						<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</MeasureDistance>
+																																						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																							<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</GetSpatialInfo>
+																																									<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																										<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																										</Move>
+																																									</MoveParamsDecorator>
+																																									<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</MeasureDistance>
+																																								</Sequence>
+																																							</While>
+																																							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<Function_crime_emitInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</Function_crime_emitInformation>
+																																								</IfGate>
+																																							</Loop>
+																																							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</Wait>
+																																									<Function_crime_flee_runningBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</Function_crime_flee_runningBark>
+																																								</Sequence>
+																																							</Loop>
+																																						</Parallel>
+																																						<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																									<OutputBreakpoints />
+																																									<Init>
+																																										<Expression hasInputBreakpoint="0" comment="if not running from player, allow E" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																										</Expression>
+																																									</Init>
+																																									<Subtree>
+																																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																											<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</UnstanceAction>
+																																											<Function_crime_waitMiliseconds hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</Function_crime_waitMiliseconds>
+																																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</Expression>
+																																										</Sequence>
+																																									</Subtree>
+																																									<Cleanup>
+																																										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																										</Expression>
+																																									</Cleanup>
+																																								</SubtreeDecorator>
+																																							</EntityContext>
+																																						</DistanceGate>
+																																					</Sequence>
+																																				</Else>
+																																			</IfElseCondition>
+																																		</While>
+																																	</Else>
+																																</IsInsideAreaWithLabel>
+																															</Else>
+																														</IfElseCondition>
+																													</Sequence>
+																												</Parallel>
+																											</Subtree>
+																											<Cleanup>
+																												<RemoveBuffs hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</RemoveBuffs>
+																											</Cleanup>
+																										</SubtreeDecorator>
+																									</EnsureWuidValid>
+																								</IfCondition>
+																								<Function_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_callFollowUpBehavior>
+																							</Sequence>
+																						</UrgencyDecorator>
+																					</LogToLabel>
+																				</LogToLabel>
+																			</AddPerceivableState>
+																		</EntityContext>
+																	</EntityContext>
+																</EntityContext>
+															</EntityContext>
+														</EntityContext>
+													</EntityContext>
+												</EntityContext>
+											</AnyDecorator>
+										</AnyDecorator>
+									</Sequence>
+								</EntityContextElement>
+								<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContextPresetElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</EntityContextPresetElement>
+										</EntityContextPreset>
+									</IfCondition>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</IfCondition>
+								</ContinuousSwitch>
+							</Parallel>
+						</Child>
+						<OnFail>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_crime_addLeavingInterruptCooldown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_addLeavingInterruptCooldown>
+								<Function_crime_limits_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_limits_removeReactionLink>
+								<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</RemoveLink>
+							</Sequence>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest>
+				<SuppressFailure editorPosX="-2740" editorPosY="1190" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</LinkTagFilter>
+						</GraphSearch>
+					</Sequence>
+				</SuppressFailure>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

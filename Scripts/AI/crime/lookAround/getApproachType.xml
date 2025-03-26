@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_lookAround_getApproachType" is_function="1">
+		<Variables>
+			<Variable name="corpseValid" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="distance" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="theftMethod" type="enum:crime_theftMethod" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="alarmReactionKind" type="enum:crime_alarmReactionType" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="approachType" type="enum:crime_lookAround_approachType" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="firstIterationSoundSkip" type="_bool" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="initialEvaluationDone" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="isFirstOnCrimeScene" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="isPoaching" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="originPosition" type="vec3" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+			<Variable name="positionUpdated" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="positionUpdatedFromSound" type="_bool" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="resetMove" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="soundType" type="enum:sound" values="$enum:sound.invalid" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="stimulusKind" type="enum:crime_stimulusKind" values="" isPersistent="0" form="single" requirementType="ConstReference" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Expression expressions="$approachType = $enum:crime_lookAround_approachType.loose" />
+					<Loop count="-1">
+						<Sequence>
+							<MeasureDistance position1="$this.id" position2="$originPosition" mode="ThreeDimensions" result="$distance" />
+							<IfElseCondition failOnCondition="false" condition="$distance &lt; $data:script_param[&apos;crime_crimeSceneSeach_firstNpcEvalDistance&apos;].value" saveVersion="2">
+								<Then canSkip="1">
+									<Sequence>
+										<AtomicDecorator>
+											<Sequence>
+												<Function_crime_lookAround_isFirstReactorNearby pos="$originPosition" isFirst="$isFirstOnCrimeScene" nodeLabel="70391249" />
+												<IfElseCondition failOnCondition="false" condition="$isFirstOnCrimeScene" saveVersion="2">
+													<Then canSkip="1">
+														<Sequence>
+															<Expression expressions="$resetMove = true" />
+															<IfCondition failOnCondition="false" condition="$stimulusKind == $enum:crime_stimulusKind.corpse | &#10;$stimulusKind == $enum:crime_stimulusKind.murder">
+																<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+																	<Then canSkip="1">
+																		<Expression expressions="$corpseValid = true" />
+																	</Then>
+																</CheckWuidValid>
+															</IfCondition>
+															<Switch>
+																<IfCondition failOnCondition="false" condition="$stimulusKind == $enum:crime_stimulusKind.sound &amp; &#10;$soundType == $enum:sound.dog_bark">
+																	<Expression expressions="$approachType = $enum:crime_lookAround_approachType.special_sound_dog_bark_align" />
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="($stimulusKind == $enum:crime_stimulusKind.sound | $positionUpdatedFromSound) &#10;&amp; &#10;~$firstIterationSoundSkip">
+																	<Expression expressions="$approachType = $enum:crime_lookAround_approachType.special_sound" />
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="$positionUpdated">
+																	<Expression expressions="$approachType = $enum:crime_lookAround_approachType.close" />
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="$corpseValid &amp; ( &#10;$stimulusKind == $enum:crime_stimulusKind.corpse | &#10;$stimulusKind == $enum:crime_stimulusKind.murder &#10;)">
+																	<Expression expressions="$approachType = $enum:crime_lookAround_approachType.special_corpse" />
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="$stimulusKind == $enum:crime_stimulusKind.theft &amp; &#10;$information.label == &apos;theft&apos;">
+																	<Sequence>
+																		<LockDynamicInformationValues Information="$information">
+																			<GetDynamicInformationValue Information="$information" Tag="&apos;theftMethod&apos;" Out="$theftMethod" />
+																		</LockDynamicInformationValues>
+																		<IfElseCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.lootCorpse" saveVersion="2">
+																			<Then canSkip="1">
+																				<Expression expressions="$approachType = $enum:crime_lookAround_approachType.special_corpse" />
+																			</Then>
+																			<Else canSkip="1">
+																				<Expression expressions="$approachType = $enum:crime_lookAround_approachType.close" />
+																			</Else>
+																		</IfElseCondition>
+																	</Sequence>
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="$alarmReactionKind &gt; $enum:crime_alarmReactionType.none">
+																	<Expression expressions="$approachType = $enum:crime_lookAround_approachType.approximate" />
+																</IfCondition>
+																<IfCondition failOnCondition="false" condition="$stimulusKind == $enum:crime_stimulusKind.animalAbuse &amp; &#10;$isPoaching">
+																	<Expression expressions="$approachType = $enum:crime_lookAround_approachType.special_animal_corpse" />
+																</IfCondition>
+																<DefaultBranch>
+																	<Expression expressions="$approachType = $enum:crime_lookAround_approachType.close" />
+																</DefaultBranch>
+															</Switch>
+															<AddLink From="$__player" To="$this.id" Tag="&apos;crime_firstReactorAtPos&apos;" Data="$originPosition" LinkOpHandleMode="OverWrite" />
+														</Sequence>
+													</Then>
+													<Else canSkip="1">
+														<IfCondition failOnCondition="false" condition="($stimulusKind == $enum:crime_stimulusKind.sound | $positionUpdatedFromSound) &amp; &#10;~$firstIterationSoundSkip">
+															<Expression expressions="$resetMove = true &#10;$approachType = $enum:crime_lookAround_approachType.special_sound" />
+														</IfCondition>
+													</Else>
+												</IfElseCondition>
+												<Expression expressions="$initialEvaluationDone = true" />
+											</Sequence>
+										</AtomicDecorator>
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</Then>
+								<Else canSkip="1">
+									<Sequence>
+										<AtomicDecorator>
+											<Sequence>
+												<IfCondition failOnCondition="false" condition="($stimulusKind == $enum:crime_stimulusKind.sound | $positionUpdatedFromSound)  &#10;&amp; &#10;~$firstIterationSoundSkip">
+													<Expression expressions="$approachType = $enum:crime_lookAround_approachType.special_sound" />
+												</IfCondition>
+												<Expression expressions="$initialEvaluationDone = true" />
+											</Sequence>
+										</AtomicDecorator>
+										<Wait duration="&apos;200ms&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</Else>
+							</IfElseCondition>
+						</Sequence>
+					</Loop>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="corpseValid" comment="" />
+				<Variable name="distance" comment="" />
+				<Variable name="theftMethod" comment="" />
+				<Variable name="alarmReactionKind" comment="" />
+				<Variable name="approachType" comment="" />
+				<Variable name="firstIterationSoundSkip" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="initialEvaluationDone" comment="" />
+				<Variable name="isFirstOnCrimeScene" comment="" />
+				<Variable name="isPoaching" comment="" />
+				<Variable name="originPosition" comment="" />
+				<Variable name="positionUpdated" comment="" />
+				<Variable name="positionUpdatedFromSound" comment="" />
+				<Variable name="resetMove" comment="" />
+				<Variable name="soundType" comment="" />
+				<Variable name="stimulusKind" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</MeasureDistance>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Function_crime_lookAround_isFirstReactorNearby hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Function_crime_lookAround_isFirstReactorNearby>
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Then>
+																	</CheckWuidValid>
+																</IfCondition>
+																<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</GetDynamicInformationValue>
+																			</LockDynamicInformationValues>
+																			<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Then>
+																				<Else>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Else>
+																			</IfElseCondition>
+																		</Sequence>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																	<DefaultBranch>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</DefaultBranch>
+																</Switch>
+																<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</AddLink>
+															</Sequence>
+														</Then>
+														<Else>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</IfCondition>
+														</Else>
+													</IfElseCondition>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Sequence>
+											</AtomicDecorator>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</Then>
+									<Else>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</IfCondition>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Sequence>
+											</AtomicDecorator>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+						</Loop>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

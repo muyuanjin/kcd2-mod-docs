@@ -1,0 +1,701 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_animal_annoyance" is_function="0">
+		<Variables>
+			<Variable name="animalCooldown" type="crime:animalCooldowns" values="" isPersistent="0" form="single" />
+			<Variable name="annoyanceCancelDistance" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="canSeePlayer" type="_bool" values="true" isPersistent="0" form="single" />
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="distanceToTarget" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="goIntoAttack" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="perceptibleType" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="perceptionInfo" type="perceptionInfo" values="" isPersistent="0" form="single" />
+			<Variable name="stopBarkingRequest" type="animal:dog:stopBarkingRequest" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="animalAnnoyanceData" type="switch:animal_interruptData:annoyance" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<EntityContext context="crime_animal_interruptAnnoyance" target="$this.id">
+							<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+								<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:animal:annoyance&apos;">
+									<Sequence>
+										<Function_crime_animal_confirmReactionLink reactionKind="$enum:crime_animal_reactionKind.annoyance" target="$animalAnnoyanceData.target" nodeLabel="48304385" />
+										<WaitAction />
+										<Parallel successMode="Any" failureMode="Any">
+											<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$stopBarkingRequest" senderInfo="" inbox="&apos;dog_stopBarkingRequest&apos;" condition="" answerVar="">
+												<Sequence>
+													<SuppressFailure>
+														<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;crime_animalCooldowns&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+															<LinkTagFilter tag="&apos;crime_animalCooldowns&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$animalCooldown" />
+														</GraphSearch>
+													</SuppressFailure>
+													<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+													<Expression expressions="$animalCooldown.soundReactionTimestamp = $currentTime + 20000 &#10;$animalCooldown.dogStoppedBarkingCooldown = $currentTime + 20000" />
+													<AddLink From="$this.id" To="$this.id" Tag="&apos;crime_animalCooldowns&apos;" Data="$animalCooldown" LinkOpHandleMode="OverWrite" />
+												</Sequence>
+											</ProcessMessage>
+											<Switch>
+												<IfCondition failOnCondition="false" condition="$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.enemy">
+													<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;enemy&apos;">
+														<EntityContextCheck context="crime_isCombatableAnimal" target="" saveVersion="2">
+															<Then canSkip="1">
+																<ForceLook LookTarget="$animalAnnoyanceData.target" DisableVariations="false">
+																	<Sequence>
+																		<Parallel successMode="Any" failureMode="Any">
+																			<Sequence>
+																				<Turn target="$animalAnnoyanceData.target" align="false" />
+																				<Function_switch_animal_oneshotDogBark barkTarget="$__player" count="-1" shouldConsiderPerk="true" nodeLabel="12523648" />
+																			</Sequence>
+																			<DistanceGate Origin="$this.id" ReferencePt="$animalAnnoyanceData.target" Low="$data:script_param[&apos;crime_animal_attackDistanceThreshold&apos;].value" High="$data:script_param[&apos;crime_animal_attackDistanceThreshold&apos;].value" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+																				<Expression expressions="$goIntoAttack = true" />
+																			</DistanceGate>
+																			<Sequence>
+																				<MeasureDistance position1="$animalAnnoyanceData.target" position2="$this.id" mode="ThreeDimensions" result="$distanceToTarget" />
+																				<Expression expressions="$annoyanceCancelDistance = $distanceToTarget + 1" />
+																				<DistanceGate Origin="$this.id" ReferencePt="$animalAnnoyanceData.target" Low="$annoyanceCancelDistance" High="$annoyanceCancelDistance" Negation="true" OpenInMiddle="false" RunLogic="KeepRunning">
+																					<Success />
+																				</DistanceGate>
+																			</Sequence>
+																			<Sequence>
+																				<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" />
+																				<Expression expressions="$goIntoAttack = true" />
+																			</Sequence>
+																		</Parallel>
+																		<IfCondition failOnCondition="false" condition="$goIntoAttack">
+																			<Function_switch_animal_decideAttackOrEscape previousReaction="$enum:crime_animal_reactionKind.annoyance" skirmishRelationOverride="$enum:skirmishRelationOverride.hostile" stimulusKind="$animalAnnoyanceData.stimulusKind" targetNPC="$animalAnnoyanceData.target" nodeLabel="27152906" />
+																		</IfCondition>
+																	</Sequence>
+																</ForceLook>
+															</Then>
+															<Else canSkip="1">
+																<Success />
+															</Else>
+														</EntityContextCheck>
+													</LogToLabel>
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.combat">
+													<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;combat&apos;">
+														<EntityContextCheck context="crime_isCombatableAnimal" target="" saveVersion="2">
+															<Then canSkip="1">
+																<ForceLook LookTarget="$animalAnnoyanceData.target" DisableVariations="false">
+																	<Parallel successMode="Any" failureMode="Any">
+																		<Sequence>
+																			<Turn target="$animalAnnoyanceData.target" align="false" />
+																			<Loop count="-1">
+																				<AnimationAction fragment="&apos;GrowlingStand&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+																			</Loop>
+																		</Sequence>
+																		<Sequence>
+																			<Wait duration="&apos;7s&apos;" timeType="GameTime" doFail="false" variation="" />
+																			<Function_switch_animal_decideAttackOrEscape previousReaction="$enum:crime_animal_reactionKind.annoyance" skirmishRelationOverride="$enum:skirmishRelationOverride.hostile" stimulusKind="$animalAnnoyanceData.stimulusKind" targetNPC="$animalAnnoyanceData.target" nodeLabel="87180239" />
+																		</Sequence>
+																	</Parallel>
+																</ForceLook>
+															</Then>
+															<Else canSkip="1">
+																<Success />
+															</Else>
+														</EntityContextCheck>
+													</LogToLabel>
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.hit | &#10;$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.sound | &#10;$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.human | &#10;$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.flyBy">
+													<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;hit|sound|human&apos;">
+														<Sequence>
+															<UrgencyDecorator Urgency="Fast">
+																<WaitAction />
+															</UrgencyDecorator>
+															<StopMovement waitUntilStopped="false" />
+															<EntityContextCheck context="crime_isCombatableAnimal" target="" saveVersion="2">
+																<Then canSkip="1">
+																	<Switch>
+																		<IfCondition failOnCondition="false" condition="$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.human">
+																			<ForceLook LookTarget="$animalAnnoyanceData.target" DisableVariations="false">
+																				<Parallel successMode="Any" failureMode="Any">
+																					<Function_switch_animal_oneshotDogBark barkTarget="$__player" count="-1" shouldConsiderPerk="false" nodeLabel="21313765" />
+																					<Sequence>
+																						<MeasureDistance position1="$animalAnnoyanceData.target" position2="$this.id" mode="ThreeDimensions" result="$distanceToTarget" />
+																						<Expression expressions="$annoyanceCancelDistance = $distanceToTarget + 1" />
+																						<DistanceGate Origin="$this.id" ReferencePt="$animalAnnoyanceData.target" Low="$annoyanceCancelDistance" High="$annoyanceCancelDistance" Negation="true" OpenInMiddle="false" RunLogic="KeepRunning">
+																							<Success />
+																						</DistanceGate>
+																					</Sequence>
+																				</Parallel>
+																			</ForceLook>
+																		</IfCondition>
+																		<IfCondition failOnCondition="false" condition="$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.sound | &#10;$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.flyBy">
+																			<Parallel successMode="Any" failureMode="Any">
+																				<Function_switch_animal_oneshotDogBark barkTarget="$__player" count="3" shouldConsiderPerk="false" nodeLabel="39889874" />
+																				<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" />
+																			</Parallel>
+																		</IfCondition>
+																		<IfCondition failOnCondition="false" condition="$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.hit">
+																			<Sequence>
+																				<Turn target="$animalAnnoyanceData.target" align="false" />
+																				<Parallel successMode="Any" failureMode="Any">
+																					<IfElseCondition failOnCondition="false" condition="$animalAnnoyanceData.attackKind == $enum:crime_attackKind.armed | &#10;$animalAnnoyanceData.attackKind == $enum:crime_attackKind.missile" saveVersion="2">
+																						<Then canSkip="1">
+																							<Loop count="-1">
+																								<Sequence>
+																									<HasSeenPlayer NPC="$this.id" FullyAwareOnly="false" saveVersion="2">
+																										<Then canSkip="1">
+																											<Function_switch_animal_decideAttackOrEscape previousReaction="$enum:crime_animal_reactionKind.annoyance" skirmishRelationOverride="$enum:skirmishRelationOverride.hostile" stimulusKind="$animalAnnoyanceData.stimulusKind" targetNPC="$animalAnnoyanceData.target" nodeLabel="22913988" />
+																										</Then>
+																									</HasSeenPlayer>
+																									<Wait duration="&apos;100ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																								</Sequence>
+																							</Loop>
+																						</Then>
+																						<Else canSkip="1">
+																							<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																						</Else>
+																					</IfElseCondition>
+																					<Sequence>
+																						<Function_switch_animal_oneshotDogBark barkTarget="$__player" count="1" shouldConsiderPerk="false" nodeLabel="22195321" />
+																						<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+																					</Sequence>
+																				</Parallel>
+																			</Sequence>
+																		</IfCondition>
+																		<DefaultBranch>
+																			<Success />
+																		</DefaultBranch>
+																	</Switch>
+																</Then>
+																<Else canSkip="1">
+																	<EntityContextCheck context="crime_isWildAnimal" target="" saveVersion="2">
+																		<Then canSkip="1">
+																			<Switch>
+																				<IfCondition failOnCondition="false" condition="$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.human">
+																					<EntityContext context="crime_animal_suppressSwitchPerceptionReaction" target="">
+																						<IfGate atomic="false" condition="$canSeePlayer" RunLogic="Halt">
+																							<ForceLook LookTarget="$animalAnnoyanceData.target" DisableVariations="false">
+																								<Sequence>
+																									<Parallel successMode="Any" failureMode="Any">
+																										<Loop count="-1">
+																											<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$perceptionInfo" senderInfo="" inbox="&apos;perceptionInfo&apos;" condition="" answerVar="">
+																												<Sequence>
+																													<GetType WUID="$perceptionInfo.perceptible" OutString="$perceptibleType" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+																													<IfCondition failOnCondition="false" condition="$perceptibleType == &apos;NPC&apos;">
+																														<IfElseCondition failOnCondition="false" condition="$perceptionInfo.perceptible == $animalAnnoyanceData.target" saveVersion="2">
+																															<Then canSkip="1">
+																																<IfCondition failOnCondition="false" condition="$perceptionInfo.threshold == 0">
+																																	<Expression expressions="$canSeePlayer = false" />
+																																</IfCondition>
+																															</Then>
+																															<Else canSkip="1">
+																																<IfCondition failOnCondition="false" condition="$perceptionInfo.threshold == 1">
+																																	<Expression expressions="$animalAnnoyanceData.target = $perceptionInfo.perceptible" />
+																																</IfCondition>
+																															</Else>
+																														</IfElseCondition>
+																													</IfCondition>
+																												</Sequence>
+																											</ProcessMessage>
+																										</Loop>
+																										<DistanceGate Origin="$this.id" ReferencePt="$animalAnnoyanceData.target" Low="$data:script_param[&apos;crime_animal_wild_annoyanceToEscapeDistanceThreshold&apos;].value" High="$data:script_param[&apos;crime_animal_wild_annoyanceToEscapeDistanceThreshold&apos;].value" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+																											<Success />
+																										</DistanceGate>
+																										<Function_switch_animal_alertMode duration="&apos;10s&apos;" source="$animalAnnoyanceData.target" waitActionOnEnd="true" nodeLabel="22857506" />
+																									</Parallel>
+																									<Function_callInterrupt_animal_escape escapeFromVec3="" escapeFromWuid="$animalAnnoyanceData.target" ignorePriority="false" initiator="$enum:switch_interruptInitiator.scheduler" previousReaction="$enum:crime_animal_reactionKind.unknown" stimulusKind="$animalAnnoyanceData.stimulusKind" useVec3ForEscape="false" nodeLabel="52931505" />
+																								</Sequence>
+																							</ForceLook>
+																						</IfGate>
+																					</EntityContext>
+																				</IfCondition>
+																				<IfCondition failOnCondition="false" condition="$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.sound | &#10;$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.flyBy | &#10;$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.hit">
+																					<Function_switch_animal_alertMode duration="&apos;10s&apos;" source="$__player" waitActionOnEnd="true" nodeLabel="27807466" />
+																				</IfCondition>
+																				<DefaultBranch>
+																					<Success />
+																				</DefaultBranch>
+																			</Switch>
+																		</Then>
+																		<Else canSkip="1">
+																			<Function_switch_animal_alertMode duration="&apos;10s&apos;" source="$__player" waitActionOnEnd="true" nodeLabel="71185211" />
+																		</Else>
+																	</EntityContextCheck>
+																</Else>
+															</EntityContextCheck>
+														</Sequence>
+													</LogToLabel>
+												</IfCondition>
+												<DefaultBranch>
+													<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+												</DefaultBranch>
+											</Switch>
+										</Parallel>
+										<Function_switch_animal_callFollowUpBehavior previousReaction="$enum:crime_animal_reactionKind.annoyance" nodeLabel="20561931" />
+									</Sequence>
+								</LogToLabel>
+							</AddPerceivableState>
+						</EntityContext>
+					</Child>
+					<OnFail canSkip="1">
+						<AtomicDecorator>
+							<Sequence>
+								<Function_crime_animal_removeReactionLink reactionKind="$enum:crime_animal_reactionKind.annoyance" target="$animalAnnoyanceData.target" nodeLabel="14979390" />
+								<IfCondition failOnCondition="false" condition="$animalAnnoyanceData.stimulusKind == $enum:crime_animal_stimulusKind.sound">
+									<Sequence>
+										<SuppressFailure>
+											<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;crime_animalCooldowns&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+												<LinkTagFilter tag="&apos;crime_animalCooldowns&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$animalCooldown" />
+											</GraphSearch>
+										</SuppressFailure>
+										<GetTime TimeType="GameTime" OutVar="$animalCooldown.soundReactionTimestamp" Delta="" />
+										<Expression expressions="$animalCooldown.soundReactionTimestamp += 10000" />
+										<AddLink From="$this.id" To="$this.id" Tag="&apos;crime_animalCooldowns&apos;" Data="$animalCooldown" LinkOpHandleMode="OverWrite" />
+									</Sequence>
+								</IfCondition>
+							</Sequence>
+						</AtomicDecorator>
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="animal_annoyance" EventSet="">
+			<Variables>
+				<Variable name="animalCooldown" comment="" />
+				<Variable name="annoyanceCancelDistance" comment="" />
+				<Variable name="canSeePlayer" comment="" />
+				<Variable name="currentTime" comment="" />
+				<Variable name="distanceToTarget" comment="" />
+				<Variable name="goIntoAttack" comment="" />
+				<Variable name="perceptibleType" comment="" />
+				<Variable name="perceptionInfo" comment="" />
+				<Variable name="stopBarkingRequest" comment="" />
+				<Variable name="animalAnnoyanceData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_crime_animal_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_animal_confirmReactionLink>
+											<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</WaitAction>
+											<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LinkTagFilter>
+															</GraphSearch>
+														</SuppressFailure>
+														<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetTime>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</AddLink>
+													</Sequence>
+												</ProcessMessage>
+												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Turn>
+																					<Function_switch_animal_oneshotDogBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_switch_animal_oneshotDogBark>
+																				</Sequence>
+																				<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</DistanceGate>
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</MeasureDistance>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Success>
+																					</DistanceGate>
+																				</Sequence>
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Sequence>
+																			</Parallel>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Function_switch_animal_decideAttackOrEscape hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_switch_animal_decideAttackOrEscape>
+																			</IfCondition>
+																		</Sequence>
+																	</ForceLook>
+																</Then>
+																<Else>
+																	<Success hasInputBreakpoint="0" comment="Shouldn&apos;t really be here, just exit" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Success>
+																</Else>
+															</EntityContextCheck>
+														</LogToLabel>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Turn>
+																				<Loop hasInputBreakpoint="0" comment="Run until wait below finishes" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</AnimationAction>
+																				</Loop>
+																			</Sequence>
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Wait>
+																				<Function_switch_animal_decideAttackOrEscape hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_switch_animal_decideAttackOrEscape>
+																			</Sequence>
+																		</Parallel>
+																	</ForceLook>
+																</Then>
+																<Else>
+																	<Success hasInputBreakpoint="0" comment="Shouldn&apos;t really be here, just exit" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Success>
+																</Else>
+															</EntityContextCheck>
+														</LogToLabel>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</WaitAction>
+																</UrgencyDecorator>
+																<StopMovement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</StopMovement>
+																<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Function_switch_animal_oneshotDogBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_switch_animal_oneshotDogBark>
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</MeasureDistance>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																							<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Success>
+																							</DistanceGate>
+																						</Sequence>
+																					</Parallel>
+																				</ForceLook>
+																			</IfCondition>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Function_switch_animal_oneshotDogBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Function_switch_animal_oneshotDogBark>
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																				</Parallel>
+																			</IfCondition>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Turn>
+																					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																							<OutputBreakpoints />
+																							<Then>
+																								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																											<OutputBreakpoints />
+																											<Then>
+																												<Function_switch_animal_decideAttackOrEscape hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Function_switch_animal_decideAttackOrEscape>
+																											</Then>
+																										</HasSeenPlayer>
+																										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Wait>
+																									</Sequence>
+																								</Loop>
+																							</Then>
+																							<Else>
+																								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Wait>
+																							</Else>
+																						</IfElseCondition>
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Function_switch_animal_oneshotDogBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_switch_animal_oneshotDogBark>
+																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Wait>
+																						</Sequence>
+																					</Parallel>
+																				</Sequence>
+																			</IfCondition>
+																			<DefaultBranch>
+																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Success>
+																			</DefaultBranch>
+																		</Switch>
+																	</Then>
+																	<Else>
+																		<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<EntityContext hasInputBreakpoint="0" comment="We want to handle perception ourselves in here" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																														<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</GetType>
+																														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																															<IfElseCondition hasInputBreakpoint="0" comment="Swap target if another human comes closer (? dunno)" breakpointFlags="0" saveVersion="2">
+																																<OutputBreakpoints />
+																																<Then>
+																																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Expression>
+																																	</IfCondition>
+																																</Then>
+																																<Else>
+																																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Expression>
+																																	</IfCondition>
+																																</Else>
+																															</IfElseCondition>
+																														</IfCondition>
+																													</Sequence>
+																												</ProcessMessage>
+																											</Loop>
+																											<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</Success>
+																											</DistanceGate>
+																											<Function_switch_animal_alertMode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Function_switch_animal_alertMode>
+																										</Parallel>
+																										<Function_callInterrupt_animal_escape hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Function_callInterrupt_animal_escape>
+																									</Sequence>
+																								</ForceLook>
+																							</IfGate>
+																						</EntityContext>
+																					</IfCondition>
+																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Function_switch_animal_alertMode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_switch_animal_alertMode>
+																					</IfCondition>
+																					<DefaultBranch>
+																						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Success>
+																					</DefaultBranch>
+																				</Switch>
+																			</Then>
+																			<Else>
+																				<Function_switch_animal_alertMode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_switch_animal_alertMode>
+																			</Else>
+																		</EntityContextCheck>
+																	</Else>
+																</EntityContextCheck>
+															</Sequence>
+														</LogToLabel>
+													</IfCondition>
+													<DefaultBranch>
+														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Wait>
+													</DefaultBranch>
+												</Switch>
+											</Parallel>
+											<Function_switch_animal_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_switch_animal_callFollowUpBehavior>
+										</Sequence>
+									</LogToLabel>
+								</AddPerceivableState>
+							</EntityContext>
+						</Child>
+						<OnFail>
+							<AtomicDecorator hasInputBreakpoint="0" comment="Let&apos;s not react to sound for some time" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_animal_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_animal_removeReactionLink>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</LinkTagFilter>
+												</GraphSearch>
+											</SuppressFailure>
+											<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetTime>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</AddLink>
+										</Sequence>
+									</IfCondition>
+								</Sequence>
+							</AtomicDecorator>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

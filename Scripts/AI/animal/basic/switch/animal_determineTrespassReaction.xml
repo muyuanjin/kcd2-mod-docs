@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="switch_animal_determineTrespassReaction" is_function="1">
+    <Variables>
+      <Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+      <Variable name="homeCooldowns" type="crime:homeCooldowns" values="" isPersistent="0" form="single" />
+      <Variable name="overrideArea" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="position" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="reactionSuppressed" type="_bool" values="false" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="observer" type="_wuid" values="$this.id" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="positionVec3" type="vec3" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+      <Variable name="positionWuid" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+      <Variable name="reaction" type="_bool" values="" isPersistent="0" form="single" requirementType="Out" />
+      <Variable name="shouldUseVec3" type="_bool" values="false" isPersistent="0" form="single" requirementType="In" />
+      <Variable name="trespassArea" type="_wuid" values="" isPersistent="0" form="single" requirementType="Out" />
+      <Variable name="trespassLevel" type="enum:trespassLevel" values="" isPersistent="0" form="single" requirementType="Out" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <AtomicDecorator>
+          <GameContextCheck context="crime_disabledTrespassReactions" saveVersion="2">
+            <Then canSkip="1">
+              <Expression expressions="$reaction = false &#10;$trespassLevel = $enum:trespassLevel.public" />
+            </Then>
+            <Else canSkip="1">
+              <EntityContextCheck context="crime_disabledDirectPlayerTrespassReactions" target="" saveVersion="2">
+                <Then canSkip="1">
+                  <Expression expressions="$reaction = false &#10;$trespassLevel = $enum:trespassLevel.public" />
+                </Then>
+                <Else canSkip="1">
+                  <Sequence>
+                    <Expression expressions="$reaction = false" />
+                    <IfElseCondition failOnCondition="false" condition="$shouldUseVec3" saveVersion="2">
+                      <Then canSkip="1">
+                        <Expression expressions="$position = $positionVec3" />
+                      </Then>
+                      <Else canSkip="1">
+                        <GetSpatialInfo In="$positionWuid" Out="$position" What="Position" />
+                      </Else>
+                    </IfElseCondition>
+                    <IsInsideAreaWithLabel Position="$position" Label="&apos;interior&apos;" Area="$trespassArea" FailSubtMissing="false" saveVersion="2">
+                      <Else canSkip="1">
+                        <IsInsideAreaWithLabel Position="$position" Label="&apos;private&apos;" Area="$trespassArea" FailSubtMissing="false" saveVersion="2">
+                          <Then canSkip="1">
+                            <Sequence>
+                              <GetTrespass Position="$position" TrespassLevelOut="$trespassLevel" />
+                              <SuppressFailure>
+                                <Sequence>
+                                  <Selector>
+                                    <IsInsideAreaWithLabel Position="$position" Label="&apos;antitrespass&apos;" Area="$overrideArea" FailSubtMissing="true" saveVersion="2">
+                                      <Then canSkip="1">
+                                        <Success />
+                                      </Then>
+                                    </IsInsideAreaWithLabel>
+                                    <IsInsideAreaWithLabel Position="$position" Label="&apos;crime_reactionsToTrespass&apos;" Area="$overrideArea" FailSubtMissing="true" saveVersion="2">
+                                      <Then canSkip="1">
+                                        <GraphSearch Origin="$overrideArea" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                          <LinkTagFilter tag="&apos;crime_doNotReactToTrespass&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                                          <WUIDFilter WUID="$observer" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                                        </GraphSearch>
+                                      </Then>
+                                    </IsInsideAreaWithLabel>
+                                    <IfCondition failOnCondition="true" condition="$trespassLevel &lt; $enum:trespassLevel.prohibited">
+                                      <GraphSearch Origin="$trespassArea" Borders="" depth="3" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;home_area_reverse,crime_trespass_expected,area_union_member_reverse&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                        <LinkTagFilter tag="&apos;crime_trespass_expected&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                                      </GraphSearch>
+                                    </IfCondition>
+                                  </Selector>
+                                  <Expression expressions="$reactionSuppressed = true" />
+                                </Sequence>
+                              </SuppressFailure>
+                              <Sequence>
+                                <Function_crime_getHomeCooldowns home="" useHomeWuid="false" cooldownData="$homeCooldowns" nodeLabel="63862182" />
+                                <GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+                                <Expression expressions="$reactionSuppressed = $homeCooldowns.dogTrespassReaction &gt;= $currentTime" />
+                              </Sequence>
+                              <IfCondition failOnCondition="false" condition="~$reactionSuppressed">
+                                <Sequence>
+                                  <IfCondition failOnCondition="false" condition="$trespassLevel == $enum:trespassLevel.semipublic">
+                                    <IsNightTimeOfDay saveVersion="2">
+                                      <Then canSkip="1">
+                                        <Expression expressions="$trespassLevel = $enum:trespassLevel.semipersonal" />
+                                      </Then>
+                                      <Else canSkip="1">
+                                        <Success />
+                                      </Else>
+                                    </IsNightTimeOfDay>
+                                  </IfCondition>
+                                  <IfCondition failOnCondition="false" condition="$trespassLevel &gt;= $enum:trespassLevel.semipublic">
+                                    <SuppressFailure>
+                                      <Sequence>
+                                        <GraphSearch Origin="$observer" Borders="" depth="3" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;home,home_area,area_union_member&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                          <WUIDFilter WUID="$trespassArea" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+                                        </GraphSearch>
+                                        <Expression expressions="$reaction = true" />
+                                      </Sequence>
+                                    </SuppressFailure>
+                                  </IfCondition>
+                                </Sequence>
+                              </IfCondition>
+                            </Sequence>
+                          </Then>
+                        </IsInsideAreaWithLabel>
+                      </Else>
+                    </IsInsideAreaWithLabel>
+                  </Sequence>
+                </Else>
+              </EntityContextCheck>
+            </Else>
+          </GameContextCheck>
+        </AtomicDecorator>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="currentTime" comment="" />
+        <Variable name="homeCooldowns" comment="" />
+        <Variable name="overrideArea" comment="" />
+        <Variable name="position" comment="" />
+        <Variable name="reactionSuppressed" comment="" />
+        <Variable name="observer" comment="" />
+        <Variable name="positionVec3" comment="" />
+        <Variable name="positionWuid" comment="" />
+        <Variable name="reaction" comment="" />
+        <Variable name="shouldUseVec3" comment="" />
+        <Variable name="trespassArea" comment="" />
+        <Variable name="trespassLevel" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <AtomicDecorator hasInputBreakpoint="0" comment="Simpler copy of crime_determineTrespassReaction" breakpointFlags="0">
+            <OutputBreakpoints />
+            <GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Then>
+                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                </Expression>
+              </Then>
+              <Else>
+                <EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                  <OutputBreakpoints />
+                  <Then>
+                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Expression>
+                  </Then>
+                  <Else>
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Expression>
+                      <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                        <OutputBreakpoints />
+                        <Then>
+                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </Expression>
+                        </Then>
+                        <Else>
+                          <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </GetSpatialInfo>
+                        </Else>
+                      </IfElseCondition>
+                      <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                        <OutputBreakpoints />
+                        <Else>
+                          <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                            <Then>
+                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <GetTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                </GetTrespass>
+                                <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                        <OutputBreakpoints />
+                                        <Then>
+                                          <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </Success>
+                                        </Then>
+                                      </IsInsideAreaWithLabel>
+                                      <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                        <OutputBreakpoints />
+                                        <Then>
+                                          <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                            <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </LinkTagFilter>
+                                            <WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </WUIDFilter>
+                                          </GraphSearch>
+                                        </Then>
+                                      </IsInsideAreaWithLabel>
+                                      <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </LinkTagFilter>
+                                        </GraphSearch>
+                                      </IfCondition>
+                                    </Selector>
+                                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </Expression>
+                                  </Sequence>
+                                </SuppressFailure>
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Function_crime_getHomeCooldowns hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Function_crime_getHomeCooldowns>
+                                  <GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </GetTime>
+                                  <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </Expression>
+                                </Sequence>
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <IsNightTimeOfDay hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                        <OutputBreakpoints />
+                                        <Then>
+                                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </Expression>
+                                        </Then>
+                                        <Else>
+                                          <Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </Success>
+                                        </Else>
+                                      </IsNightTimeOfDay>
+                                    </IfCondition>
+                                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                            <WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </WUIDFilter>
+                                          </GraphSearch>
+                                          <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </Expression>
+                                        </Sequence>
+                                      </SuppressFailure>
+                                    </IfCondition>
+                                  </Sequence>
+                                </IfCondition>
+                              </Sequence>
+                            </Then>
+                          </IsInsideAreaWithLabel>
+                        </Else>
+                      </IsInsideAreaWithLabel>
+                    </Sequence>
+                  </Else>
+                </EntityContextCheck>
+              </Else>
+            </GameContextCheck>
+          </AtomicDecorator>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

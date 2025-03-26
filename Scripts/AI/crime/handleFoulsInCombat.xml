@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="crime_handleFoulsInCombat" is_function="1">
+    <Variables>
+      <Variable name="foul" type="enum:combat_skirmishFoul" values="" isPersistent="0" form="single" />
+      <Variable name="informationDiff" type="informationDiff" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <Behavior canSkip="1">
+        <Parallel successMode="Any" failureMode="Any">
+          <Loop count="-1">
+            <EntityContextBarrier context="crime_foulDrawMissileWeapon" target="$__player" Negation="false" RunLogic="KeepRunning">
+              <OnWeaponChange WeaponChangeFilter="missile" Combatants="Me" Who="$__player" RunLogic="KeepRunning">
+                <Sequence>
+                  <SendAIConceptSignal_skirmish_foul kind="$enum:combat_skirmishFoul.DrawMissileWeapon" />
+                  <Function_switch_handleStimulusFoul skirmishFoul="$enum:combat_skirmishFoul.DrawMissileWeapon" nodeLabel="51079861" />
+                </Sequence>
+              </OnWeaponChange>
+            </EntityContextBarrier>
+          </Loop>
+          <Loop count="-1">
+            <EntityContextBarrier context="crime_foulDrawWeapon" target="$__player" Negation="false" RunLogic="KeepRunning">
+              <Sequence>
+                <Function_crime_waitForWeaponChange npc="$__player" succeedOnArmed="true" nodeLabel="29081365" />
+                <SendAIConceptSignal_skirmish_foul kind="$enum:combat_skirmishFoul.DrawWeapon" />
+                <Function_switch_handleStimulusFoul skirmishFoul="$enum:combat_skirmishFoul.DrawWeapon" nodeLabel="14407460" />
+              </Sequence>
+            </EntityContextBarrier>
+          </Loop>
+          <Loop count="-1">
+            <EntityContextBarrier context="crime_foulMountHorse" target="$__player" Negation="false" RunLogic="KeepRunning">
+              <LinkGate from="$__player" to="" tag="&apos;mount&apos;" amount="AtLeastOne" presence="Present" RunLogic="KeepRunning">
+                <Sequence>
+                  <SendAIConceptSignal_skirmish_foul kind="$enum:combat_skirmishFoul.MountHorse" />
+                  <Function_switch_handleStimulusFoul skirmishFoul="$enum:combat_skirmishFoul.MountHorse" nodeLabel="14782944" />
+                </Sequence>
+              </LinkGate>
+            </EntityContextBarrier>
+          </Loop>
+          <Loop count="-1">
+            <EntityContextBarrier context="crime_foulDogIsInCombat" target="$__player" Negation="false" RunLogic="KeepRunning">
+              <EntityContextBarrier context="dog_meleeCombat" target="$__playerDog" Negation="false" RunLogic="KeepRunning">
+                <Sequence>
+                  <SendAIConceptSignal_skirmish_foul kind="$enum:combat_skirmishFoul.DogIsInCombat" />
+                  <Function_switch_handleStimulusFoul skirmishFoul="$enum:combat_skirmishFoul.DogIsInCombat" nodeLabel="71380142" />
+                </Sequence>
+              </EntityContextBarrier>
+            </EntityContextBarrier>
+          </Loop>
+          <Loop count="-1">
+            <EntityContextBarrier context="crime_foulNewCrimeCreated" target="$__player" Negation="false" RunLogic="KeepRunning">
+              <ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$informationDiff" senderInfo="" inbox="&apos;informationDiff&apos;" condition="" answerVar="">
+                <IfCondition failOnCondition="false" condition="$data:crime[$informationDiff.information.label].isCrime &amp; &#10;($informationDiff.status == &apos;Created&apos; | &#10;$informationDiff.status == &apos;Received&apos;)">
+                  <Sequence>
+                    <SendAIConceptSignal_skirmish_foul kind="$enum:combat_skirmishFoul.NewCrimeCreated" />
+                    <Function_switch_handleStimulusFoul skirmishFoul="$enum:combat_skirmishFoul.NewCrimeCreated" nodeLabel="46332851" />
+                  </Sequence>
+                </IfCondition>
+              </ProcessMessage>
+            </EntityContextBarrier>
+          </Loop>
+        </Parallel>
+      </Behavior>
+    </Root>
+    <ForestContainer>
+      <IfCondition failOnCondition="false" condition="$informationDiff.status == &apos;Created&apos;">
+        <Sequence>
+          <SendAIConceptSignal_NPCLearnsInformationNotification who="$this.id" label="$informationDiff.information.label" perceivedWuid="$informationDiff.information.perceivedWuid" isCrime="$data:crime[$informationDiff.information.label].isCrime" crimeLevel="$crimeLevel" />
+          <Function_crime_executeReputationHit information="$informationDiff.information" npc="$this.id" reputationHitForm="$enum:crime_reputationHitForm.witness" nodeLabel="72413105" />
+        </Sequence>
+      </IfCondition>
+      <EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+        <Then canSkip="1">
+          <IfCondition failOnCondition="false" condition="$informationDiff.status == &apos;Created&apos; | &#10;$informationDiff.status == &apos;Received&apos;">
+            <Function_crime_executeReputationHit information="$informationDiff.information" npc="$this.id" reputationHitForm="$enum:crime_reputationHitForm.faction" nodeLabel="10943787" />
+          </IfCondition>
+        </Then>
+      </EntityContextCheck>
+      <IfCondition failOnCondition="false" condition="$informationDiff.status == &apos;Received&apos;">
+        <Sequence>
+          <Expression expressions="$stimulus.information = $informationDiff.information" />
+          <SendAIConceptSignal_NPCLearnsInformationNotification who="$this.id" label="$informationDiff.information.label" perceivedWuid="$informationDiff.information.perceivedWuid" isCrime="$data:crime[$informationDiff.information.label].isCrime" crimeLevel="$crimeLevel" />
+          <Function_switch_handleStimulusInformation stimulus="$stimulus" nodeLabel="38890190" />
+        </Sequence>
+      </IfCondition>
+      <IfCondition failOnCondition="false" condition="$data:crime[$informationDiff.information.label].isCrime">
+        <Function_crime_getCrimeLevelByLabel label="$informationDiff.information.label" crimeLevel="$crimeLevel" nodeLabel="55924545" />
+      </IfCondition>
+    </ForestContainer>
+    <EditorData EventSet="">
+      <Variables>
+        <Variable name="foul" comment="" />
+        <Variable name="informationDiff" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <Behavior>
+          <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <OnWeaponChange hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <SendAIConceptSignal_skirmish_foul hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </SendAIConceptSignal_skirmish_foul>
+                    <Function_switch_handleStimulusFoul hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Function_switch_handleStimulusFoul>
+                  </Sequence>
+                </OnWeaponChange>
+              </EntityContextBarrier>
+            </Loop>
+            <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Function_crime_waitForWeaponChange hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Function_crime_waitForWeaponChange>
+                  <SendAIConceptSignal_skirmish_foul hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </SendAIConceptSignal_skirmish_foul>
+                  <Function_switch_handleStimulusFoul hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                  </Function_switch_handleStimulusFoul>
+                </Sequence>
+              </EntityContextBarrier>
+            </Loop>
+            <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <SendAIConceptSignal_skirmish_foul hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </SendAIConceptSignal_skirmish_foul>
+                    <Function_switch_handleStimulusFoul hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Function_switch_handleStimulusFoul>
+                  </Sequence>
+                </LinkGate>
+              </EntityContextBarrier>
+            </Loop>
+            <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <SendAIConceptSignal_skirmish_foul hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </SendAIConceptSignal_skirmish_foul>
+                    <Function_switch_handleStimulusFoul hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </Function_switch_handleStimulusFoul>
+                  </Sequence>
+                </EntityContextBarrier>
+              </EntityContextBarrier>
+            </Loop>
+            <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <EntityContextBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+                <ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <SendAIConceptSignal_skirmish_foul hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </SendAIConceptSignal_skirmish_foul>
+                      <Function_switch_handleStimulusFoul hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </Function_switch_handleStimulusFoul>
+                    </Sequence>
+                  </IfCondition>
+                </ProcessMessage>
+              </EntityContextBarrier>
+            </Loop>
+          </Parallel>
+        </Behavior>
+      </Root>
+      <Forest>
+        <IfCondition editorPosX="2580" editorPosY="740" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+          <OutputBreakpoints />
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <SendAIConceptSignal_NPCLearnsInformationNotification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </SendAIConceptSignal_NPCLearnsInformationNotification>
+            <Function_crime_executeReputationHit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Function_crime_executeReputationHit>
+          </Sequence>
+        </IfCondition>
+        <EntityContextCheck editorPosX="2600" editorPosY="970" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+          <OutputBreakpoints />
+          <Then>
+            <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+              <Function_crime_executeReputationHit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                <OutputBreakpoints />
+              </Function_crime_executeReputationHit>
+            </IfCondition>
+          </Then>
+        </EntityContextCheck>
+        <IfCondition editorPosX="2600" editorPosY="1190" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+          <OutputBreakpoints />
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Expression>
+            <SendAIConceptSignal_NPCLearnsInformationNotification hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </SendAIConceptSignal_NPCLearnsInformationNotification>
+            <Function_switch_handleStimulusInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Function_switch_handleStimulusInformation>
+          </Sequence>
+        </IfCondition>
+        <IfCondition editorPosX="2590" editorPosY="570" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+          <OutputBreakpoints />
+          <Function_crime_getCrimeLevelByLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+          </Function_crime_getCrimeLevelByLabel>
+        </IfCondition>
+      </Forest>
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

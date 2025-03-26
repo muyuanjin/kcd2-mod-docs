@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_checkMates" is_function="1">
+		<Variables>
+			<Variable name="deadMateData" type="crime:corpseData" values="" isPersistent="0" form="single" />
+			<Variable name="deadMateInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="doCheckProperty" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="doMourning" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="home" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="ignorePriority" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="interruptMourn" type="switch:interruptData:mourn" values="" isPersistent="0" form="single" />
+			<Variable name="mate" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="mateIsMissing" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="mates" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="mournGenderBalance" type="_int" values="0" isPersistent="0" form="single" />
+			<Variable name="mourningTarget" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="now" type="_int64" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="checker" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="deadMate" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="initiator" type="enum:switch_interruptInitiator" values="$enum:switch_interruptInitiator.unknown" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="previousReaction" type="enum:crime_reactionKind" values="$enum:crime_reactionKind.unknown" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<SuppressFailure>
+						<Sequence>
+							<Invertor>
+								<Sequence>
+									<RetrieveInformation PerceivedWuid="$mate" label="&apos;corpse&apos;" OutVariable="$deadMateInformation" />
+									<Expression expressions="$doMourning = true" />
+								</Sequence>
+							</Invertor>
+							<Sequence>
+								<Function_crime_addCorpseLink corpse="$deadMate" corpseState="$enum:corpseState.undiscovered" mateReacting="false" resolve="false" storeTime="false" nodeLabel="46866175" />
+								<Expression expressions="$doCheckProperty = true" />
+							</Sequence>
+						</Sequence>
+					</SuppressFailure>
+					<Switch>
+						<IfCondition failOnCondition="false" condition="$doCheckProperty">
+							<SuppressFailure>
+								<Sequence>
+									<GraphSearch Origin="$checker" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+										<LinkTagFilter tag="&apos;home&apos;" prune="true" negprune="unknown" Parent="" Child="$home" Data="" />
+									</GraphSearch>
+									<AddLink From="$checker" To="$deadMate" Tag="&apos;crime_followUpBehavior_mourn&apos;" Data="" LinkOpHandleMode="OverWrite" />
+									<Expression expressions="$ignorePriority = $initiator == $enum:switch_interruptInitiator.scheduler" />
+									<Function_callInterrupt_checkProperty home="$home" ignorePriority="$ignorePriority" initiator="$initiator" missingNpc="$deadMate" previousReaction="$previousReaction" stimulusKind="$enum:crime_stimulusKind.missingNpc" suspiciousDoor="$__null" suspiciousDoorFreshlyOpened="false" nodeLabel="40965451" />
+								</Sequence>
+							</SuppressFailure>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$doMourning">
+							<Sequence>
+								<Expression expressions="$ignorePriority = $initiator == $enum:switch_interruptInitiator.scheduler &#10; &#10;$interruptMourn.initiatedBy = $initiator &#10;$interruptMourn.corpse = $deadMate &#10;$interruptMourn.previousReaction = $previousReaction &#10;$interruptMourn.stimulusKind = $enum:crime_stimulusKind.missingNpc" />
+								<Function_callInterrupt_mourn ignorePriority="$ignorePriority" initiator="$initiator" mournTarget="$mourningTarget" previousReaction="$previousReaction" stimulusKind="$enum:crime_stimulusKind.missingNpc" nodeLabel="73535686" />
+							</Sequence>
+						</IfCondition>
+						<DefaultBranch>
+							<Success />
+						</DefaultBranch>
+					</Switch>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Function_crime_getMates target="$this.id" mates="$mates" nodeLabel="36499603" />
+			<IfCondition failOnCondition="false" condition="#mates &gt; 0">
+				<Sequence>
+					<GetTime TimeType="WorldTime" OutVar="$now" Delta="" />
+					<ForEach startIndex="0" step="1" array="$mates" iterator="" value="$mate" break="">
+						<Sequence>
+							<VarOperation varName="$mateIsMissing" targetVarName="" operation="Reinit" argument="" />
+							<IsDeadCheck SoulWUID="$mate" FailSubtMissing="false" saveVersion="2" />
+						</Sequence>
+					</ForEach>
+				</Sequence>
+			</IfCondition>
+			<GraphSearch Origin="$mate" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+				<LinkDataFilter tag="&apos;switch_corpse&apos;" condition="$now &gt; $__link_switch_corpse.timeOfDeath + 60000 * 60 * 24" prune="true" negprune="unknown" Parent="" Child="" Data="$deadMateData" />
+			</GraphSearch>
+			<Switch>
+				<IfCondition failOnCondition="false" condition="$now &lt; $deadMateData.timeOfDeath + 60000 * 60 * 24 * 2">
+					<IfCondition failOnCondition="false" condition="~$deadMateData.mateChecked" />
+				</IfCondition>
+				<IfCondition failOnCondition="false" condition="$now &lt; $deadMateData.timeOfDeath + 60000 * 60 * 24 * 7">
+					<Expression expressions="$doMourning = true &#10; &#10;$mourningTarget = $mate" />
+				</IfCondition>
+				<DefaultBranch>
+					<Success />
+				</DefaultBranch>
+			</Switch>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="deadMateData" comment="" />
+				<Variable name="deadMateInformation" comment="" />
+				<Variable name="doCheckProperty" comment="" />
+				<Variable name="doMourning" comment="" />
+				<Variable name="home" comment="" />
+				<Variable name="ignorePriority" comment="" />
+				<Variable name="interruptMourn" comment="" />
+				<Variable name="mate" comment="" />
+				<Variable name="mateIsMissing" comment="" />
+				<Variable name="mates" comment="" />
+				<Variable name="mournGenderBalance" comment="" />
+				<Variable name="mourningTarget" comment="" />
+				<Variable name="now" comment="" />
+				<Variable name="checker" comment="" />
+				<Variable name="deadMate" comment="" />
+				<Variable name="initiator" comment="" />
+				<Variable name="previousReaction" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Invertor hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="succeeds only if NPC knows corpse information about this mate" breakpointFlags="0">
+										<OutputBreakpoints />
+										<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</RetrieveInformation>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Sequence>
+								</Invertor>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="MateReacting true caused mourn to never happen" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_addCorpseLink>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+								</Sequence>
+							</Sequence>
+						</SuppressFailure>
+						<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<SuppressFailure hasInputBreakpoint="0" comment="CheckProperty will do either report/mourn based on npc data" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</LinkTagFilter>
+										</GraphSearch>
+										<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</AddLink>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<Function_callInterrupt_checkProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_callInterrupt_checkProperty>
+									</Sequence>
+								</SuppressFailure>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+									<Function_callInterrupt_mourn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_callInterrupt_mourn>
+								</Sequence>
+							</IfCondition>
+							<DefaultBranch>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</DefaultBranch>
+						</Switch>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Function_crime_getMates editorPosX="390" editorPosY="-860" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</Function_crime_getMates>
+				<IfCondition editorPosX="600" editorPosY="-840" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</GetTime>
+						<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<VarOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</VarOperation>
+								<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+								</IsDeadCheck>
+							</Sequence>
+						</ForEach>
+					</Sequence>
+				</IfCondition>
+				<GraphSearch editorPosX="1580" editorPosY="-900" hasInputBreakpoint="0" comment="succeeds if corpse is old enough and no mate has reacted to it yet" breakpointFlags="0">
+					<OutputBreakpoints />
+					<LinkDataFilter hasInputBreakpoint="0" comment="TODO: remove *0" breakpointFlags="0">
+						<OutputBreakpoints />
+					</LinkDataFilter>
+				</GraphSearch>
+				<Switch editorPosX="1510" editorPosY="-550" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<IfCondition hasInputBreakpoint="0" comment="&lt; 2 days" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</IfCondition>
+					</IfCondition>
+					<IfCondition hasInputBreakpoint="0" comment="&lt; a week" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+					</IfCondition>
+					<DefaultBranch>
+						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Success>
+					</DefaultBranch>
+				</Switch>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

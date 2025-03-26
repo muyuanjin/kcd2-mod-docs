@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_watchCorpse" is_function="0">
+		<Variables>
+			<Variable name="anyDecoratorPreset" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="corpseData" type="crime:corpseData" values="" isPersistent="0" form="single" />
+			<Variable name="corpseReactionData" type="crime:corpseReactor" values="" isPersistent="0" form="single" />
+			<Variable name="corpseViolationInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="potentionalCorpseWatcher_value" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="potentionalCorpseWatchers" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Parameters>
+			<Variable name="watchCorpseData" type="switch:interruptData:watchCorpse" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<EntityContext context="crime_preventDespawn" target="">
+							<Sequence>
+								<Function_crime_getAnyDecoratorPreset tryToKeepItems="false" presetString="$anyDecoratorPreset" nodeLabel="38495392" />
+								<AnyDecorator preset="$anyDecoratorPreset" enabled="true">
+									<EntityContextElement context="crime_interrupt" enabled="true">
+										<EntityContext context="crime_interruptWatchCorpse" target="$this.id">
+											<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+												<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:watchCorpse&apos;">
+													<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$watchCorpseData.stimulusKind&apos;">
+														<Sequence>
+															<Function_crime_limits_confirmReactionLink reactionKind="$enum:crime_reactionKind.watchCorpse" nodeLabel="29122020" />
+															<AtomicDecorator>
+																<Sequence>
+																	<GraphSearch Origin="$watchCorpseData.corpse" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;crime_corpseReactor&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																		<LinkTagFilter tag="&apos;crime_corpseReactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																		<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																		<LinkDataFilter tag="&apos;crime_corpseReactor&apos;" condition="$__link_crime_corpseReactor.reactionKind == $enum:crime_reactionKind.watchCorpse" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																		<Datalyzer Tag="&apos;crime_corpseReactor&apos;" Quantifiers="Exists" Parent="" Child="" Data="$corpseReactionData" saveVersion="2" />
+																	</GraphSearch>
+																	<LinkDataExpression From="$watchCorpseData.corpse" To="$this.id" Expresssion="$__link_crime_corpseReactor.reservation = false" />
+																</Sequence>
+															</AtomicDecorator>
+															<Function_crime_checkInterruptInformation information="$watchCorpseData.information" nodeLabel="94021140" />
+															<IsLoadedGate saveVersion="2">
+																<Else canSkip="1">
+																	<Switch>
+																		<IfCondition failOnCondition="false" condition="$watchCorpseData.stimulusKind == $enum:crime_stimulusKind.corpseMissing">
+																			<Sequence>
+																				<Turn target="$watchCorpseData.corpse" align="false" />
+																				<Selector>
+																					<Sequence>
+																						<RetrieveInformation PerceivedWuid="$watchCorpseData.corpse" label="&apos;corpseViolation&apos;" OutVariable="$corpseViolationInformation" />
+																						<Function_crime_crimeBark animationApproach="$enum:animationApproach.tryDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$watchCorpseData.corpse" metarole="&apos;STRAZ_NASLA_MRTVOLU_KTEROU_HLIDALA_A_PAK_SE_JI_ZTRATILA_(VI_O_HRACI)&apos;" priority="$enum:crime_barkPriority.flavor" nodeLabel="34083514" />
+																					</Sequence>
+																					<Function_crime_crimeBark animationApproach="$enum:animationApproach.tryDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$watchCorpseData.corpse" metarole="&apos;STRAZ_NASLA_MRTVOLU_KTEROU_HLIDALA_A_PAK_SE_JI_ZTRATILA_(NEVI_O_HRACI)&apos;" priority="$enum:crime_barkPriority.flavor" nodeLabel="31241665" />
+																				</Selector>
+																			</Sequence>
+																		</IfCondition>
+																		<IfCondition failOnCondition="false" condition="~$watchCorpseData.seenBefore">
+																			<Function_crime_startBark_corpse corpse="$watchCorpseData.corpse" corpseState="$enum:corpseState.watched" nodeLabel="53141297" />
+																		</IfCondition>
+																		<DefaultBranch>
+																			<Success />
+																		</DefaultBranch>
+																	</Switch>
+																</Else>
+															</IsLoadedGate>
+															<Function_crime_addCorpseLink corpse="$watchCorpseData.corpse" corpseState="$enum:corpseState.watched" mateReacting="false" resolve="true" storeTime="false" nodeLabel="83551169" />
+															<Parallel successMode="Any" failureMode="Any">
+																<IfGate atomic="false" condition="$corpseData.state == $enum:corpseState.cleared" RunLogic="KeepRunning">
+																	<Success />
+																</IfGate>
+																<DeadUnconsciousGate Who="$watchCorpseData.corpse" State="Dead" Negation="true" RunLogic="KeepRunning">
+																	<Success />
+																</DeadUnconsciousGate>
+																<Loop count="-1">
+																	<LinkGate from="$__player" to="$watchCorpseData.corpse" tag="&apos;bodyCarrier&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="Halt">
+																		<ContinuousSwitch>
+																			<DistanceCondition Origin="$this.id" ReferencePt="$watchCorpseData.corpse" Low="3.000000" High="3.000000" Negation="true" ValueOnMiddle="false" failOnCondition="false">
+																				<Move stopWithinDistance="2.000000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$watchCorpseData.corpse" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+																			</DistanceCondition>
+																			<IfCondition failOnCondition="false" condition="true">
+																				<Sequence>
+																					<WaitAction />
+																					<Turn target="$watchCorpseData.corpse" align="false" />
+																					<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="&apos;5s&apos;" />
+																					<Function_crime_crimeBark animationApproach="$enum:animationApproach.tryDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$watchCorpseData.corpse" metarole="&apos;STRAZ_HLIDA_MRTVOLU_(MRTVOLA)&apos;" priority="$enum:crime_barkPriority.flavor" nodeLabel="37753329" />
+																					<Selector>
+																						<GraphSearch Origin="$watchCorpseData.corpse" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																							<LinkTagFilter tag="&apos;switch_corpse&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$corpseData" />
+																						</GraphSearch>
+																						<Expression expressions="$corpseData.state = $enum:corpseState.cleared" />
+																					</Selector>
+																				</Sequence>
+																			</IfCondition>
+																		</ContinuousSwitch>
+																	</LinkGate>
+																</Loop>
+															</Parallel>
+															<Sequence>
+																<GraphSearch Origin="$watchCorpseData.corpse" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																	<LinkTagFilter tag="&apos;crime_followUpBehavior_watchCorpseReverse&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																	<Nodalyzer Quantifiers="ForAll" Parent="" Child="$potentionalCorpseWatchers" saveVersion="2" />
+																</GraphSearch>
+																<ForEach startIndex="0" step="1" array="$potentionalCorpseWatchers" iterator="" value="$potentionalCorpseWatcher_value" break="">
+																	<IfElseCondition failOnCondition="false" condition="$potentionalCorpseWatcher_value == $this.id" saveVersion="2">
+																		<Then canSkip="1">
+																			<RemoveLink From="$this.id" To="$watchCorpseData.corpse" Tag="&apos;crime_followUpBehavior_watchCorpse&apos;" LinkOpHandleMode="Error" />
+																		</Then>
+																		<Else canSkip="1">
+																			<LinkDataExpression From="$potentionalCorpseWatcher_value" To="$watchCorpseData.corpse" Expresssion="$__link_crime_followUpBehavior_watchCorpse.active = false" />
+																		</Else>
+																	</IfElseCondition>
+																</ForEach>
+																<Function_callFollowUpBehavior previousReaction="$enum:crime_reactionKind.watchCorpse" nodeLabel="57870808" />
+															</Sequence>
+														</Sequence>
+													</LogToLabel>
+												</LogToLabel>
+											</AddPerceivableState>
+										</EntityContext>
+									</EntityContextElement>
+								</AnyDecorator>
+							</Sequence>
+						</EntityContext>
+					</Child>
+					<OnFail canSkip="1">
+						<AtomicDecorator>
+							<Sequence>
+								<SuppressFailure>
+									<Sequence>
+										<GraphSearch Origin="$watchCorpseData.corpse" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;crime_corpseReactor&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;crime_corpseReactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+											<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+											<Datalyzer Tag="&apos;crime_corpseReactor&apos;" Quantifiers="Exists" Parent="" Child="" Data="$corpseReactionData" saveVersion="2" />
+										</GraphSearch>
+										<IfCondition failOnCondition="false" condition="$corpseReactionData.reactionKind == $enum:crime_reactionKind.watchCorpse &amp; &#10;~$corpseReactionData.reservation">
+											<RemoveLink From="$watchCorpseData.corpse" To="$this.id" Tag="&apos;crime_corpseReactor&apos;" LinkOpHandleMode="Error" />
+										</IfCondition>
+									</Sequence>
+								</SuppressFailure>
+								<Function_crime_limits_removeReactionLink information="$watchCorpseData.information" reactionKind="$enum:crime_reactionKind.watchCorpse" nodeLabel="29153407" />
+							</Sequence>
+						</AtomicDecorator>
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="watchCorpse" EventSet="">
+			<Variables>
+				<Variable name="anyDecoratorPreset" comment="" />
+				<Variable name="corpseData" comment="" />
+				<Variable name="corpseReactionData" comment="" />
+				<Variable name="corpseViolationInformation" comment="" />
+				<Variable name="potentionalCorpseWatcher_value" comment="" />
+				<Variable name="potentionalCorpseWatchers" comment="" />
+				<Variable name="watchCorpseData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-910" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_crime_getAnyDecoratorPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_getAnyDecoratorPreset>
+									<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Function_crime_limits_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_limits_confirmReactionLink>
+																<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</LinkTagFilter>
+																			<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</WUIDFilter>
+																			<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</LinkDataFilter>
+																			<Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																			</Datalyzer>
+																		</GraphSearch>
+																		<LinkDataExpression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</LinkDataExpression>
+																	</Sequence>
+																</AtomicDecorator>
+																<Function_crime_checkInterruptInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_checkInterruptInformation>
+																<IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Else>
+																		<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Turn>
+																					<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<RetrieveInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</RetrieveInformation>
+																							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_crime_crimeBark>
+																						</Sequence>
+																						<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_crimeBark>
+																					</Selector>
+																				</Sequence>
+																			</IfCondition>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Function_crime_startBark_corpse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_startBark_corpse>
+																			</IfCondition>
+																			<DefaultBranch>
+																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Success>
+																			</DefaultBranch>
+																		</Switch>
+																	</Else>
+																</IsLoadedGate>
+																<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Function_crime_addCorpseLink>
+																<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Success>
+																	</IfGate>
+																	<DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Success>
+																	</DeadUnconsciousGate>
+																	<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Move>
+																				</DistanceCondition>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<WaitAction hasInputBreakpoint="0" comment="KCD2-343850" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</WaitAction>
+																						<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Turn>
+																						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Wait>
+																						<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_crimeBark>
+																						<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</LinkTagFilter>
+																							</GraphSearch>
+																							<Expression hasInputBreakpoint="0" comment="if corpse link is missing, NPC must have respawned; consider it cleared" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</Selector>
+																					</Sequence>
+																				</IfCondition>
+																			</ContinuousSwitch>
+																		</LinkGate>
+																	</Loop>
+																</Parallel>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</LinkTagFilter>
+																		<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																		</Nodalyzer>
+																	</GraphSearch>
+																	<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</RemoveLink>
+																			</Then>
+																			<Else>
+																				<LinkDataExpression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</LinkDataExpression>
+																			</Else>
+																		</IfElseCondition>
+																	</ForEach>
+																	<Function_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_callFollowUpBehavior>
+																</Sequence>
+															</Sequence>
+														</LogToLabel>
+													</LogToLabel>
+												</AddPerceivableState>
+											</EntityContext>
+										</EntityContextElement>
+									</AnyDecorator>
+								</Sequence>
+							</EntityContext>
+						</Child>
+						<OnFail>
+							<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+												<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</WUIDFilter>
+												<Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+												</Datalyzer>
+											</GraphSearch>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</RemoveLink>
+											</IfCondition>
+										</Sequence>
+									</SuppressFailure>
+									<Function_crime_limits_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_crime_limits_removeReactionLink>
+								</Sequence>
+							</AtomicDecorator>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

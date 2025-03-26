@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="onUpdate" is_function="0">
+		<Variables>
+			<Variable name="interactionItemsArray" type="interactionModule:itemSelection" values="" isPersistent="0" form="array" />
+			<Variable name="signal_onInteraction" type="interactionModule:onInteraction" values="" isPersistent="0" form="single" />
+			<Variable name="signal_playerInteractionItemRequest" type="kettle:signal:onPlayerInteractionItemRequest" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Parallel successMode="Any" failureMode="Any">
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$signal_onInteraction" senderInfo="" inbox="&apos;interactionModule&apos;" condition="" answerVar="">
+							<IfCondition failOnCondition="false" condition="$signal_onInteraction.usedItem ~= $__null">
+								<AddInterrupt_player_useSmokehouse Target="$__player" Host="$this.id" Behavior="&apos;player_useSmokehouse&apos;" Priority="1" IgnorePriorityOnPreviousInterrupt="false" urgency="Default" Aliveness="Alive" Privileged="false" FastForward="false" />
+							</IfCondition>
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$interactionItemsArray" senderInfo="" inbox="&apos;interactionModule&apos;" condition="" answerVar="">
+							<Success />
+						</ProcessMessage>
+					</While>
+					<While doFail="false" propagateChildFail="false" condition="true">
+						<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$signal_playerInteractionItemRequest" senderInfo="" inbox="&apos;kettleInbox&apos;" condition="" answerVar="$interactionItemsArray">
+							<Success />
+						</ProcessMessage>
+					</While>
+				</Parallel>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="interactionItemsArray" comment="" />
+				<Variable name="signal_onInteraction" comment="" />
+				<Variable name="signal_playerInteractionItemRequest" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-70" editorPosY="30" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AddInterrupt_player_useSmokehouse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddInterrupt_player_useSmokehouse>
+								</IfCondition>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</ProcessMessage>
+						</While>
+						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</ProcessMessage>
+						</While>
+					</Parallel>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="player_useSmokehouse" is_function="1">
+		<Variables>
+			<Variable name="index" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="interactionItemsArray" type="interactionModule:itemSelection" values="" isPersistent="0" form="array" />
+			<Variable name="isSmokehouse" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="itemType" type="_string" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<ExecuteLua code="local soEntity = XGenAIModule.GetEntityByWUID(data.__object.id); &#10;data.isSmokehouse = EntityUtils.GetScriptProperty(soEntity,&apos;isSmokehouse&apos;);" />
+			</OnInit>
+			<Behavior canSkip="1">
+				<LuaWrapper onEnter="player.player:OnEnterInteractive()" onExit="player.player:OnEndInteractive()">
+					<Sequence>
+						<SendMessageToNPC target="$__object.id" type="&apos;kettle:signal:onPlayerInteractionItemRequest&apos;" values="" timeType="GameTime" timeoutType="OnProcessed" timeout="&apos;-1&apos;" answer="$interactionItemsArray" />
+						<IfElseCondition failOnCondition="false" condition="$isSmokehouse" saveVersion="2">
+							<Then canSkip="1">
+								<Sequence>
+									<AnimationAction fragment="&apos;SmokehouseSniff&apos;" tags="" eventReferenceObject="" alignObject="$__object.id" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+									<For startIndex="0" endIndex="-1" step="1" array="$interactionItemsArray" iterator="$index" value="" break="">
+										<PrepareFood PrepareType="Smoke" Chef="$__player" Items="$interactionItemsArray[$index].id" Amount="-1" />
+									</For>
+								</Sequence>
+							</Then>
+							<Else canSkip="1">
+								<Sequence>
+									<AnimationAction fragment="&apos;Drying&apos;" tags="" eventReferenceObject="" alignObject="$__object.id" slaveObject="" resourceOverride="" allowTorchForPlayer="true" />
+									<For startIndex="0" endIndex="-1" step="1" array="$interactionItemsArray" iterator="$index" value="" break="">
+										<Sequence>
+											<GetItemType WUID="$interactionItemsArray[$index].id" OutCategory="$itemType[0]" OutType="$itemType[1]" OutSubType="$itemType[2]" />
+											<IfElseCondition failOnCondition="false" condition="$itemType[0] == &apos;crafting_material&apos; &amp; $itemType[1] == &apos;herb&apos;" saveVersion="2">
+												<Then canSkip="1">
+													<DryHerb Chef="$__player" Items="$interactionItemsArray[$index].id" Amount="-1" />
+												</Then>
+												<Else canSkip="1">
+													<PrepareFood PrepareType="Dry" Chef="$__player" Items="$interactionItemsArray[$index].id" Amount="-1" />
+												</Else>
+											</IfElseCondition>
+										</Sequence>
+									</For>
+								</Sequence>
+							</Else>
+						</IfElseCondition>
+					</Sequence>
+				</LuaWrapper>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="player_useSmokehouse" EventSet="">
+			<Variables>
+				<Variable name="index" comment="" />
+				<Variable name="interactionItemsArray" comment="" />
+				<Variable name="isSmokehouse" comment="" />
+				<Variable name="itemType" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<OnInit>
+					<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</ExecuteLua>
+				</OnInit>
+				<Behavior>
+					<LuaWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<SendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</SendMessageToNPC>
+							<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Then>
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</AnimationAction>
+										<For hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<PrepareFood hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</PrepareFood>
+										</For>
+									</Sequence>
+								</Then>
+								<Else>
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</AnimationAction>
+										<For hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GetItemType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetItemType>
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<DryHerb hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</DryHerb>
+													</Then>
+													<Else>
+														<PrepareFood hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</PrepareFood>
+													</Else>
+												</IfElseCondition>
+											</Sequence>
+										</For>
+									</Sequence>
+								</Else>
+							</IfElseCondition>
+						</Sequence>
+					</LuaWrapper>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

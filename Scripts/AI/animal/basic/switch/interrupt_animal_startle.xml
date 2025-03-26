@@ -1,0 +1,704 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+  <BehaviorTree name="interrupt_animal_startle" is_function="0">
+    <Variables>
+      <Variable name="__zeroVec3" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="_usedReservation" type="_bool" values="false" isPersistent="0" form="single" />
+      <Variable name="additionalMoveParams" type="additionalMoveParams" values="destChangedThreshold(&apos;1s&apos;)" isPersistent="0" form="single" />
+      <Variable name="animalCooldowns" type="crime:animalCooldowns" values="" isPersistent="0" form="single" />
+      <Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
+      <Variable name="customStartle_area" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="customStartle_tagpoint" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="customStartle_tagpoints" type="_wuid" values="" isPersistent="0" form="array" />
+      <Variable name="distanceToFlee" type="_float" values="50" isPersistent="0" form="single" />
+      <Variable name="distanceToFlee_int" type="_int" values="50" isPersistent="0" form="single" />
+      <Variable name="dotPlayerMePoint" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="finishedMove" type="_bool" values="false" isPersistent="1" form="single" />
+      <Variable name="highestDot_point" type="_wuid" values="" isPersistent="1" form="single" />
+      <Variable name="highestDot_val" type="_float" values="" isPersistent="0" form="single" />
+      <Variable name="hitReaction" type="hitReaction" values="" isPersistent="0" form="single" />
+      <Variable name="keepMinimalDistance" type="_float" values="0" isPersistent="0" form="single" />
+      <Variable name="lockName_gStartled" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="lockName_onSpot" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="lockName_running" type="_string" values="" isPersistent="0" form="single" />
+      <Variable name="myCurrentPos" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="myPos" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="pathFindingParams" type="pathFindingParams" values="" isPersistent="0" form="single" />
+      <Variable name="playStartle" type="_bool" values="false" isPersistent="0" form="single" />
+      <Variable name="playerHorse" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="pointPos" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="runFromPos" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="shouldExitWaiting" type="_bool" values="false" isPersistent="0" form="single" />
+      <Variable name="startleData" type="animal:startle" values="" isPersistent="0" form="single" />
+      <Variable name="startledFromPos" type="vec3" values="" isPersistent="1" form="single" />
+      <Variable name="targetPos" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="vecTargetToMe" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="vecTargetToPoint" type="vec3" values="" isPersistent="0" form="single" />
+      <Variable name="volume" type="_wuid" values="" isPersistent="0" form="single" />
+      <Variable name="volumeData" type="crime:animalMissingVolume" values="" isPersistent="0" form="single" />
+      <Variable name="volumeParams" type="perceptibleParams" values="" isPersistent="0" form="single" />
+    </Variables>
+    <Parameters>
+      <Variable name="animalStartleData" type="switch:animal_interruptData:startle" values="" isPersistent="0" form="single" requirementType="In" />
+    </Parameters>
+    <Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+      <OnInit canSkip="1">
+        <Sequence>
+          <GenerateRandomInteger lowerBoundary="40" upperBoundary="60" result="$distanceToFlee_int" />
+          <Expression expressions="$pathFindingParams.useGeneratedNSO = false &#10;$pathFindingParams.usePaths = false &#10; &#10;$distanceToFlee = $distanceToFlee_int" />
+          <Concatenation OutString="$lockName_gStartled" Pattern="&apos;crime_animal_startled_$this.id;&apos;" />
+          <Concatenation OutString="$lockName_running" Pattern="&apos;startleState_running_$this.id;&apos;" />
+          <SetExternalLock LockManagerType="Global" Locked="false" LockName="&apos;$lockName_running&apos;" />
+          <Concatenation OutString="$lockName_onSpot" Pattern="&apos;startleState_onSpot_$this.id;&apos;" />
+          <SetExternalLock LockManagerType="Global" Locked="false" LockName="&apos;$lockName_onSpot&apos;" />
+          <RemoveLink From="$this.id" To="$this.id" Tag="&apos;crime_animal_startledPosition&apos;" LinkOpHandleMode="Success" />
+        </Sequence>
+      </OnInit>
+      <Behavior canSkip="1">
+        <EntityContext context="crime_animal_interruptStartle" target="$this.id">
+          <FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+            <Child canSkip="1">
+              <AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+                <LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:animal:startle&apos;">
+                  <LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$animalStartleData.stimulusKind&apos;">
+                    <Sequence>
+                      <IfCondition failOnCondition="false" condition="~$finishedMove">
+                        <SetExternalLock LockManagerType="Global" Locked="false" LockName="&apos;$lockName_running&apos;" />
+                      </IfCondition>
+                      <IfCondition failOnCondition="false" condition="~$animalStartleData.suppressBuckingAnimation">
+                        <IsLoadedGate saveVersion="2">
+                          <Else canSkip="1">
+                            <AnimationAction fragment="&apos;Bucking&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+                          </Else>
+                        </IsLoadedGate>
+                      </IfCondition>
+                      <GetPlayerHorse HorseWuid="$playerHorse" />
+                      <IfCondition failOnCondition="false" condition="$playerHorse ~= $this.id">
+                        <Sequence>
+                          <AtomicDecorator>
+                            <Sequence>
+                              <IfCondition failOnCondition="false" condition="$startledFromPos == $__zeroVec3">
+                                <GetSpatialInfo In="$this.id" Out="$startledFromPos" What="Position" />
+                              </IfCondition>
+                              <Sequence>
+                                <Sequence>
+                                  <Expression expressions="$volumeParams.visibility = 0.005, &#10;$volumeParams.conspicuousness = 1 &#10; &#10;$volumeData.culprit = $__player &#10;$volumeData.target = $this.id &#10;$volumeData.isTheft = false" />
+                                  <ExecuteLua code="local soul = XGenAIModule.GetEntityByWUID(data.this.id).soul &#10; &#10;data.volumeData.animalArchetype = soul:GetArchetype().Name" />
+                                  <GetTime TimeType="GameTime" OutVar="$volumeData.timestamp" Delta="" />
+                                  <SpawnExpiringPerceptibleVolume Expiration="&apos;20m&apos;" TimerType="GameTime" Position="$startledFromPos" Radius="1.000000" Height="1.000000" Label="&apos;crime_animal_missing&apos;" OnlyVisiblePointsFromCenter="true" PerceptibleParams="$volumeParams" OutWuid="$volume" />
+                                  <AddLink From="$volume" To="$volume" Tag="&apos;crime_animal_missing&apos;" Data="$volumeData" LinkOpHandleMode="Error" />
+                                  <AddLink From="$this.id" To="$volume" Tag="&apos;crime_animal_startledMissingVolume&apos;" Data="" LinkOpHandleMode="Error" />
+                                  <IgnorePerception PerceptorObject="$this.id" PerceptibleObject="$volume" IgnoreFor="&apos;-1&apos;" TimerType="GameTime" Uninterruptible="false" Persistent="true" />
+                                  <IgnorePerception PerceptorObject="$volumeData.culprit" PerceptibleObject="$volume" IgnoreFor="&apos;-1&apos;" TimerType="GameTime" Uninterruptible="false" Persistent="true" />
+                                  <IgnorePerception PerceptorObject="$__player" PerceptibleObject="$volume" IgnoreFor="&apos;-1&apos;" TimerType="GameTime" Uninterruptible="false" Persistent="true" />
+                                </Sequence>
+                                <ProduceSound Sound="startled_critter" Position="$this.id" Multiplier="1.000000" />
+                              </Sequence>
+                            </Sequence>
+                          </AtomicDecorator>
+                          <AddPerceivableState PerceivableLabel="&apos;crime_animal_startled&apos;">
+                            <Sequence>
+                              <IfCondition failOnCondition="false" condition="$highestDot_point == $__null">
+                                <IsInsideAreaWithLabel Position="$startledFromPos" Label="&apos;customAnimalStartleArea&apos;" Area="$customStartle_area" FailSubtMissing="false" saveVersion="2">
+                                  <Then canSkip="1">
+                                    <Sequence>
+                                      <SuppressFailure>
+                                        <GraphSearch Origin="$customStartle_area" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                          <LinkTagFilter tag="&apos;crime_customAnimalStartle_tagpoint&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                                          <Nodalyzer Quantifiers="ForAll" Parent="" Child="$customStartle_tagpoints" saveVersion="2" />
+                                        </GraphSearch>
+                                      </SuppressFailure>
+                                      <IfElseCondition failOnCondition="false" condition="#customStartle_tagpoints &gt; 0" saveVersion="2">
+                                        <Then canSkip="1">
+                                          <Sequence>
+                                            <Sequence>
+                                              <Expression expressions="$myPos = $startledFromPos" />
+                                              <GetSpatialInfo In="$animalStartleData.target" Out="$targetPos" What="Position" />
+                                              <Expression expressions="$vecTargetToMe.x = $myPos.x - $targetPos.x &#10;$vecTargetToMe.y = $myPos.y - $targetPos.y &#10;$vecTargetToMe.z = $myPos.z - $targetPos.z &#10; &#10;$highestDot_val = -1 &#10;$highestDot_point = $__null" />
+                                              <NumericalOperation In1VariableName="vecTargetToMe" In2VariableName="" In3VariableName="" OutVariableName="$vecTargetToMe" Operation="normalize" />
+                                              <ForEach startIndex="0" step="1" array="$customStartle_tagpoints" iterator="" value="$customStartle_tagpoint" break="">
+                                                <Selector>
+                                                  <GraphSearch Origin="$customStartle_tagpoint" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                                    <LinkTagFilter tag="&apos;animal_customStartle_reservation&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+                                                  </GraphSearch>
+                                                  <Sequence>
+                                                    <GetSpatialInfo In="$customStartle_tagpoint" Out="$pointPos" What="Position" />
+                                                    <Expression expressions="$vecTargetToPoint.x = $pointPos.x - $targetPos.x &#10;$vecTargetToPoint.y = $pointPos.y - $targetPos.y &#10;$vecTargetToPoint.z = $pointPos.z - $targetPos.z" />
+                                                    <NumericalOperation In1VariableName="vecTargetToPoint" In2VariableName="" In3VariableName="" OutVariableName="$vecTargetToPoint" Operation="normalize" />
+                                                    <NumericalOperation In1VariableName="vecTargetToMe" In2VariableName="vecTargetToPoint" In3VariableName="" OutVariableName="$dotPlayerMePoint" Operation="dot" />
+                                                    <IfCondition failOnCondition="false" condition="$highestDot_val &lt; $dotPlayerMePoint">
+                                                      <Expression expressions="$highestDot_val = $dotPlayerMePoint &#10;$highestDot_point = $customStartle_tagpoint" />
+                                                    </IfCondition>
+                                                  </Sequence>
+                                                </Selector>
+                                              </ForEach>
+                                            </Sequence>
+                                          </Sequence>
+                                        </Then>
+                                        <Else canSkip="1">
+                                          <ErrorNode Message="&apos;[$this.name;] using customAnimalStartle but no tagPoints linked to this area (use link `crime_customAnimalStartle_tagpoint`)&apos;" />
+                                        </Else>
+                                      </IfElseCondition>
+                                    </Sequence>
+                                  </Then>
+                                  <Else canSkip="1">
+                                    <Expression expressions="$highestDot_point = $__null" />
+                                  </Else>
+                                </IsInsideAreaWithLabel>
+                              </IfCondition>
+                              <IfCondition failOnCondition="false" condition="~$finishedMove">
+                                <Sequence>
+                                  <IfElseCondition failOnCondition="false" condition="$highestDot_point ~= $__null" saveVersion="2">
+                                    <Then canSkip="1">
+                                      <Sequence>
+                                        <AtomicDecorator>
+                                          <Sequence>
+                                            <AddLink From="$highestDot_point" To="$this.id" Tag="&apos;animal_customStartle_reservation&apos;" Data="" LinkOpHandleMode="OverWrite" />
+                                            <Expression expressions="$_usedReservation = true" />
+                                          </Sequence>
+                                        </AtomicDecorator>
+                                        <Move stopWithinDistance="0.200000" stopDistanceVariation="0.500000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$highestDot_point" destinationSpecification2="" destinationSpecification3="" speed="Dash" additionalParams="$additionalMoveParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+                                      </Sequence>
+                                    </Then>
+                                    <Else canSkip="1">
+                                      <Sequence>
+                                        <GetSpatialInfo In="$animalStartleData.target" Out="$runFromPos" What="Position" />
+                                        <Move stopWithinDistance="0.200000" stopDistanceVariation="0.500000" rayCasteFlee="false" successDistance="0.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$runFromPos" destinationSpecification2="$distanceToFlee" destinationSpecification3="$keepMinimalDistance" speed="Dash" additionalParams="$additionalMoveParams" pathFindingParams="$pathFindingParams" staminaPolicy="" pathInfo="" />
+                                      </Sequence>
+                                    </Else>
+                                  </IfElseCondition>
+                                  <Expression expressions="$finishedMove = true" />
+                                  <SetExternalLock LockManagerType="Global" Locked="true" LockName="&apos;$lockName_running&apos;" />
+                                </Sequence>
+                              </IfCondition>
+                              <FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+                                <Child canSkip="1">
+                                  <Sequence>
+                                    <SetExternalLock LockManagerType="Global" Locked="false" LockName="&apos;$lockName_onSpot&apos;" />
+                                    <Parallel successMode="Any" failureMode="Any">
+                                      <Loop count="-1">
+                                        <ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$startleData" senderInfo="" inbox="&apos;animalStartle&apos;" condition="" answerVar="">
+                                          <Expression expressions="$playStartle = true" />
+                                        </ProcessMessage>
+                                      </Loop>
+                                      <Loop count="-1">
+                                        <ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hitReaction" senderInfo="" inbox="&apos;hitReaction&apos;" condition="" answerVar="">
+                                          <Expression expressions="$playStartle = true" />
+                                        </ProcessMessage>
+                                      </Loop>
+                                      <Loop count="-1">
+                                        <IfGate atomic="false" condition="$playStartle" RunLogic="KeepRunning">
+                                          <Sequence>
+                                            <SuppressFailure>
+                                              <GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;crime_animalCooldowns&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+                                                <LinkTagFilter tag="&apos;crime_animalCooldowns&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$animalCooldowns" />
+                                              </GraphSearch>
+                                            </SuppressFailure>
+                                            <GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+                                            <IfCondition failOnCondition="false" condition="$animalCooldowns.animalStartleCooldown &lt; $currentTime | &#10;$animalCooldowns.animalStartleCooldown == 0">
+                                              <Sequence>
+                                                <AnimationAction fragment="&apos;Bucking&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+                                                <ProduceSound Sound="startled_critter" Position="$this.id" Multiplier="50.000000" />
+                                                <Sequence>
+                                                  <Expression expressions="$animalCooldowns.animalStartleCooldown = $currentTime + 10000" />
+                                                  <AddLink From="$this.id" To="$this.id" Tag="&apos;crime_animalCooldowns&apos;" Data="$animalCooldowns" LinkOpHandleMode="OverWrite" />
+                                                </Sequence>
+                                              </Sequence>
+                                            </IfCondition>
+                                            <Expression expressions="$playStartle = false" />
+                                          </Sequence>
+                                        </IfGate>
+                                      </Loop>
+                                      <While doFail="false" propagateChildFail="false" condition="~$shouldExitWaiting">
+                                        <LinkGate from="$this.id" to="" tag="&apos;crime_returnStartledAnimalReserved_reverse&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="Halt">
+                                          <Sequence>
+                                            <Wait duration="&apos;1m&apos;" timeType="GameTime" doFail="false" variation="&apos;20s&apos;" />
+                                            <Expression expressions="$shouldExitWaiting = true" />
+                                          </Sequence>
+                                        </LinkGate>
+                                      </While>
+                                    </Parallel>
+                                  </Sequence>
+                                </Child>
+                                <OnFail canSkip="1">
+                                  <SetExternalLock LockManagerType="Global" Locked="true" LockName="&apos;$lockName_onSpot&apos;" />
+                                </OnFail>
+                              </FuseBox>
+                            </Sequence>
+                          </AddPerceivableState>
+                        </Sequence>
+                      </IfCondition>
+                    </Sequence>
+                  </LogToLabel>
+                </LogToLabel>
+              </AddPerceivableState>
+            </Child>
+            <OnFail canSkip="1">
+              <AtomicDecorator>
+                <Sequence>
+                  <GetSpatialInfo In="$this.id" Out="$myCurrentPos" What="Position" />
+                  <AddLink From="$this.id" To="$this.id" Tag="&apos;crime_animal_startledPosition&apos;" Data="$myCurrentPos" LinkOpHandleMode="OverWrite" />
+                  <CheckWuidValid wuid="$volume" FailSubtMissing="false" saveVersion="2">
+                    <Then canSkip="1">
+                      <Sequence>
+                        <RemoveLink From="$this.id" To="$volume" Tag="&apos;crime_animal_startledMissingVolume&apos;" LinkOpHandleMode="OverWrite" />
+                        <DeSpawnPerceptibleVolume Wuid="$volume" />
+                      </Sequence>
+                    </Then>
+                  </CheckWuidValid>
+                  <IfCondition failOnCondition="false" condition="$_usedReservation">
+                    <RemoveLink From="$highestDot_point" To="$this.id" Tag="&apos;animal_customStartle_reservation&apos;" LinkOpHandleMode="OverWrite" />
+                  </IfCondition>
+                </Sequence>
+              </AtomicDecorator>
+            </OnFail>
+          </FuseBox>
+        </EntityContext>
+      </Behavior>
+    </Root>
+    <ForestContainer />
+    <EditorData Signature="animal_startle" EventSet="">
+      <Variables>
+        <Variable name="__zeroVec3" comment="" />
+        <Variable name="_usedReservation" comment="" />
+        <Variable name="additionalMoveParams" comment="" />
+        <Variable name="animalCooldowns" comment="" />
+        <Variable name="currentTime" comment="" />
+        <Variable name="customStartle_area" comment="" />
+        <Variable name="customStartle_tagpoint" comment="" />
+        <Variable name="customStartle_tagpoints" comment="" />
+        <Variable name="distanceToFlee" comment="" />
+        <Variable name="distanceToFlee_int" comment="" />
+        <Variable name="dotPlayerMePoint" comment="" />
+        <Variable name="finishedMove" comment="" />
+        <Variable name="highestDot_point" comment="" />
+        <Variable name="highestDot_val" comment="" />
+        <Variable name="hitReaction" comment="" />
+        <Variable name="keepMinimalDistance" comment="" />
+        <Variable name="lockName_gStartled" comment="" />
+        <Variable name="lockName_onSpot" comment="" />
+        <Variable name="lockName_running" comment="" />
+        <Variable name="myCurrentPos" comment="" />
+        <Variable name="myPos" comment="" />
+        <Variable name="pathFindingParams" comment="" />
+        <Variable name="playStartle" comment="" />
+        <Variable name="playerHorse" comment="" />
+        <Variable name="pointPos" comment="" />
+        <Variable name="runFromPos" comment="" />
+        <Variable name="shouldExitWaiting" comment="" />
+        <Variable name="startleData" comment="" />
+        <Variable name="startledFromPos" comment="" />
+        <Variable name="targetPos" comment="" />
+        <Variable name="vecTargetToMe" comment="" />
+        <Variable name="vecTargetToPoint" comment="" />
+        <Variable name="volume" comment="" />
+        <Variable name="volumeData" comment="" />
+        <Variable name="volumeParams" comment="" />
+        <Variable name="animalStartleData" comment="" />
+      </Variables>
+      <ForwardDeclarations />
+      <Root editorPosX="-80" editorPosY="20" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+        <OutputBreakpoints />
+        <OnInit>
+          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <GenerateRandomInteger hasInputBreakpoint="0" comment="Can&apos;t pass float variable to result" breakpointFlags="0">
+              <OutputBreakpoints />
+            </GenerateRandomInteger>
+            <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Expression>
+            <Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Concatenation>
+            <Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Concatenation>
+            <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </SetExternalLock>
+            <Concatenation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </Concatenation>
+            <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+              <OutputBreakpoints />
+            </SetExternalLock>
+            <RemoveLink hasInputBreakpoint="0" comment="Remove position from previous startle" breakpointFlags="0">
+              <OutputBreakpoints />
+            </RemoveLink>
+          </Sequence>
+        </OnInit>
+        <Behavior>
+          <EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+            <OutputBreakpoints />
+            <FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+              <OutputBreakpoints />
+              <Child>
+                <AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                        <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </SetExternalLock>
+                        </IfCondition>
+                        <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <IsLoadedGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                            <OutputBreakpoints />
+                            <Else>
+                              <AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                              </AnimationAction>
+                            </Else>
+                          </IsLoadedGate>
+                        </IfCondition>
+                        <GetPlayerHorse hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                        </GetPlayerHorse>
+                        <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                            <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <IfCondition hasInputBreakpoint="0" comment="Save&amp;Load" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </GetSpatialInfo>
+                                </IfCondition>
+                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </Expression>
+                                    <ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </ExecuteLua>
+                                    <GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </GetTime>
+                                    <SpawnExpiringPerceptibleVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </SpawnExpiringPerceptibleVolume>
+                                    <AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </AddLink>
+                                    <AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </AddLink>
+                                    <IgnorePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </IgnorePerception>
+                                    <IgnorePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </IgnorePerception>
+                                    <IgnorePerception hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </IgnorePerception>
+                                  </Sequence>
+                                  <ProduceSound hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                  </ProduceSound>
+                                </Sequence>
+                              </Sequence>
+                            </AtomicDecorator>
+                            <AddPerceivableState hasInputBreakpoint="0" comment="Add perceivable state AFTER we create link and volumes" breakpointFlags="0">
+                              <OutputBreakpoints />
+                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                <OutputBreakpoints />
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                    <OutputBreakpoints />
+                                    <Then>
+                                      <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                            <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </LinkTagFilter>
+                                            <Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                              <OutputBreakpoints />
+                                            </Nodalyzer>
+                                          </GraphSearch>
+                                        </SuppressFailure>
+                                        <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                          <OutputBreakpoints />
+                                          <Then>
+                                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                              <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </Expression>
+                                                <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </GetSpatialInfo>
+                                                <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </Expression>
+                                                <NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                </NumericalOperation>
+                                                <ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                  <Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                    <OutputBreakpoints />
+                                                    <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                      <OutputBreakpoints />
+                                                      <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                        <OutputBreakpoints />
+                                                      </LinkTagFilter>
+                                                    </GraphSearch>
+                                                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                      <OutputBreakpoints />
+                                                      <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                        <OutputBreakpoints />
+                                                      </GetSpatialInfo>
+                                                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                        <OutputBreakpoints />
+                                                      </Expression>
+                                                      <NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                        <OutputBreakpoints />
+                                                      </NumericalOperation>
+                                                      <NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                        <OutputBreakpoints />
+                                                      </NumericalOperation>
+                                                      <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                        <OutputBreakpoints />
+                                                        <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                          <OutputBreakpoints />
+                                                        </Expression>
+                                                      </IfCondition>
+                                                    </Sequence>
+                                                  </Selector>
+                                                </ForEach>
+                                              </Sequence>
+                                            </Sequence>
+                                          </Then>
+                                          <Else>
+                                            <ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </ErrorNode>
+                                          </Else>
+                                        </IfElseCondition>
+                                      </Sequence>
+                                    </Then>
+                                    <Else>
+                                      <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </Expression>
+                                    </Else>
+                                  </IsInsideAreaWithLabel>
+                                </IfCondition>
+                                <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                  <OutputBreakpoints />
+                                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                    <OutputBreakpoints />
+                                    <IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                                      <OutputBreakpoints />
+                                      <Then>
+                                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                              <AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                              </AddLink>
+                                              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                              </Expression>
+                                            </Sequence>
+                                          </AtomicDecorator>
+                                          <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </Move>
+                                        </Sequence>
+                                      </Then>
+                                      <Else>
+                                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </GetSpatialInfo>
+                                          <Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                          </Move>
+                                        </Sequence>
+                                      </Else>
+                                    </IfElseCondition>
+                                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </Expression>
+                                    <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </SetExternalLock>
+                                  </Sequence>
+                                </IfCondition>
+                                <FuseBox hasInputBreakpoint="0" comment="Ugh" breakpointFlags="0" saveVersion="2">
+                                  <OutputBreakpoints />
+                                  <Child>
+                                    <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                      <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                      </SetExternalLock>
+                                      <Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                        <OutputBreakpoints />
+                                        <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                            <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </Expression>
+                                          </ProcessMessage>
+                                        </Loop>
+                                        <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                            <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                            </Expression>
+                                          </ProcessMessage>
+                                        </Loop>
+                                        <Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                              <SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                                <GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                  <LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                    <OutputBreakpoints />
+                                                  </LinkTagFilter>
+                                                </GraphSearch>
+                                              </SuppressFailure>
+                                              <GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                              </GetTime>
+                                              <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                                <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                  <OutputBreakpoints />
+                                                  <AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                    <OutputBreakpoints />
+                                                  </AnimationAction>
+                                                  <ProduceSound hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                    <OutputBreakpoints />
+                                                  </ProduceSound>
+                                                  <Sequence hasInputBreakpoint="0" comment="Update Cooldown" breakpointFlags="0">
+                                                    <OutputBreakpoints />
+                                                    <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                      <OutputBreakpoints />
+                                                    </Expression>
+                                                    <AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                      <OutputBreakpoints />
+                                                    </AddLink>
+                                                  </Sequence>
+                                                </Sequence>
+                                              </IfCondition>
+                                              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                              </Expression>
+                                            </Sequence>
+                                          </IfGate>
+                                        </Loop>
+                                        <While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                          <OutputBreakpoints />
+                                          <LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                            <OutputBreakpoints />
+                                            <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                              <OutputBreakpoints />
+                                              <Wait hasInputBreakpoint="0" comment="Scheduler with take care of return" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                              </Wait>
+                                              <Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                                <OutputBreakpoints />
+                                              </Expression>
+                                            </Sequence>
+                                          </LinkGate>
+                                        </While>
+                                      </Parallel>
+                                    </Sequence>
+                                  </Child>
+                                  <OnFail>
+                                    <SetExternalLock hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                                      <OutputBreakpoints />
+                                    </SetExternalLock>
+                                  </OnFail>
+                                </FuseBox>
+                              </Sequence>
+                            </AddPerceivableState>
+                          </Sequence>
+                        </IfCondition>
+                      </Sequence>
+                    </LogToLabel>
+                  </LogToLabel>
+                </AddPerceivableState>
+              </Child>
+              <OnFail>
+                <AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                  <OutputBreakpoints />
+                  <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                    <OutputBreakpoints />
+                    <GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </GetSpatialInfo>
+                    <AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                    </AddLink>
+                    <CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+                      <OutputBreakpoints />
+                      <Then>
+                        <Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                          <OutputBreakpoints />
+                          <RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </RemoveLink>
+                          <DeSpawnPerceptibleVolume hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                            <OutputBreakpoints />
+                          </DeSpawnPerceptibleVolume>
+                        </Sequence>
+                      </Then>
+                    </CheckWuidValid>
+                    <IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                      <OutputBreakpoints />
+                      <RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+                        <OutputBreakpoints />
+                      </RemoveLink>
+                    </IfCondition>
+                  </Sequence>
+                </AtomicDecorator>
+              </OnFail>
+            </FuseBox>
+          </EntityContext>
+        </Behavior>
+      </Root>
+      <Forest />
+      <Comments />
+    </EditorData>
+  </BehaviorTree>
+</BehaviorTrees>

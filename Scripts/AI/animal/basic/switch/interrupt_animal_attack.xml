@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="interrupt_animal_attack" is_function="0">
+		<Variables>
+			<Variable name="animalAlarmInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="receivedAttackState" type="enum:crime_interruptAttackState" values="" isPersistent="0" form="single" />
+			<Variable name="stopAttacking" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="stopFight" type="stopFight" values="" isPersistent="0" form="single" />
+			<Variable name="wolfsTarget" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="animalAttackData" type="switch:animal_interruptData:attack" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<EntityContext context="crime_animal_interruptAttack" target="$this.id">
+							<AddPerceivableState PerceivableLabel="&apos;crime_interrupt&apos;">
+								<LogToLabel Name="&apos;crime_interrupt&apos;" Wuid="" Message="&apos;interrupt:animal:attack&apos;">
+									<LogToLabel Name="&apos;crime_stimulusKind&apos;" Wuid="" Message="&apos;stimulusKind:$animalAttackData.stimulusKind&apos;">
+										<Sequence>
+											<Function_crime_animal_confirmReactionLink reactionKind="$enum:crime_animal_reactionKind.attack" target="" nodeLabel="88585195" />
+											<Expression expressions="$receivedAttackState = $enum:crime_interruptAttackState.attacking" />
+											<EntityContextCheck context="lovVlku_dogPack" target="" saveVersion="2">
+												<Then canSkip="1">
+													<Function_lovVlku_sendPackAction action="&apos;fight&apos;" target="$animalAttackData.target" nodeLabel="10676462" />
+												</Then>
+											</EntityContextCheck>
+											<IfGate atomic="false" condition="~$stopAttacking &amp; $receivedAttackState ~= $enum:crime_interruptAttackState.playerSurrendered" RunLogic="Halt">
+												<Sequence>
+													<Sequence>
+														<CreateInformationWrapper Label="&apos;animal_alarm&apos;" PerceivedWuid="$this.id" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$animalAlarmInformation" />
+														<LockDynamicInformationValues Information="$animalAlarmInformation">
+															<Sequence>
+																<SetDynamicInformationValue Information="$animalAlarmInformation" Tag="&apos;attackTarget&apos;" Variable="$animalAttackData.target" Type="" Value="" />
+																<SetDynamicInformationValue Information="$animalAlarmInformation" Tag="&apos;stimulusKind&apos;" Variable="$animalAttackData.stimulusKind" Type="" Value="" />
+																<SetDynamicInformationValue Information="$animalAlarmInformation" Tag="&apos;reactionKind&apos;" Variable="$enum:crime_animal_reactionKind.attack" Type="" Value="" />
+															</Sequence>
+														</LockDynamicInformationValues>
+														<InformationEmittingStart Information="$animalAlarmInformation" Periodicity="&apos;1s&apos;" TimerType="GameTime" Radius="10.000000" />
+													</Sequence>
+													<Parallel successMode="Any" failureMode="Any">
+														<Loop count="-1">
+															<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$receivedAttackState" senderInfo="" inbox="&apos;crime_playerIsSurrendering&apos;" condition="" answerVar="">
+																<IfCondition failOnCondition="false" condition="$receivedAttackState == $enum:crime_interruptAttackState.playerSurrendered">
+																	<Expression expressions="$stopAttacking = true" />
+																</IfCondition>
+															</ProcessMessage>
+														</Loop>
+														<Loop count="-1">
+															<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$stopFight" senderInfo="" inbox="&apos;combat_stopFight&apos;" condition="" answerVar="">
+																<Expression expressions="$stopAttacking = true" />
+															</ProcessMessage>
+														</Loop>
+														<IfGate atomic="false" condition="$receivedAttackState == $enum:crime_interruptAttackState.attacking" RunLogic="KeepRunning">
+															<IfGate atomic="false" condition="$receivedAttackState ~= $enum:crime_interruptAttackState.playerIsSurrendering" RunLogic="Halt">
+																<TenseCircumstanceBarrier RunLogic="Halt">
+																	<MeleeOffenseAutomationDecorator active="true">
+																		<MeleeDefenseAutomationDecorator active="true">
+																			<MeleeGuardAutomationDecorator GuardMode="automate" active="true">
+																				<CombatFollowerDecorator ProbablisticDrivenSweetSpot="true" RPGSweetSpotArcDriver="true" active="true">
+																					<Sequence>
+																						<SuppressFailure>
+																							<CombatAction TargetNPC="$animalAttackData.target" RelationOverride="$animalAttackData.skirmishRelationOverride" />
+																						</SuppressFailure>
+																						<Expression expressions="$stopAttacking = true" />
+																					</Sequence>
+																				</CombatFollowerDecorator>
+																			</MeleeGuardAutomationDecorator>
+																		</MeleeDefenseAutomationDecorator>
+																	</MeleeOffenseAutomationDecorator>
+																</TenseCircumstanceBarrier>
+															</IfGate>
+														</IfGate>
+														<Function_switch_animal_fleeDecision attackData="$animalAttackData" nodeLabel="88247919" />
+														<EntityContextCheck context="switch_isWolf" target="" saveVersion="2">
+															<Then canSkip="1">
+																<Parallel successMode="Any" failureMode="Any">
+																	<Loop count="-1">
+																		<Sequence>
+																			<SuppressFailure>
+																				<GetTarget ReferenceNPC="$this.id" TargetVarOut="$wolfsTarget" />
+																			</SuppressFailure>
+																			<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" />
+																		</Sequence>
+																	</Loop>
+																	<Loop count="-1">
+																		<IfGate atomic="false" condition="$wolfsTarget == $__player" RunLogic="KeepRunning">
+																			<GameContext context="combat_disablePlayerSurrenderDistanceCondition">
+																				<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																			</GameContext>
+																		</IfGate>
+																	</Loop>
+																</Parallel>
+															</Then>
+															<Else canSkip="1">
+																<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+															</Else>
+														</EntityContextCheck>
+													</Parallel>
+												</Sequence>
+											</IfGate>
+											<Function_switch_animal_callFollowUpBehavior previousReaction="$enum:crime_animal_reactionKind.attack" nodeLabel="82216955" />
+										</Sequence>
+									</LogToLabel>
+								</LogToLabel>
+							</AddPerceivableState>
+						</EntityContext>
+					</Child>
+					<OnFail canSkip="1">
+						<Sequence>
+							<AtomicDecorator>
+								<Sequence>
+									<InformationEmittingEnd Information="$animalAlarmInformation" />
+									<DestroyInformationCompletely Information="$animalAlarmInformation" />
+								</Sequence>
+							</AtomicDecorator>
+							<Function_crime_animal_removeReactionLink reactionKind="$enum:crime_animal_reactionKind.attack" target="" nodeLabel="97478406" />
+						</Sequence>
+					</OnFail>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="animal_attack" EventSet="">
+			<Variables>
+				<Variable name="animalAlarmInformation" comment="" />
+				<Variable name="receivedAttackState" comment="" />
+				<Variable name="stopAttacking" comment="" />
+				<Variable name="stopFight" comment="" />
+				<Variable name="wolfsTarget" comment="" />
+				<Variable name="animalAttackData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AddPerceivableState hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Function_crime_animal_confirmReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_crime_animal_confirmReactionLink>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Function_lovVlku_sendPackAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_lovVlku_sendPackAction>
+													</Then>
+												</EntityContextCheck>
+												<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</CreateInformationWrapper>
+															<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</SetDynamicInformationValue>
+																	<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</SetDynamicInformationValue>
+																	<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</SetDynamicInformationValue>
+																</Sequence>
+															</LockDynamicInformationValues>
+															<InformationEmittingStart hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</InformationEmittingStart>
+														</Sequence>
+														<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																</ProcessMessage>
+															</Loop>
+															<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</ProcessMessage>
+															</Loop>
+															<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<TenseCircumstanceBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<MeleeOffenseAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<MeleeDefenseAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<MeleeGuardAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<CombatFollowerDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<CombatAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</CombatAction>
+																							</SuppressFailure>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</Sequence>
+																					</CombatFollowerDecorator>
+																				</MeleeGuardAutomationDecorator>
+																			</MeleeDefenseAutomationDecorator>
+																		</MeleeOffenseAutomationDecorator>
+																	</TenseCircumstanceBarrier>
+																</IfGate>
+															</IfGate>
+															<Function_switch_animal_fleeDecision hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_switch_animal_fleeDecision>
+															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<GetTarget hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GetTarget>
+																				</SuppressFailure>
+																				<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Wait>
+																			</Sequence>
+																		</Loop>
+																		<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<GameContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Wait>
+																				</GameContext>
+																			</IfGate>
+																		</Loop>
+																	</Parallel>
+																</Then>
+																<Else>
+																	<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Wait>
+																</Else>
+															</EntityContextCheck>
+														</Parallel>
+													</Sequence>
+												</IfGate>
+												<Function_switch_animal_callFollowUpBehavior hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_animal_callFollowUpBehavior>
+											</Sequence>
+										</LogToLabel>
+									</LogToLabel>
+								</AddPerceivableState>
+							</EntityContext>
+						</Child>
+						<OnFail>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<InformationEmittingEnd hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</InformationEmittingEnd>
+										<DestroyInformationCompletely hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</DestroyInformationCompletely>
+									</Sequence>
+								</AtomicDecorator>
+								<Function_crime_animal_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_animal_removeReactionLink>
+							</Sequence>
+						</OnFail>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

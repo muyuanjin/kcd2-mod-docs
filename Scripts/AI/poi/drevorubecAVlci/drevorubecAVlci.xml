@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="lumberjack_cowerAndBark" is_function="0">
+		<Variables>
+			<Variable name="archetype" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="barkToSay" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="currentBark" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="currentWatchingPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="doesSeePlayer" type="_bool" values="" isPersistent="1" form="single" />
+			<Variable name="enemiesInWolfArea" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="hitReaction" type="hitReaction" values="" isPersistent="0" form="single" />
+			<Variable name="perceptionInfo" type="perceptionInfo" values="" isPersistent="0" form="single" />
+			<Variable name="watchingPlayer" type="_bool" values="" isPersistent="1" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="helpBark" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="incomingPlayerBark" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="wolfArea" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<ExactMove directionType="AlignWithEntity" directionSpecification="$__object.id" animationTriggerDist="0.150000" precise="true" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$__object.id" destinationSpecification2="" destinationSpecification3="" speed="Run" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+					<FuseBox StatusPropagation="Child" OneCleanup="false" saveVersion="2">
+						<Child canSkip="1">
+							<Parallel successMode="Any" failureMode="Any">
+								<RelationContext context="PerceptionPriorityBoost" source="$this.id" target="$__player">
+									<ContinuousSwitch>
+										<IfCondition failOnCondition="false" condition="$watchingPlayer &amp; &#10;#enemiesInWolfArea == 0">
+											<ForceLook LookTarget="$__player" DisableVariations="true">
+												<Sequence>
+													<Expression expressions="$currentBark = $incomingPlayerBark" />
+													<Parallel successMode="Any" failureMode="Any">
+														<Loop count="-1">
+															<Sequence>
+																<WaitAction />
+																<Turn target="$__player" align="false" />
+																<Wait duration="&apos;4s&apos;" timeType="GameTime" doFail="false" variation="&apos;2s&apos;" />
+															</Sequence>
+														</Loop>
+														<Function_continuousPlayerPerceptionCheck NPC="$this.id" loopTime="&apos;1s&apos;" doesSeePlayer="$doesSeePlayer" nodeLabel="99921779" />
+													</Parallel>
+												</Sequence>
+											</ForceLook>
+										</IfCondition>
+										<IfCondition failOnCondition="false" condition="!$watchingPlayer | &#10;#enemiesInWolfArea &gt; 0">
+											<Parallel successMode="All" failureMode="Any">
+												<Sequence>
+													<Expression expressions="$currentBark = $helpBark" />
+													<UnstanceAction unstance="Cower" locationObject="" slaveObject="" />
+													<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+												</Sequence>
+												<While doFail="false" propagateChildFail="false" condition="!$watchingPlayer">
+													<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$perceptionInfo" senderInfo="" inbox="&apos;perceptionInfo&apos;" condition="" answerVar="">
+														<IfCondition failOnCondition="false" condition="$perceptionInfo.perceptible == $__player &amp; &#10;$perceptionInfo.threshold == 1">
+															<Expression expressions="$watchingPlayer = true" />
+														</IfCondition>
+													</ProcessMessage>
+												</While>
+											</Parallel>
+										</IfCondition>
+									</ContinuousSwitch>
+								</RelationContext>
+								<IfGate atomic="false" condition="$currentBark ~= &apos;&apos;" RunLogic="KeepRunning">
+									<Loop count="-1">
+										<Sequence>
+											<Expression expressions="$barkToSay = $currentBark &#10;$currentWatchingPlayer = $watchingPlayer" />
+											<IfGate atomic="false" condition="$currentBark == $barkToSay &amp; &#10;$currentWatchingPlayer == $watchingPlayer" RunLogic="Halt">
+												<Sequence>
+													<SuppressFailure>
+														<Function_speech_schedulerMonolog alias="$currentBark" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" lookAtId="" metarole="" skipInLod="false" subtitlesDown="false" nodeLabel="76915928" />
+													</SuppressFailure>
+													<Wait duration="&apos;8s&apos;" timeType="GameTime" doFail="false" variation="&apos;2s&apos;" />
+												</Sequence>
+											</IfGate>
+										</Sequence>
+									</Loop>
+								</IfGate>
+								<AreaPresenceListener aiObjects="" area="$wolfArea" trackIn="true" trackOut="true" reportInitialState="true">
+									<IfElseCondition failOnCondition="false" condition="$__presence" saveVersion="2">
+										<Then canSkip="1">
+											<CheckRelationshipInterval_SoulToSoul TargetSoul="$__presenceObject" Soul="$this.id" Flag="enemy" saveVersion="2">
+												<Then canSkip="1">
+													<PushToArray array="$enemiesInWolfArea" value="$__presenceObject" direction="Back" />
+												</Then>
+												<Else canSkip="1">
+													<Sequence>
+														<Function_crime_getSoulArchetype soul="$__presenceObject" archetype="$archetype" nodeLabel="29129606" />
+														<IfCondition failOnCondition="false" condition="$archetype == &apos;Wolf&apos;">
+															<PushToArray array="$enemiesInWolfArea" value="$__presenceObject" direction="Back" />
+														</IfCondition>
+													</Sequence>
+												</Else>
+											</CheckRelationshipInterval_SoulToSoul>
+										</Then>
+										<Else canSkip="1">
+											<EraseFromArray array="$enemiesInWolfArea" condition="$__value == $__presenceObject" />
+										</Else>
+									</IfElseCondition>
+								</AreaPresenceListener>
+								<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hitReaction" senderInfo="" inbox="&apos;hitReaction&apos;" condition="" answerVar="">
+									<Fail />
+								</ProcessMessage>
+								<Loop count="-1">
+									<IfGate atomic="false" condition="#enemiesInWolfArea &gt; 0" RunLogic="Halt">
+										<EntityContext context="drevorubecAVlci_lumberjackInDanger" target="">
+											<Loop count="-1">
+												<DeadUnconsciousGate Who="$enemiesInWolfArea[0]" State="Dead" Negation="false" RunLogic="KeepRunning">
+													<EraseFromArray array="$enemiesInWolfArea" condition="$__value == $enemiesInWolfArea[0]" />
+												</DeadUnconsciousGate>
+											</Loop>
+										</EntityContext>
+									</IfGate>
+								</Loop>
+								<IfGate atomic="false" condition="$doesSeePlayer" RunLogic="Halt">
+									<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+								</IfGate>
+							</Parallel>
+						</Child>
+						<OnSuccess canSkip="1">
+							<InstantCallback_empty EventName="&apos;Success&apos;" />
+						</OnSuccess>
+						<OnFail canSkip="1">
+							<InstantCallback_empty EventName="&apos;Fail&apos;" />
+						</OnFail>
+					</FuseBox>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="drevorubecAVlci_cowerAndBark" EventSet="resultNotificationAtomic">
+			<Variables>
+				<Variable name="archetype" comment="" />
+				<Variable name="barkToSay" comment="" />
+				<Variable name="currentBark" comment="" />
+				<Variable name="currentWatchingPlayer" comment="" />
+				<Variable name="doesSeePlayer" comment="" />
+				<Variable name="enemiesInWolfArea" comment="" />
+				<Variable name="hitReaction" comment="" />
+				<Variable name="perceptionInfo" comment="" />
+				<Variable name="watchingPlayer" comment="" />
+				<Variable name="helpBark" comment="" />
+				<Variable name="incomingPlayerBark" comment="" />
+				<Variable name="wolfArea" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</ExactMove>
+						<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Child>
+								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<RelationContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</WaitAction>
+																	<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Turn>
+																	<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Wait>
+																</Sequence>
+															</Loop>
+															<Function_continuousPlayerPerceptionCheck hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_continuousPlayerPerceptionCheck>
+														</Parallel>
+													</Sequence>
+												</ForceLook>
+											</IfCondition>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+														<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</UnstanceAction>
+														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Wait>
+													</Sequence>
+													<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</IfCondition>
+														</ProcessMessage>
+													</While>
+												</Parallel>
+											</IfCondition>
+										</ContinuousSwitch>
+									</RelationContext>
+									<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_speech_schedulerMonolog>
+														</SuppressFailure>
+														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Wait>
+													</Sequence>
+												</IfGate>
+											</Sequence>
+										</Loop>
+									</IfGate>
+									<AreaPresenceListener hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</PushToArray>
+													</Then>
+													<Else>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_crime_getSoulArchetype hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_getSoulArchetype>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</PushToArray>
+															</IfCondition>
+														</Sequence>
+													</Else>
+												</CheckRelationshipInterval_SoulToSoul>
+											</Then>
+											<Else>
+												<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</EraseFromArray>
+											</Else>
+										</IfElseCondition>
+									</AreaPresenceListener>
+									<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Fail>
+									</ProcessMessage>
+									<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<DeadUnconsciousGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</EraseFromArray>
+													</DeadUnconsciousGate>
+												</Loop>
+											</EntityContext>
+										</IfGate>
+									</Loop>
+									<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Wait>
+									</IfGate>
+								</Parallel>
+							</Child>
+							<OnSuccess>
+								<InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</InstantCallback_empty>
+							</OnSuccess>
+							<OnFail>
+								<InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</InstantCallback_empty>
+							</OnFail>
+						</FuseBox>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="lumberjack_barkAndLeave" is_function="0">
+		<Variables>
+			<Variable name="hitReaction" type="hitReaction" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="data" type="_string" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<Parallel successMode="Any" failureMode="Any">
+							<Function_speech_schedulerMonolog alias="$data" animationApproach="$enum:animationApproach.ingameDialogPoseAndAnimations" context="" lookAtId="$__player" metarole="" skipInLod="false" subtitlesDown="false" nodeLabel="15653285" />
+							<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hitReaction" senderInfo="" inbox="&apos;hitReaction&apos;" condition="" answerVar="">
+								<Success />
+							</ProcessMessage>
+						</Parallel>
+					</Child>
+					<OnSuccess canSkip="1">
+						<InstantCallback_empty EventName="&apos;OnFinished&apos;" />
+					</OnSuccess>
+				</FuseBox>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData Signature="stringData" EventSet="endNotification">
+			<Variables>
+				<Variable name="hitReaction" comment="" />
+				<Variable name="data" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_speech_schedulerMonolog>
+								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Success>
+								</ProcessMessage>
+							</Parallel>
+						</Child>
+						<OnSuccess>
+							<InstantCallback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</InstantCallback_empty>
+						</OnSuccess>
+					</FuseBox>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="lumberjack_wait" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<WaitAction />
+					<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</WaitAction>
+						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Wait>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

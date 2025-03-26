@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleAwareness_informations" is_function="1">
+		<Variables>
+			<Variable name="attributedInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="label" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="playerCrimeInfoKnown" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="playerIsSuspicious" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="reactorData" type="crime:reactor" values="" isPersistent="0" form="single" />
+			<Variable name="reactorStimulusKind" type="enum:crime_stimulusKind" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus" type="switch:stimulus:criminal" values="" isPersistent="0" form="single" />
+			<Variable name="stimulusKind" type="enum:crime_stimulusKind" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus_animalAbuse" type="switch:stimulus:animalAbuse" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus_unknownShooter" type="switch:stimulus:unknownShooter" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<GameContextCheck context="crime_global_disableCriminalPlayerReaction" saveVersion="2">
+					<Else canSkip="1">
+						<EntityContextCheck context="crime_bff" target="" saveVersion="2">
+							<Else canSkip="1">
+								<EntityContextCheck context="crime_inCrimeDialog" target="" saveVersion="2">
+									<Else canSkip="1">
+										<Sequence>
+											<Switch>
+												<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+													<Then canSkip="1">
+														<Success />
+													</Then>
+												</EntityContextCheck>
+												<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+													<Then canSkip="1">
+														<Success />
+													</Then>
+												</EntityContextCheck>
+												<DefaultBranch>
+													<SuppressFailure>
+														<Sequence>
+															<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																<LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																<Datalyzer Tag="&apos;crime_reactor&apos;" Quantifiers="Exists" Parent="" Child="" Data="$reactorData" saveVersion="2" />
+															</GraphSearch>
+															<IfCondition failOnCondition="false" condition="$reactorData.information.label == &apos;nonAttributedCrime&apos;">
+																<Sequence>
+																	<Function_crime_getReactorStimulusKind reactorData="$reactorData" stimulusKind="$reactorStimulusKind" nodeLabel="77316595" />
+																	<Function_crime_isPlayerSuspicious crimePosition="$reactorData.information.position" stimulusKind="$reactorStimulusKind" playerSuspicious="$playerIsSuspicious" nodeLabel="96311033" />
+																	<IfCondition failOnCondition="false" condition="$playerIsSuspicious">
+																		<Switch>
+																			<IfCondition failOnCondition="false" condition="$reactorStimulusKind == $enum:crime_stimulusKind.disturbance">
+																				<Sequence>
+																					<CreateInformationWrapper Label="&apos;disturbance&apos;" PerceivedWuid="$reactorData.information.perceivedWuid" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$attributedInformation" />
+																					<Function_crime_transformInformation a_originalInformation="$reactorData.information" b_newInformation="$attributedInformation" skipAllDynamicInfo="false" skipMetadata="true" nodeLabel="72559404" />
+																					<Function_crime_broadcastCooperationNotification cooperationNotification="$enum:crime_cooperationNotification.informationTransformed" nodeLabel="45592621" />
+																					<Function_crime_playerIsSuspiciousTutorial nodeLabel="30072381" />
+																				</Sequence>
+																			</IfCondition>
+																			<IfCondition failOnCondition="false" condition="$reactorStimulusKind == $enum:crime_stimulusKind.unknownShooter">
+																				<Sequence>
+																					<LockDynamicInformationValues Information="$reactorData.information">
+																						<GetDynamicInformationValue Information="$reactorData.information" Tag="&apos;stimulusUnknownShooter&apos;" Out="$stimulus_unknownShooter" />
+																					</LockDynamicInformationValues>
+																					<SuppressFailure>
+																						<LockDynamicInformationValues Information="$reactorData.information">
+																							<GetDynamicInformationValue Information="$reactorData.information" Tag="&apos;stimulusAnimalAbuse&apos;" Out="$stimulus_animalAbuse" />
+																						</LockDynamicInformationValues>
+																					</SuppressFailure>
+																					<AtomicDecorator>
+																						<Sequence>
+																							<IfElseCondition failOnCondition="false" condition="$stimulus_animalAbuse.animalAbuseKind == $enum:crime_animalAbuseKind.none" saveVersion="2">
+																								<Then canSkip="1">
+																									<Sequence>
+																										<Expression expressions="$label = $stimulus_unknownShooter.directHit ? &apos;assault&apos; : &apos;aggression&apos;" />
+																										<CreateInformationWrapper Label="$label" PerceivedWuid="$reactorData.information.perceivedWuid" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$attributedInformation" />
+																										<LockDynamicInformationValues Information="$attributedInformation">
+																											<SetDynamicInformationValue Information="$attributedInformation" Tag="&apos;kind&apos;" Variable="" Type="&apos;enum:crime_attackKind&apos;" Value="$enum:crime_attackKind.missile" />
+																										</LockDynamicInformationValues>
+																									</Sequence>
+																								</Then>
+																								<Else canSkip="1">
+																									<Sequence>
+																										<CreateInformationWrapper Label="&apos;assaultAnimal&apos;" PerceivedWuid="$stimulus_animalAbuse.victim" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$attributedInformation" />
+																										<LockDynamicInformationValues Information="$attributedInformation">
+																											<Sequence>
+																												<SetDynamicInformationValue Information="$attributedInformation" Tag="&apos;victim&apos;" Variable="$this.id" Type="" Value="" />
+																												<SetDynamicInformationValue Information="$attributedInformation" Tag="&apos;attributedCrime&apos;" Variable="" Type="&apos;bool&apos;" Value="true" />
+																												<SetDynamicInformationValue Information="$attributedInformation" Tag="&apos;kind&apos;" Variable="" Type="&apos;enum:crime_attackKind&apos;" Value="$enum:crime_attackKind.missile" />
+																											</Sequence>
+																										</LockDynamicInformationValues>
+																									</Sequence>
+																								</Else>
+																							</IfElseCondition>
+																							<Function_crime_transformInformation a_originalInformation="$reactorData.information" b_newInformation="$attributedInformation" skipAllDynamicInfo="false" skipMetadata="true" nodeLabel="78942429" />
+																							<Function_crime_broadcastCooperationNotification cooperationNotification="$enum:crime_cooperationNotification.informationTransformed" nodeLabel="58529491" />
+																							<LinkDataExpression From="$__player" To="$this.id" Expresssion="$__link_crime_reactor.information = $attributedInformation" />
+																						</Sequence>
+																					</AtomicDecorator>
+																					<Function_crime_playerIsSuspiciousTutorial nodeLabel="53447995" />
+																				</Sequence>
+																			</IfCondition>
+																			<DefaultBranch>
+																				<Success />
+																			</DefaultBranch>
+																		</Switch>
+																	</IfCondition>
+																</Sequence>
+															</IfCondition>
+														</Sequence>
+													</SuppressFailure>
+												</DefaultBranch>
+											</Switch>
+											<CheckRelationshipInterval_SoulToSoul TargetSoul="$__player" Soul="$this.id" Flag="enemy" saveVersion="2">
+												<Else canSkip="1">
+													<Sequence>
+														<PlayersCrimeInformationKnown Npc="$this.id" OnlyRelated="false" PlayersCrimeInformationKnown="$playerCrimeInfoKnown" />
+														<IfCondition failOnCondition="false" condition="$playerCrimeInfoKnown">
+															<Sequence>
+																<GetMostImportantCrimeInformation Npc="$this.id" OnlyRelated="false" MostImportantInformation="$stimulus.information" />
+																<Function_crime_checkFreshlyAttributedInformation information="$stimulus.information" aboveThreshold="" belowThreshold="$stimulus.freshCrime" nodeLabel="34552095" />
+																<IfCondition failOnCondition="false" condition="$stimulus.freshCrime &amp; &#10; &#10;$stimulus.information.label == $attributedInformation.label &amp; &#10;$stimulus.information.perceivedWuid == $attributedInformation.perceivedWuid">
+																	<Expression expressions="$stimulus.freshlyAttributedCrime = true" />
+																</IfCondition>
+																<IfElseCondition failOnCondition="false" condition="$stimulus.information.label ~= &apos;resistingArrest&apos;" saveVersion="2">
+																	<Then canSkip="1">
+																		<Function_switch_handleStimulusCriminal stimulus="$stimulus" nodeLabel="10455657" />
+																	</Then>
+																	<Else canSkip="1">
+																		<DestroyInformationFromHolder Information="$stimulus.information" />
+																	</Else>
+																</IfElseCondition>
+															</Sequence>
+														</IfCondition>
+													</Sequence>
+												</Else>
+											</CheckRelationshipInterval_SoulToSoul>
+										</Sequence>
+									</Else>
+								</EntityContextCheck>
+							</Else>
+						</EntityContextCheck>
+					</Else>
+				</GameContextCheck>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="attributedInformation" comment="" />
+				<Variable name="label" comment="" />
+				<Variable name="playerCrimeInfoKnown" comment="" />
+				<Variable name="playerIsSuspicious" comment="" />
+				<Variable name="reactorData" comment="" />
+				<Variable name="reactorStimulusKind" comment="" />
+				<Variable name="stimulus" comment="" />
+				<Variable name="stimulusKind" comment="" />
+				<Variable name="stimulus_animalAbuse" comment="" />
+				<Variable name="stimulus_unknownShooter" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-30" editorPosY="-30" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Else>
+							<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<OutputBreakpoints />
+								<Else>
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Else>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Success>
+														</Then>
+													</EntityContextCheck>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Success>
+														</Then>
+													</EntityContextCheck>
+													<DefaultBranch>
+														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</LinkTagFilter>
+																	<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</WUIDFilter>
+																	<Datalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																	</Datalyzer>
+																</GraphSearch>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Function_crime_getReactorStimulusKind hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_crime_getReactorStimulusKind>
+																		<Function_crime_isPlayerSuspicious hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_crime_isPlayerSuspicious>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</CreateInformationWrapper>
+																						<Function_crime_transformInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_transformInformation>
+																						<Function_crime_broadcastCooperationNotification hasInputBreakpoint="0" comment="Notify reactors that SOME informations got transformed, they have to check for themselves" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_broadcastCooperationNotification>
+																						<Function_crime_playerIsSuspiciousTutorial hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_playerIsSuspiciousTutorial>
+																					</Sequence>
+																				</IfCondition>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</GetDynamicInformationValue>
+																						</LockDynamicInformationValues>
+																						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</GetDynamicInformationValue>
+																							</LockDynamicInformationValues>
+																						</SuppressFailure>
+																						<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																									<OutputBreakpoints />
+																									<Then>
+																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Expression>
+																											<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</CreateInformationWrapper>
+																											<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																												</SetDynamicInformationValue>
+																											</LockDynamicInformationValues>
+																										</Sequence>
+																									</Then>
+																									<Else>
+																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</CreateInformationWrapper>
+																											<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</SetDynamicInformationValue>
+																													<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</SetDynamicInformationValue>
+																													<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<OutputBreakpoints />
+																													</SetDynamicInformationValue>
+																												</Sequence>
+																											</LockDynamicInformationValues>
+																										</Sequence>
+																									</Else>
+																								</IfElseCondition>
+																								<Function_crime_transformInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_crime_transformInformation>
+																								<Function_crime_broadcastCooperationNotification hasInputBreakpoint="0" comment="Notify reactors that SOME informations got transformed, they have to check for themselves" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</Function_crime_broadcastCooperationNotification>
+																								<LinkDataExpression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																								</LinkDataExpression>
+																							</Sequence>
+																						</AtomicDecorator>
+																						<Function_crime_playerIsSuspiciousTutorial hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_crime_playerIsSuspiciousTutorial>
+																					</Sequence>
+																				</IfCondition>
+																				<DefaultBranch>
+																					<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Success>
+																				</DefaultBranch>
+																			</Switch>
+																		</IfCondition>
+																	</Sequence>
+																</IfCondition>
+															</Sequence>
+														</SuppressFailure>
+													</DefaultBranch>
+												</Switch>
+												<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Else>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<PlayersCrimeInformationKnown hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</PlayersCrimeInformationKnown>
+															<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GetMostImportantCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetMostImportantCrimeInformation>
+																	<Function_crime_checkFreshlyAttributedInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_crime_checkFreshlyAttributedInformation>
+																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</IfCondition>
+																	<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Function_switch_handleStimulusCriminal hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_switch_handleStimulusCriminal>
+																		</Then>
+																		<Else>
+																			<DestroyInformationFromHolder hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</DestroyInformationFromHolder>
+																		</Else>
+																	</IfElseCondition>
+																</Sequence>
+															</IfCondition>
+														</Sequence>
+													</Else>
+												</CheckRelationshipInterval_SoulToSoul>
+											</Sequence>
+										</Else>
+									</EntityContextCheck>
+								</Else>
+							</EntityContextCheck>
+						</Else>
+					</GameContextCheck>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

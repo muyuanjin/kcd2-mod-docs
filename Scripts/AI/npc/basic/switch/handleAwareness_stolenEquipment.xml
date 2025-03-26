@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleAwareness_stolenEquipment" is_function="1">
+		<Variables>
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="relevantStolenItems" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="seenEquippedType" type="enum:crime_theft_seenEquippedType" values="" isPersistent="0" form="single" />
+			<Variable name="someItemBelongsToAMate" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus" type="switch:stimulus:theft" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItemCategory" type="_string" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItemIsRelevant" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItems" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="stolenItems_value" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Switch>
+					<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Success />
+						</Then>
+					</EntityContextCheck>
+					<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Success />
+						</Then>
+					</EntityContextCheck>
+					<EntityContextCheck context="crime_bff" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Success />
+						</Then>
+					</EntityContextCheck>
+					<DefaultBranch>
+						<Sequence>
+							<GetVisibleStolenEquipment Equipment="$stolenItems" />
+							<ForEach startIndex="0" step="1" array="$stolenItems" iterator="" value="$stolenItems_value" break="">
+								<Sequence>
+									<GetItemType WUID="$stolenItems_value" OutCategory="$stolenItemCategory" OutType="" OutSubType="" />
+									<IfCondition failOnCondition="false" condition="$stolenItemCategory ~= &apos;ammo&apos;">
+										<Sequence>
+									<GetOwner Object="$stolenItems_value" Owner="$stimulus.owner" />
+									<IfCondition failOnCondition="false" condition="$stimulus.owner ~= $__null">
+												<IfElseCondition failOnCondition="false" condition="$stimulus.owner == $this.id" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$stolenItemIsRelevant = true" />
+													</Then>
+													<Else canSkip="1">
+														<Sequence>
+															<GetAreMates Npc1="$this.id" Npc2="$stimulus.owner" AreMates="$stolenItemIsRelevant" />
+															<IfCondition failOnCondition="false" condition="~$someItemBelongsToAMate &amp; $stolenItemIsRelevant">
+																<Expression expressions="$someItemBelongsToAMate = true" />
+															</IfCondition>
+														</Sequence>
+													</Else>
+												</IfElseCondition>
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="$stolenItemIsRelevant">
+										<PushToArray array="$relevantStolenItems" value="$stolenItems_value" direction="Back" />
+									</IfCondition>
+								</Sequence>
+									</IfCondition>
+								</Sequence>
+							</ForEach>
+							<IfCondition failOnCondition="false" condition="#relevantStolenItems &gt; 0">
+								<Sequence>
+									<Selector>
+										<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;home&apos;" prune="true" negprune="unknown" Parent="" Child="$stimulus.pivot" Data="" />
+										</GraphSearch>
+										<Expression expressions="$stimulus.pivot = $this.id" />
+									</Selector>
+									<Expression expressions="$stimulus.method = $enum:crime_theftMethod.seenEquipped &#10;$stimulus.immediate = true" />
+									<Function_crime_createTheftInformation count="0" immediate="true" isNonAttributedCrime="false" kettleType="$enum:kettleType.kettle" method="$stimulus.method" owner="$stimulus.owner" pivot="$stimulus.pivot" seenEquippedItems="$relevantStolenItems" information="$information" nodeLabel="48907981" />
+									<IfElseCondition failOnCondition="false" condition="$someItemBelongsToAMate" saveVersion="2">
+										<Then canSkip="1">
+											<Expression expressions="$seenEquippedType = $enum:crime_theft_seenEquippedType.multipleOwners" />
+										</Then>
+										<Else canSkip="1">
+											<IfElseCondition failOnCondition="false" condition="#relevantStolenItems &gt; 1" saveVersion="2">
+												<Then canSkip="1">
+													<Expression expressions="$seenEquippedType = $enum:crime_theft_seenEquippedType.owner_multipleItems" />
+												</Then>
+												<Else canSkip="1">
+													<Sequence>
+														<GetItemType WUID="$relevantStolenItems[0]" OutCategory="$stolenItemCategory" OutType="" OutSubType="" />
+														<IfElseCondition failOnCondition="false" condition="$stolenItemCategory == &apos;armor&apos;" saveVersion="2">
+															<Then canSkip="1">
+																<Expression expressions="$seenEquippedType = $enum:crime_theft_seenEquippedType.owner_singleArmor" />
+															</Then>
+															<Else canSkip="1">
+																<Expression expressions="$seenEquippedType = $enum:crime_theft_seenEquippedType.owner_singleWeapon" />
+															</Else>
+														</IfElseCondition>
+													</Sequence>
+												</Else>
+											</IfElseCondition>
+										</Else>
+									</IfElseCondition>
+									<LockDynamicInformationValues Information="$information">
+										<SetDynamicInformationValue Information="$information" Tag="&apos;seenEquipedItemsType&apos;" Variable="$seenEquippedType" Type="" Value="" />
+									</LockDynamicInformationValues>
+									<Expression expressions="$stimulus.information = $information" />
+									<EntityContext context="crime_disableArrestEscalationForRecurrentCrime" target="">
+										<Function_switch_handleStimulusTheft stimulus="$stimulus" nodeLabel="58366638" />
+									</EntityContext>
+								</Sequence>
+							</IfCondition>
+						</Sequence>
+					</DefaultBranch>
+				</Switch>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="information" comment="" />
+				<Variable name="relevantStolenItems" comment="" />
+				<Variable name="seenEquippedType" comment="" />
+				<Variable name="someItemBelongsToAMate" comment="" />
+				<Variable name="stimulus" comment="" />
+				<Variable name="stolenItemCategory" comment="" />
+				<Variable name="stolenItemIsRelevant" comment="" />
+				<Variable name="stolenItems" comment="" />
+				<Variable name="stolenItems_value" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Then>
+						</EntityContextCheck>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Then>
+						</EntityContextCheck>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Then>
+						</EntityContextCheck>
+						<DefaultBranch>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GetVisibleStolenEquipment hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</GetVisibleStolenEquipment>
+								<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<GetItemType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetItemType>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+										<GetOwner hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetOwner>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+														<Else>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<GetAreMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetAreMates>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</IfCondition>
+															</Sequence>
+														</Else>
+													</IfElseCondition>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<PushToArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</PushToArray>
+										</IfCondition>
+									</Sequence>
+										</IfCondition>
+									</Sequence>
+								</ForEach>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Selector hasInputBreakpoint="0" comment="by default use home as pivot; but since no home = no mates, use self as pivot if no home exists" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</LinkTagFilter>
+											</GraphSearch>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Selector>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<Function_crime_createTheftInformation hasInputBreakpoint="0" comment="create information here, because stolenItems (array) can not be passed through stimulus" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_createTheftInformation>
+										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Then>
+											<Else>
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Then>
+													<Else>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GetItemType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</GetItemType>
+															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Then>
+																<Else>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Else>
+															</IfElseCondition>
+														</Sequence>
+													</Else>
+												</IfElseCondition>
+											</Else>
+										</IfElseCondition>
+										<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<SetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</SetDynamicInformationValue>
+										</LockDynamicInformationValues>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_switch_handleStimulusTheft hasInputBreakpoint="0" comment="" breakpointFlags="1">
+												<OutputBreakpoints />
+											</Function_switch_handleStimulusTheft>
+										</EntityContext>
+									</Sequence>
+								</IfCondition>
+							</Sequence>
+						</DefaultBranch>
+					</Switch>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

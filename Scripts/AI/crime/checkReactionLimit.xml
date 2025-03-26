@@ -1,0 +1,915 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_checkReactionLimit" is_function="1">
+		<Variables>
+			<Variable name="activeReactorCount" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="authorityOnSceneReactionType" type="enum:crime_reactionType" values="$enum:crime_reactionType.unknown" isPersistent="0" form="single" />
+			<Variable name="corpseCount" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="crimeLevel" type="enum:crime_crimeLevel" values="" isPersistent="0" form="single" />
+			<Variable name="crimeSceneLevel" type="enum:crime_crimeLevel" values="" isPersistent="0" form="single" />
+			<Variable name="distanceToCrime" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="guardArresting" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="informationLimit" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="informations" type="information" values="" isPersistent="0" form="array" />
+			<Variable name="informations_value" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="isAuthority" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="itemsInRadius" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="mates" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="myPos" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="reactorCountByType" type="enum:crime_reactionType,_int" values="" isPersistent="0" form="custom_associative" />
+			<Variable name="reactors" type="_wuid" values="" isPersistent="0" form="array" />
+		</Variables>
+		<Parameters>
+			<Variable name="desiredReactionType" type="enum:crime_reactionType" values="" isPersistent="0" form="single" requirementType="In" />
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+			<Variable name="pos" type="vec3" values="" isPersistent="0" form="single" requirementType="In" optional="1" />
+			<Variable name="shouldReact" type="_bool" values="" isPersistent="0" form="single" requirementType="Out" />
+			<Variable name="shouldWatch" type="_bool" values="" isPersistent="0" form="single" requirementType="Out" />
+			<Variable name="stimulusKind" type="enum:crime_stimulusKind" values="$enum:crime_stimulusKind.unknown" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<ErrorNode Message="&apos;Function is obsolete. Use its code successor.&apos;" />
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<IfCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.report &amp; &#10;$crimeLevel &gt; $enum:crime_crimeLevel.violent &amp; &#10;$distanceToCrime &lt; $data:script_param[&apos;crime_ignoreReportLimitsDistance&apos;].value" />
+			<Expression expressions="$shouldReact = true" />
+			<Sequence>
+				<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+					<Then canSkip="1">
+						<Expression expressions="$isAuthority = true" />
+					</Then>
+				</EntityContextCheck>
+				<Switch>
+					<IfCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.arrest &amp; &#10;~$isAuthority">
+						<Sequence>
+							<IsPlayerUnderArrest IsUnderArrest="$guardArresting" />
+							<IfElseCondition failOnCondition="false" condition="~$guardArresting" saveVersion="2">
+								<Then canSkip="1">
+									<Sequence>
+										<GetSpatialInfo In="$__player" Out="$pos" What="Position" />
+										<Function_crime_getCrimeSceneData isNonAuthorityArrest="true" pos="$pos" authorityOnSceneReactionType="$authorityOnSceneReactionType" crimeLevel="$crimeSceneLevel" informations="$informations" reactorsCountByType="$reactorCountByType" nodeLabel="14780861" />
+										<Expression expressions="$activeReactorCount = $reactorCountByType[$enum:crime_reactionType.arrest]" />
+										<IsPublicEnemy Soul="" FailOnSubtreeMissing="false" saveVersion="2">
+											<Then canSkip="1">
+												<Sequence>
+													<ExecuteLua code="data.informationLimit = player.soul:GetDerivedStat(&apos;bad&apos;) * 10" />
+													<Clamp value="$informationLimit" lowerBoundary="4.000000" upperBoundary="10.000000" result="$informationLimit" />
+												</Sequence>
+											</Then>
+											<Else canSkip="1">
+												<Sequence>
+													<ExecuteLua code="data.informationLimit = player.soul:GetDerivedStat(&apos;bad&apos;) * 5" />
+													<Clamp value="$informationLimit" lowerBoundary="2.000000" upperBoundary="5.000000" result="$informationLimit" />
+												</Sequence>
+											</Else>
+										</IsPublicEnemy>
+										<Round value="$informationLimit" step="1.000000" operation="Nearest" result="$informationLimit" />
+										<Expression expressions="$shouldReact = $activeReactorCount &lt; $informationLimit" />
+										<IfCondition failOnCondition="false" condition="~$shouldReact">
+											<Sequence>
+												<Expression expressions="$shouldWatch = $reactorCountByType[$enum:crime_reactionType.passive] &lt; $informationLimit" />
+												<IfCondition failOnCondition="false" condition="~$shouldWatch">
+													<Sequence>
+														<GetSpatialInfo In="$this.id" Out="$myPos" What="Position" />
+														<MeasureDistance position1="$myPos" position2="$information.position" mode="ThreeDimensions" result="$distanceToCrime" />
+														<Expression expressions="$shouldWatch = $distanceToCrime &lt; $data:script_param[&apos;crime_ignoreWatchLimitsDistance&apos;].value" />
+													</Sequence>
+												</IfCondition>
+											</Sequence>
+										</IfCondition>
+									</Sequence>
+								</Then>
+								<Else canSkip="1">
+									<Expression expressions="$shouldWatch = true" />
+								</Else>
+							</IfElseCondition>
+						</Sequence>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.arrest | &#10;$desiredReactionType == $enum:crime_reactionType.investigate | &#10;$desiredReactionType == $enum:crime_reactionType.report">
+						<Sequence>
+							<IfElseCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.arrest" saveVersion="2">
+								<Then canSkip="1">
+									<GetSpatialInfo In="$__player" Out="$pos" What="Position" />
+								</Then>
+								<Else canSkip="1">
+									<Expression expressions="$pos = $information.position" />
+								</Else>
+							</IfElseCondition>
+							<IfElseCondition failOnCondition="false" condition="$information.label == &apos;alarm&apos;" saveVersion="2">
+								<Then canSkip="1">
+									<GetCrimeLevelByStimulusKind StimulusKind="$stimulusKind" CrimeLevel="$crimeLevel" />
+								</Then>
+								<Else canSkip="1">
+									<GetCrimeLevelByLabel Label="$information.label" CrimeLevel="$crimeLevel" />
+								</Else>
+							</IfElseCondition>
+							<Function_crime_getCrimeSceneData isNonAuthorityArrest="false" pos="$pos" authorityOnSceneReactionType="$authorityOnSceneReactionType" crimeLevel="$crimeSceneLevel" informations="$informations" reactorsCountByType="$reactorCountByType" nodeLabel="78130534" />
+							<IfElseCondition failOnCondition="false" condition="$crimeSceneLevel &lt; $crimeLevel" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$shouldReact = true" />
+								</Then>
+								<Else canSkip="1">
+									<Sequence>
+										<Function_crime_getCrimeReactionLimit informations="$informations" reactionLimit="$informationLimit" nodeLabel="25763719" />
+										<IfElseCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.arrest" saveVersion="2">
+											<Then canSkip="1">
+												<Expression expressions="$activeReactorCount =  &#10;$reactorCountByType[$enum:crime_reactionType.arrest]" />
+											</Then>
+											<Else canSkip="1">
+												<Expression expressions="$activeReactorCount =  &#10;$reactorCountByType[$enum:crime_reactionType.arrest] + &#10;$reactorCountByType[$enum:crime_reactionType.investigate] +  &#10;$reactorCountByType[$enum:crime_reactionType.report]" />
+											</Else>
+										</IfElseCondition>
+										<Expression expressions="$shouldReact = $activeReactorCount &lt; $informationLimit" />
+										<IfCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.report &amp; &#10;$stimulusKind == $enum:crime_stimulusKind.criminal &amp; &#10;~$isAuthority">
+											<Expression expressions="$shouldReact = $reactorCountByType[$enum:crime_reactionType.arrest] == 0" />
+										</IfCondition>
+									</Sequence>
+								</Else>
+							</IfElseCondition>
+							<IfCondition failOnCondition="false" condition="~$shouldReact">
+								<Switch>
+									<IfCondition failOnCondition="false" condition="$isAuthority &amp; $desiredReactionType &gt; $authorityOnSceneReactionType">
+										<Expression expressions="$shouldReact = true" />
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="$isAuthority">
+										<Expression expressions="$shouldWatch = true" />
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="$crimeLevel &gt; $enum:crime_crimeLevel.offence">
+										<Sequence>
+											<Expression expressions="$shouldWatch = $reactorCountByType[$enum:crime_reactionType.passive] &lt; $informationLimit" />
+											<IfCondition failOnCondition="false" condition="~$shouldWatch">
+												<Sequence>
+													<GetSpatialInfo In="$this.id" Out="$myPos" What="Position" />
+													<MeasureDistance position1="$myPos" position2="$information.position" mode="ThreeDimensions" result="$distanceToCrime" />
+													<Expression expressions="$shouldWatch = $distanceToCrime &lt; $data:script_param[&apos;crime_ignoreWatchLimitsDistance&apos;].value" />
+												</Sequence>
+											</IfCondition>
+										</Sequence>
+									</IfCondition>
+									<DefaultBranch>
+										<Success />
+									</DefaultBranch>
+								</Switch>
+							</IfCondition>
+						</Sequence>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.reactToCorpse">
+						<Sequence>
+							<Expression expressions="$crimeLevel = $enum:crime_crimeLevel.violent" />
+							<IfCondition failOnCondition="false" condition="$information.label ~= &apos;&apos;">
+								<Expression expressions="$pos = information.position" />
+							</IfCondition>
+							<Function_crime_getCrimeSceneData isNonAuthorityArrest="false" pos="$pos" authorityOnSceneReactionType="$authorityOnSceneReactionType" crimeLevel="$crimeSceneLevel" informations="$informations" reactorsCountByType="$reactorCountByType" nodeLabel="69503268" />
+							<IfElseCondition failOnCondition="false" condition="$crimeSceneLevel &lt; $crimeLevel" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$shouldReact = true" />
+								</Then>
+								<Else canSkip="1">
+									<Sequence>
+										<ForEach startIndex="0" step="1" array="$informations" iterator="" value="$informations_value" break="">
+											<IfCondition failOnCondition="false" condition="$informations_value.label == &apos;corpse&apos;">
+												<Expression expressions="$corpseCount += 1" />
+											</IfCondition>
+										</ForEach>
+										<Expression expressions="$informationLimit = $corpseCount + 1" />
+										<Expression expressions="$activeReactorCount = &#10;$reactorCountByType[$enum:crime_reactionType.reactToCorpse] + &#10;$reactorCountByType[$enum:crime_reactionType.report] + &#10;$reactorCountByType[$enum:crime_reactionType.investigate] + &#10;$reactorCountByType[$enum:crime_reactionType.arrest]" />
+										<Clamp value="$informationLimit" lowerBoundary="2.000000" upperBoundary="10.000000" result="$informationLimit" />
+										<NumericalOperation In1VariableName="informationLimit" In2VariableName="" In3VariableName="" OutVariableName="$informationLimit" Operation="floor" />
+										<Expression expressions="$shouldReact = $activeReactorCount &lt; $informationLimit" />
+									</Sequence>
+								</Else>
+							</IfElseCondition>
+							<IfCondition failOnCondition="false" condition="~$shouldReact">
+								<Sequence>
+									<Expression expressions="$shouldWatch = $reactorCountByType[$enum:crime_reactionType.passive] &lt; $informationLimit + 1" />
+									<IfCondition failOnCondition="false" condition="~$shouldWatch">
+										<Sequence>
+											<GetSpatialInfo In="$this.id" Out="$myPos" What="Position" />
+											<MeasureDistance position1="$myPos" position2="$information.position" mode="ThreeDimensions" result="$distanceToCrime" />
+											<Expression expressions="$shouldWatch = $distanceToCrime &lt; $data:script_param[&apos;crime_ignoreWatchLimitsDistance&apos;].value" />
+										</Sequence>
+									</IfCondition>
+								</Sequence>
+							</IfCondition>
+						</Sequence>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.watchTrespass | &#10;$desiredReactionType == $enum:crime_reactionType.shooterInvestigate | &#10;$desiredReactionType == $enum:crime_reactionType.blindInvestigate | &#10;$desiredReactionType == $enum:crime_reactionType.warnOrFrisk | &#10;$desiredReactionType == $enum:crime_reactionType.reportNonattributedCrime | &#10;$desiredReactionType == $enum:crime_reactionType.banishCompanion">
+						<Sequence>
+							<GetCrimeLevelByStimulusKind StimulusKind="$stimulusKind" CrimeLevel="$crimeLevel" />
+							<Function_crime_getCrimeSceneData isNonAuthorityArrest="false" pos="$pos" authorityOnSceneReactionType="$authorityOnSceneReactionType" crimeLevel="$crimeSceneLevel" informations="$informations" reactorsCountByType="$reactorCountByType" nodeLabel="26306476" />
+							<IfElseCondition failOnCondition="false" condition="$crimeSceneLevel &lt; $crimeLevel" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$shouldReact = true" />
+								</Then>
+								<Else canSkip="1">
+									<Sequence>
+										<IfElseCondition failOnCondition="false" condition="$information.label == &apos;alarm&apos;" saveVersion="2">
+											<Then canSkip="1">
+												<Sequence>
+													<IsPublicEnemy Soul="$this.id" FailOnSubtreeMissing="false" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$informationLimit = 5" />
+														</Then>
+														<Else canSkip="1">
+															<IfElseCondition failOnCondition="false" condition="$crimeLevel &lt; $enum:crime_crimeLevel.violent" saveVersion="2">
+																<Then canSkip="1">
+																	<Expression expressions="$informationLimit = 2" />
+																</Then>
+																<Else canSkip="1">
+																	<Expression expressions="$informationLimit = 5" />
+																</Else>
+															</IfElseCondition>
+														</Else>
+													</IsPublicEnemy>
+													<ExecuteLua code="data.informationLimit = data.informationLimit + ((math.max(player.soul:GetDerivedStat(&apos;bad&apos;), 0.5) - 0.5) * 6)" />
+												</Sequence>
+											</Then>
+											<Else canSkip="1">
+												<IfElseCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.banishCompanion" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$informationLimit = 1" />
+													</Then>
+													<Else canSkip="1">
+														<IfElseCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.watchTrespass" saveVersion="2">
+															<Then canSkip="1">
+																<IsPublicEnemy Soul="$this.id" FailOnSubtreeMissing="false" saveVersion="2">
+																	<Then canSkip="1">
+																		<Expression expressions="$informationLimit = 5" />
+																	</Then>
+																	<Else canSkip="1">
+																		<Expression expressions="$informationLimit = 2" />
+																	</Else>
+																</IsPublicEnemy>
+															</Then>
+															<Else canSkip="1">
+																<Expression expressions="$informationLimit = 2" />
+															</Else>
+														</IfElseCondition>
+													</Else>
+												</IfElseCondition>
+											</Else>
+										</IfElseCondition>
+										<IfElseCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.watchTrespass" saveVersion="2">
+											<Then canSkip="1">
+												<Expression expressions="$activeReactorCount = &#10;$reactorCountByType[$enum:crime_reactionType.watchTrespass] + &#10;$reactorCountByType[$enum:crime_reactionType.warnOrFrisk] + &#10;$reactorCountByType[$enum:crime_reactionType.report] + &#10;$reactorCountByType[$enum:crime_reactionType.investigate] + &#10;$reactorCountByType[$enum:crime_reactionType.arrest]" />
+											</Then>
+											<Else canSkip="1">
+												<Expression expressions="$activeReactorCount = &#10;$reactorCountByType[$enum:crime_reactionType.watchTrespass] + &#10;$reactorCountByType[$enum:crime_reactionType.shooterInvestigate] + &#10;$reactorCountByType[$enum:crime_reactionType.reportNonattributedCrime] + &#10;$reactorCountByType[$enum:crime_reactionType.blindInvestigate] + &#10;$reactorCountByType[$enum:crime_reactionType.warnOrFrisk] + &#10;$reactorCountByType[$enum:crime_reactionType.report] + &#10;$reactorCountByType[$enum:crime_reactionType.investigate] + &#10;$reactorCountByType[$enum:crime_reactionType.arrest] +  &#10;$reactorCountByType[$enum:crime_reactionType.banishCompanion]" />
+											</Else>
+										</IfElseCondition>
+										<Expression expressions="$shouldReact =  &#10;($activeReactorCount +  &#10;$reactorCountByType[$enum:crime_reactionType.reactToCorpse] &lt; $informationLimit | &#10;$activeReactorCount == 0 ) &amp; &#10;$reactorCountByType[$enum:crime_reactionType.warnOrFrisk] == 0" />
+									</Sequence>
+								</Else>
+							</IfElseCondition>
+							<IfCondition failOnCondition="false" condition="~$shouldReact &amp;  &#10;($crimeLevel &gt; $enum:crime_crimeLevel.offence | &#10; $stimulusKind == $enum:crime_stimulusKind.dramaticBark)">
+								<Sequence>
+									<Expression expressions="$shouldWatch = $reactorCountByType[$enum:crime_reactionType.passive] &lt; $informationLimit" />
+									<IfCondition failOnCondition="false" condition="~$shouldWatch">
+										<Sequence>
+											<GetSpatialInfo In="$this.id" Out="$myPos" What="Position" />
+											<MeasureDistance position1="$myPos" position2="$pos" mode="ThreeDimensions" result="$distanceToCrime" />
+											<Expression expressions="$shouldWatch = $distanceToCrime &lt; $data:script_param[&apos;crime_ignoreWatchLimitsDistance&apos;].value" />
+										</Sequence>
+									</IfCondition>
+								</Sequence>
+							</IfCondition>
+						</Sequence>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.reactToUnconsciousBody">
+						<Sequence>
+							<GetCrimeLevelByStimulusKind StimulusKind="$stimulusKind" CrimeLevel="$crimeLevel" />
+							<Function_crime_getCrimeSceneData isNonAuthorityArrest="false" pos="$pos" authorityOnSceneReactionType="$authorityOnSceneReactionType" crimeLevel="$crimeSceneLevel" informations="$informations" reactorsCountByType="$reactorCountByType" nodeLabel="46230308" />
+							<IfElseCondition failOnCondition="false" condition="$crimeSceneLevel &lt; $crimeLevel" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$shouldReact = true" />
+								</Then>
+								<Else canSkip="1">
+									<Expression expressions="$shouldReact = $reactorCountByType[$enum:crime_reactionType.reactToUnconsciousBody] == 0" />
+								</Else>
+							</IfElseCondition>
+							<IfCondition failOnCondition="false" condition="~$shouldReact">
+								<Sequence>
+									<Expression expressions="$shouldWatch = $reactorCountByType[$enum:crime_reactionType.passive] == 0" />
+									<IfCondition failOnCondition="false" condition="~$shouldWatch">
+										<Sequence>
+											<GetSpatialInfo In="$this.id" Out="$myPos" What="Position" />
+											<MeasureDistance position1="$myPos" position2="$pos" mode="ThreeDimensions" result="$distanceToCrime" />
+											<Expression expressions="$shouldWatch = $distanceToCrime &lt; $data:script_param[&apos;crime_ignoreWatchLimitsDistance&apos;].value" />
+										</Sequence>
+									</IfCondition>
+								</Sequence>
+							</IfCondition>
+						</Sequence>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.checkHomeStashes">
+						<Sequence>
+							<Function_crime_getMates target="$this.id" mates="$mates" nodeLabel="99997086" />
+							<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+								<LinkDataFilter tag="&apos;crime_reactor&apos;" condition="$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.checkHomeStashes" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+								<WUIDFilter WUID="$mates" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+								<Nodalyzer Quantifiers="ForAll" Parent="" Child="$reactors" saveVersion="2" />
+							</GraphSearch>
+							<Expression expressions="$shouldReact = #reactors == 0" />
+						</Sequence>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.pickUpItem">
+						<Sequence>
+							<GetCrimeLevelByStimulusKind StimulusKind="$stimulusKind" CrimeLevel="$crimeLevel" />
+							<Function_crime_getCrimeSceneData isNonAuthorityArrest="false" pos="$pos" authorityOnSceneReactionType="$authorityOnSceneReactionType" crimeLevel="$crimeSceneLevel" informations="$informations" reactorsCountByType="$reactorCountByType" nodeLabel="15932301" />
+							<Sequence>
+								<CircularSpatialQuery Radius="10.000000" Center="$pos" ToFill="$itemsInRadius" Precision="Exact" Filter="PerceivableItems" />
+								<Expression expressions="$shouldReact = $reactorCountByType[$enum:crime_reactionType.pickUpItem] &lt;= #itemsInRadius" />
+							</Sequence>
+						</Sequence>
+					</IfCondition>
+					<IfCondition failOnCondition="false" condition="$desiredReactionType == $enum:crime_reactionType.passive">
+						<Expression expressions="$shouldWatch = true" />
+					</IfCondition>
+				</Switch>
+			</Sequence>
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="activeReactorCount" comment="" />
+				<Variable name="authorityOnSceneReactionType" comment="" />
+				<Variable name="corpseCount" comment="" />
+				<Variable name="crimeLevel" comment="" />
+				<Variable name="crimeSceneLevel" comment="" />
+				<Variable name="distanceToCrime" comment="" />
+				<Variable name="guardArresting" comment="" />
+				<Variable name="informationLimit" comment="" />
+				<Variable name="informations" comment="" />
+				<Variable name="informations_value" comment="" />
+				<Variable name="isAuthority" comment="" />
+				<Variable name="itemsInRadius" comment="" />
+				<Variable name="mates" comment="" />
+				<Variable name="myPos" comment="" />
+				<Variable name="reactorCountByType" comment="" />
+				<Variable name="reactors" comment="" />
+				<Variable name="desiredReactionType" comment="" />
+				<Variable name="information" comment="" />
+				<Variable name="pos" comment="" />
+				<Variable name="shouldReact" comment="" />
+				<Variable name="shouldWatch" comment="" />
+				<Variable name="stimulusKind" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-360" editorPosY="-2550" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</ErrorNode>
+				</Behavior>
+			</Root>
+			<Forest>
+				<IfCondition editorPosX="2160" editorPosY="-1830" hasInputBreakpoint="0" comment="KCD2-45296 - dont just watch when close to a combat situation" breakpointFlags="0">
+					<OutputBreakpoints />
+				</IfCondition>
+				<Expression editorPosX="2690" editorPosY="-1830" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</Expression>
+				<Sequence editorPosX="310" editorPosY="-2280" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Then>
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</Then>
+					</EntityContextCheck>
+					<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfCondition hasInputBreakpoint="0" comment="selfhelp" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IsPlayerUnderArrest hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</IsPlayerUnderArrest>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetSpatialInfo>
+											<Function_crime_getCrimeSceneData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_getCrimeSceneData>
+											<Expression hasInputBreakpoint="0" comment="not included:arrest(authority), investigate, report, shooterInvestigate, blindInvestigate, watchTrespass, reactToCorpse,passive" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<IsPublicEnemy hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ExecuteLua>
+														<Clamp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Clamp>
+													</Sequence>
+												</Then>
+												<Else>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ExecuteLua>
+														<Clamp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Clamp>
+													</Sequence>
+												</Else>
+											</IsPublicEnemy>
+											<Round hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Round>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</GetSpatialInfo>
+															<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</MeasureDistance>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Sequence>
+													</IfCondition>
+												</Sequence>
+											</IfCondition>
+										</Sequence>
+									</Then>
+									<Else>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="crime reactions" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="crimes" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetSpatialInfo>
+									</Then>
+									<Else>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Else>
+								</IfElseCondition>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<GetCrimeLevelByStimulusKind hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetCrimeLevelByStimulusKind>
+									</Then>
+									<Else>
+										<GetCrimeLevelByLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetCrimeLevelByLabel>
+									</Else>
+								</IfElseCondition>
+								<Function_crime_getCrimeSceneData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_getCrimeSceneData>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+									<Else>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_crime_getCrimeReactionLimit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_getCrimeReactionLimit>
+											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Then>
+												<Else>
+													<Expression hasInputBreakpoint="0" comment="not included: shooterInvestigate, blindInvestigate, watchTrespass, reactToCorpse,passive" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Else>
+											</IfElseCondition>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</IfCondition>
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<IfCondition hasInputBreakpoint="0" comment="first authority can skip limit check" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="TODO: better formula " breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetSpatialInfo>
+														<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</MeasureDistance>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Sequence>
+												</IfCondition>
+											</Sequence>
+										</IfCondition>
+										<DefaultBranch>
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</DefaultBranch>
+									</Switch>
+								</IfCondition>
+							</Sequence>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="corpse" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+								<IfCondition hasInputBreakpoint="0" comment="sometimes i have corpse info, sometime i dont" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+								</IfCondition>
+								<Function_crime_getCrimeSceneData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_getCrimeSceneData>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+									<Else>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</IfCondition>
+											</ForEach>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<Expression hasInputBreakpoint="0" comment="not included: shooterInvestigate, blindInvestigate, watchTrespass, passive" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<Clamp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Clamp>
+											<NumericalOperation hasInputBreakpoint="0" comment="TODO: or round?" breakpointFlags="0">
+												<OutputBreakpoints />
+											</NumericalOperation>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetSpatialInfo>
+												<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</MeasureDistance>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Sequence>
+										</IfCondition>
+									</Sequence>
+								</IfCondition>
+							</Sequence>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="motivations" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GetCrimeLevelByStimulusKind hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</GetCrimeLevelByStimulusKind>
+								<Function_crime_getCrimeSceneData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_getCrimeSceneData>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+									<Else>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IsPublicEnemy hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+															<Else>
+																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</Then>
+																	<Else>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																	</Else>
+																</IfElseCondition>
+															</Else>
+														</IsPublicEnemy>
+														<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ExecuteLua>
+													</Sequence>
+												</Then>
+												<Else>
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+														<Else>
+															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<IsPublicEnemy hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Then>
+																		<Else>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Else>
+																	</IsPublicEnemy>
+																</Then>
+																<Else>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Else>
+															</IfElseCondition>
+														</Else>
+													</IfElseCondition>
+												</Else>
+											</IfElseCondition>
+											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Then>
+												<Else>
+													<Expression hasInputBreakpoint="0" comment="not included: reactToCorpse, passive" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Else>
+											</IfElseCondition>
+											<Expression hasInputBreakpoint="0" comment="what the fuck..." breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+									</Else>
+								</IfElseCondition>
+								<IfCondition hasInputBreakpoint="0" comment="TODO: is this ever true?" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetSpatialInfo>
+												<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</MeasureDistance>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Sequence>
+										</IfCondition>
+									</Sequence>
+								</IfCondition>
+							</Sequence>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="wakeUp" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GetCrimeLevelByStimulusKind hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</GetCrimeLevelByStimulusKind>
+								<Function_crime_getCrimeSceneData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_getCrimeSceneData>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+									<Else>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Else>
+								</IfElseCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="1 can watch" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetSpatialInfo>
+												<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</MeasureDistance>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Sequence>
+										</IfCondition>
+									</Sequence>
+								</IfCondition>
+							</Sequence>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="checkHomeStashes" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_crime_getMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_getMates>
+								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkTagFilter>
+									<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</LinkDataFilter>
+									<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</WUIDFilter>
+									<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+									</Nodalyzer>
+								</GraphSearch>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Sequence>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="pickUpItem" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<GetCrimeLevelByStimulusKind hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</GetCrimeLevelByStimulusKind>
+								<Function_crime_getCrimeSceneData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_getCrimeSceneData>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<CircularSpatialQuery hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</CircularSpatialQuery>
+									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Expression>
+								</Sequence>
+							</Sequence>
+						</IfCondition>
+						<IfCondition hasInputBreakpoint="0" comment="watch" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</IfCondition>
+					</Switch>
+				</Sequence>
+			</Forest>
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

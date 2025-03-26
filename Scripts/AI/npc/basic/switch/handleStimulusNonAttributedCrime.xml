@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="switch_handleStimulusNonAttributedCrime" is_function="1">
+		<Variables>
+			<Variable name="goIntoScan" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="hotEntity" type="switch:hotEntity" values="" isPersistent="0" form="single" />
+			<Variable name="ignorePriority" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="initiator" type="enum:switch_interruptInitiator" values="$enum:switch_interruptInitiator.unknown" isPersistent="0" form="single" />
+			<Variable name="nonAttributedStimulusKind" type="enum:crime_stimulusKind" values="" isPersistent="0" form="single" />
+			<Variable name="reportDestination" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="reportDestinationType" type="enum:crime_reportDestinationType" values="" isPersistent="0" form="single" />
+			<Variable name="scanDirection" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="turnBodyTarget" type="_wuid" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="stimulus" type="switch:stimulus:nonAttributedCrime" values="" isPersistent="0" form="single" requirementType="In" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<EntityContextCheck context="crime_stimulusInitiatedByScheduler" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Expression expressions="$ignorePriority = true &#10;$initiator = $enum:switch_interruptInitiator.scheduler" />
+						</Then>
+					</EntityContextCheck>
+					<LockDynamicInformationValues Information="$stimulus.information">
+						<GetDynamicInformationValue Information="$stimulus.information" Tag="&apos;stimulusKind&apos;" Out="$nonAttributedStimulusKind" />
+					</LockDynamicInformationValues>
+					<Switch>
+						<IfCondition failOnCondition="false" condition="$nonAttributedStimulusKind == $enum:crime_stimulusKind.theft">
+							<Expression expressions="$hotEntity.reason = $enum:switch_hotEntityReason.theft &#10;$hotEntity.information = $stimulus.information &#10; &#10;$turnBodyTarget = $stimulus.information.perceivedWuid &#10;$goIntoScan = true" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$nonAttributedStimulusKind == $enum:crime_stimulusKind.corpse">
+							<CheckWuidValid wuid="$stimulus.information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+								<Then canSkip="1">
+									<Sequence>
+										<Function_crime_addCorpseLink corpse="$stimulus.information.perceivedWuid" corpseState="$enum:corpseState.discovered" mateReacting="false" resolve="false" storeTime="false" nodeLabel="68866822" />
+										<Expression expressions="$hotEntity.reason = $enum:switch_hotEntityReason.murder &#10;$hotEntity.stimulusMurder.corpse = $stimulus.information.perceivedWuid &#10;$hotEntity.information = $stimulus.information &#10; &#10;$turnBodyTarget = $stimulus.information.perceivedWuid &#10;$goIntoScan = true" />
+									</Sequence>
+								</Then>
+							</CheckWuidValid>
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$nonAttributedStimulusKind == $enum:crime_stimulusKind.takedown | &#10;$nonAttributedStimulusKind == $enum:crime_stimulusKind.combat">
+							<Expression expressions="$hotEntity.reason = $enum:switch_hotEntityReason.unconsciousBody &#10;$hotEntity.information = $stimulus.information &#10; &#10;$turnBodyTarget = $stimulus.information.perceivedWuid &#10;$goIntoScan = true" />
+						</IfCondition>
+						<IfCondition failOnCondition="false" condition="$nonAttributedStimulusKind == $enum:crime_stimulusKind.disturbance">
+							<Sequence>
+								<ChooseReportDestination Information="$stimulus.information" IsImportant="false" Destination="$reportDestination" DestinationType="$reportDestinationType" />
+								<IfCondition failOnCondition="false" condition="$reportDestinationType &gt; $enum:crime_reportDestinationType.none">
+									<Function_callInterrupt_report assaultData="" corpseState="$enum:corpseState.undiscovered" criminalFreshness="$enum:crime_criminalFreshness.unknown" disableDetectedIcon="false" disableEmitting="false" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="$stimulus.information" initiator="$initiator" movementSpeed="$enum:movementSpeed.run" previousReaction="$enum:crime_reactionKind.unknown" reportDestination="$reportDestination" reportDestinationType="$reportDestinationType" source="$enum:crime_source.hearing" stimulusKind="$nonAttributedStimulusKind" nodeLabel="80891635" />
+								</IfCondition>
+							</Sequence>
+						</IfCondition>
+						<DefaultBranch>
+							<ErrorNode Message="&apos;[$this.name;] - tree \&apos;handleStimulus_nonAttributedCrime\&apos;, unknown nonAttributedStimulusKind (;$nonAttributedStimulusKind;)&apos;" />
+						</DefaultBranch>
+					</Switch>
+					<IfCondition failOnCondition="false" condition="$goIntoScan">
+						<Sequence>
+							<Function_switch_addHotEntity data="$hotEntity" entity="$__player" expiration="20" nodeLabel="82078430" />
+							<GetSpatialInfo In="$turnBodyTarget" Out="$scanDirection" What="Position" />
+							<Function_callInterrupt_scan corpseState="$stimulus.corpseState" ignorePriority="$ignorePriority" information="$stimulus.information" initiator="$initiator" previousReaction="$enum:crime_reactionKind.unknown" scanDirection="$scanDirection" source="$enum:crime_source.direct" stimulusAnimalAbuse="" stimulusKind="$nonAttributedStimulusKind" stimulusMissingAnimal="" stimulusShooter="" nodeLabel="86747516" />
+						</Sequence>
+					</IfCondition>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="goIntoScan" comment="" />
+				<Variable name="hotEntity" comment="" />
+				<Variable name="ignorePriority" comment="" />
+				<Variable name="initiator" comment="" />
+				<Variable name="nonAttributedStimulusKind" comment="" />
+				<Variable name="reportDestination" comment="" />
+				<Variable name="reportDestinationType" comment="" />
+				<Variable name="scanDirection" comment="" />
+				<Variable name="turnBodyTarget" comment="" />
+				<Variable name="stimulus" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</Then>
+						</EntityContextCheck>
+						<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</GetDynamicInformationValue>
+						</LockDynamicInformationValues>
+						<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Function_crime_addCorpseLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Function_crime_addCorpseLink>
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</Sequence>
+									</Then>
+								</CheckWuidValid>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+							</IfCondition>
+							<IfCondition hasInputBreakpoint="0" comment="currently made specifically for repeated sound" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<ChooseReportDestination hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</ChooseReportDestination>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Function_callInterrupt_report hasInputBreakpoint="0" comment="source is hearing for now, felt cute" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_callInterrupt_report>
+									</IfCondition>
+								</Sequence>
+							</IfCondition>
+							<DefaultBranch>
+								<ErrorNode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</ErrorNode>
+							</DefaultBranch>
+						</Switch>
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_switch_addHotEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_switch_addHotEntity>
+								<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</GetSpatialInfo>
+								<Function_callInterrupt_scan hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_callInterrupt_scan>
+							</Sequence>
+						</IfCondition>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

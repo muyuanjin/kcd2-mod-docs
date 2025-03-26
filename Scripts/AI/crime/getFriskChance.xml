@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_getFriskChance" is_function="1">
+		<Variables>
+			<Variable name="globalCooldowns" type="crime:globalCooldowns" values="" isPersistent="0" form="single" />
+			<Variable name="now" type="_int64" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Parameters>
+			<Variable name="chance" type="_float" values="0" isPersistent="0" form="single" requirementType="Out" />
+		</Parameters>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Function_crime_getGlobalCrimeLinkData linkData="$globalCooldowns" nodeLabel="59963702" />
+					<ActorStateCheck Who="$__player" State="horse" FailWithSubtreeMissing="false" saveVersion="2">
+						<Then canSkip="1">
+							<Sequence>
+								<GetTime TimeType="GameTime" OutVar="$globalCooldowns.lastFriskChanceTimestamp" Delta="" />
+								<AddLink From="$__player" To="$__player" Tag="&apos;crime_globalCooldowns&apos;" Data="$globalCooldowns" LinkOpHandleMode="OverWrite" />
+								<GameContextCheck context="crime_enableFriskChanceDebug" saveVersion="2">
+									<Then canSkip="1">
+										<ExecuteLua code="Game.SendInfoText(&apos;DEBUG_friskchance;NPC:&apos; .. data.this.name .. &apos;;Chance:0 (playerMounted)&apos; ,false)" />
+									</Then>
+								</GameContextCheck>
+							</Sequence>
+						</Then>
+						<Else canSkip="1">
+							<ActorStateCheck Who="$__player" State="minigame" FailWithSubtreeMissing="false" saveVersion="2">
+								<Then canSkip="1">
+									<Sequence>
+										<GetTime TimeType="GameTime" OutVar="$globalCooldowns.lastFriskChanceTimestamp" Delta="" />
+										<AddLink From="$__player" To="$__player" Tag="&apos;crime_globalCooldowns&apos;" Data="$globalCooldowns" LinkOpHandleMode="OverWrite" />
+										<GameContextCheck context="crime_enableFriskChanceDebug" saveVersion="2">
+											<Then canSkip="1">
+												<ExecuteLua code="Game.SendInfoText(&apos;DEBUG_friskchance;NPC:&apos; .. data.this.name .. &apos;;Chance:0 (playerMinigame)&apos; ,false)" />
+											</Then>
+										</GameContextCheck>
+									</Sequence>
+								</Then>
+								<Else canSkip="1">
+									<Selector>
+										<Sequence>
+											<GraphSearch Origin="$__player" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+												<LinkTagFilter tag="&apos;crime_reactor&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+												<LinkDataFilter tag="&apos;crime_reactor&apos;" condition="$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.arrest | &#10;$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.attack | &#10;$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.selfhelp | &#10;$__link_crime_reactor.reactionKind == $enum:crime_reactionKind.report" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+												<RangeFilter min="0.000000" max="20.000000" point="$__player" excludeRef="true" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+											</GraphSearch>
+											<GetTime TimeType="GameTime" OutVar="$globalCooldowns.lastFriskChanceTimestamp" Delta="" />
+											<AddLink From="$__player" To="$__player" Tag="&apos;crime_globalCooldowns&apos;" Data="$globalCooldowns" LinkOpHandleMode="OverWrite" />
+											<GameContextCheck context="crime_enableFriskChanceDebug" saveVersion="2">
+												<Then canSkip="1">
+													<ExecuteLua code="Game.SendInfoText(&apos;DEBUG_friskchance;NPC:&apos; .. data.this.name .. &apos;;Chance:0 (crime)&apos; ,false)" />
+												</Then>
+											</GameContextCheck>
+										</Sequence>
+										<Sequence>
+											<GetTime TimeType="GameTime" OutVar="$now" Delta="" />
+											<GameContextCheck context="crime_debug_alwaysFriskPlayer" saveVersion="2">
+												<Then canSkip="1">
+													<Sequence>
+														<Expression expressions="$chance = 1" />
+														<Expression expressions="$globalCooldowns.lastFriskChanceTimestamp = $now" />
+													</Sequence>
+												</Then>
+												<Else canSkip="1">
+													<IfElseCondition failOnCondition="false" condition="(($globalCooldowns.lastFriskTimestamp == 0  &#10; | $globalCooldowns.lastFriskTimestamp + $data:script_param[&apos;crime_frisk_cooldown&apos;].value &lt; $now)  &#10;&amp; &#10;($globalCooldowns.lastFriskChanceTimestamp == 0  &#10; | $globalCooldowns.lastFriskChanceTimestamp + $data:script_param[&apos;crime_frisk_chanceCooldown&apos;].value &lt; $now))" saveVersion="2">
+														<Then canSkip="1">
+															<Sequence>
+																<Sequence>
+																	<Switch>
+																		<CheckAngrinessInterval_Soul type="Material" Soul="$this.id" Flag="highToInf" saveVersion="2">
+																			<Then canSkip="1">
+																				<Expression expressions="$chance += 0.5" />
+																			</Then>
+																		</CheckAngrinessInterval_Soul>
+																		<CheckAngrinessInterval_Soul type="Material" Soul="$this.id" Flag="mid" saveVersion="2">
+																			<Then canSkip="1">
+																				<Expression expressions="$chance += 0.25" />
+																			</Then>
+																		</CheckAngrinessInterval_Soul>
+																		<DefaultBranch>
+																			<Success />
+																		</DefaultBranch>
+																	</Switch>
+																	<EntityContextCheck context="crime_isAuthorityOnStationaryDuty" target="$this.id" saveVersion="2">
+																		<Then canSkip="1">
+																			<Expression expressions="$chance += 0.25" />
+																		</Then>
+																		<Else canSkip="1">
+																			<Expression expressions="$chance -= 2" />
+																		</Else>
+																	</EntityContextCheck>
+																	<CheckRenownInterval_Soul Soul="$this.id" Flag="havent_heard" saveVersion="2">
+																		<Then canSkip="1">
+																			<Expression expressions="$chance += 0.25" />
+																		</Then>
+																	</CheckRenownInterval_Soul>
+																	<Switch>
+																		<CheckRelationshipInterval_SoulToSoul TargetSoul="$__player" Soul="$this.id" Flag="atLeast_4_high" saveVersion="2">
+																			<Then canSkip="1">
+																				<Expression expressions="$chance -= 0.5" />
+																			</Then>
+																		</CheckRelationshipInterval_SoulToSoul>
+																		<CheckRelationshipInterval_SoulToSoul TargetSoul="$__player" Soul="$this.id" Flag="atMost_1_horrible" saveVersion="2">
+																			<Then canSkip="1">
+																				<Expression expressions="$chance += 0.25" />
+																			</Then>
+																		</CheckRelationshipInterval_SoulToSoul>
+																		<DefaultBranch>
+																			<Success />
+																		</DefaultBranch>
+																	</Switch>
+																	<Clamp value="$chance" lowerBoundary="0.000000" upperBoundary="1.000000" result="$chance" />
+																	<ExecuteLua code="data.chance = data.chance * RPG.FriskProbabilityMod" />
+																</Sequence>
+																<Expression expressions="$globalCooldowns.lastFriskChanceTimestamp = $now" />
+																<AddLink From="$__player" To="$__player" Tag="&apos;crime_globalCooldowns&apos;" Data="$globalCooldowns" LinkOpHandleMode="OverWrite" />
+																<GameContextCheck context="crime_enableFriskChanceDebug" saveVersion="2">
+																	<Then canSkip="1">
+																		<ExecuteLua code="Game.SendInfoText(&apos;DEBUG_friskchance;NPC:&apos; .. data.this.name .. &apos;;Chance:&apos; .. data.chance ,false)" />
+																	</Then>
+																</GameContextCheck>
+															</Sequence>
+														</Then>
+														<Else canSkip="1">
+															<GameContextCheck context="crime_enableFriskChanceDebug" saveVersion="2">
+																<Then canSkip="1">
+																	<ExecuteLua code="Game.SendInfoText(&apos;DEBUG_friskchance;NPC:&apos; .. data.this.name .. &apos;;Chance:0(cooldown)&apos; ,false)" />
+																</Then>
+															</GameContextCheck>
+														</Else>
+													</IfElseCondition>
+												</Else>
+											</GameContextCheck>
+										</Sequence>
+									</Selector>
+								</Else>
+							</ActorStateCheck>
+						</Else>
+					</ActorStateCheck>
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="globalCooldowns" comment="" />
+				<Variable name="now" comment="" />
+				<Variable name="chance" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root editorPosX="-20" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Function_crime_getGlobalCrimeLinkData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Function_crime_getGlobalCrimeLinkData>
+						<ActorStateCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</GetTime>
+									<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddLink>
+									<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</ExecuteLua>
+										</Then>
+									</GameContextCheck>
+								</Sequence>
+							</Then>
+							<Else>
+								<ActorStateCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetTime>
+											<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</AddLink>
+											<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</ExecuteLua>
+												</Then>
+											</GameContextCheck>
+										</Sequence>
+									</Then>
+									<Else>
+										<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</LinkTagFilter>
+													<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</LinkDataFilter>
+													<RangeFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</RangeFilter>
+												</GraphSearch>
+												<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetTime>
+												<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</AddLink>
+												<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ExecuteLua>
+													</Then>
+												</GameContextCheck>
+											</Sequence>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetTime>
+												<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Sequence>
+													</Then>
+													<Else>
+														<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<CheckAngrinessInterval_Soul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Then>
+																			</CheckAngrinessInterval_Soul>
+																			<CheckAngrinessInterval_Soul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Then>
+																			</CheckAngrinessInterval_Soul>
+																			<DefaultBranch>
+																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Success>
+																			</DefaultBranch>
+																		</Switch>
+																		<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Then>
+																			<Else>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Else>
+																		</EntityContextCheck>
+																		<CheckRenownInterval_Soul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																			</Then>
+																		</CheckRenownInterval_Soul>
+																		<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Then>
+																			</CheckRelationshipInterval_SoulToSoul>
+																			<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Then>
+																			</CheckRelationshipInterval_SoulToSoul>
+																			<DefaultBranch>
+																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Success>
+																			</DefaultBranch>
+																		</Switch>
+																		<Clamp hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Clamp>
+																		<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</ExecuteLua>
+																	</Sequence>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																	<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</AddLink>
+																	<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</ExecuteLua>
+																		</Then>
+																	</GameContextCheck>
+																</Sequence>
+															</Then>
+															<Else>
+																<GameContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																	<OutputBreakpoints />
+																	<Then>
+																		<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</ExecuteLua>
+																	</Then>
+																</GameContextCheck>
+															</Else>
+														</IfElseCondition>
+													</Else>
+												</GameContextCheck>
+											</Sequence>
+										</Selector>
+									</Else>
+								</ActorStateCheck>
+							</Else>
+						</ActorStateCheck>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>
