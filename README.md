@@ -2,7 +2,9 @@
 [中文](#中文)
 A collection of resources and documentation for modding Kingdom Come: Deliverance 2 (KCD2).
 
-## [Official Modding Guide](https://warhorse.youtrack.cloud/articles/KM)
+## [Official Modding Guide](https://kingdomcomerpg.com/en/news/modding-in-kcdii)
+
+## [Official Modding Docs](https://warhorse.youtrack.cloud/articles/KM)
 
 ## Table of Contents
 
@@ -27,6 +29,12 @@ The `lua_dump_state` directory contains the output of the `lua_dump_state` comma
 
 The `Scripts` directory contains the extracted contents of the `KingdomComeDeliverance2\Data\Scripts.pak`(KCD2 V1.2.2) file.  These Lua scripts are a crucial reference for understanding game logic and modding.
 
+## script_bind_2025_01_14
+Lua binding documentation in the official modding tools
+
+## DLL
+
+
 ## Links
 
 The [LINKS](LINKS.md) contains a collection of links to online tutorials and resources related to KCD2 modding.
@@ -37,7 +45,9 @@ The [LINKS](LINKS.md) contains a collection of links to online tutorials and res
 
 用于 Kingdom Come: Deliverance 2 (KCD2) modding 的资源和文档集合。
 
-## [官方模组指南](https://warhorse.youtrack.cloud/articles/KM)
+## [官方模组指南](https://kingdomcomerpg.com/en/news/modding-in-kcdii)
+
+## [官方模组文档](https://warhorse.youtrack.cloud/articles/KM)
 
 ## 目录
 
@@ -61,6 +71,9 @@ The [LINKS](LINKS.md) contains a collection of links to online tutorials and res
 ## Scripts
 
 `Scripts` 目录包含从 `KingdomComeDeliverance2\Data\Scripts.pak`(KCD2 V1.2.2) 文件中提取的内容。 这些 Lua 脚本是理解游戏逻辑和 modding 的重要参考。
+
+## script_bind_2025_01_14
+官方模组工具里的 Lua 绑定文档
 
 ## Links
 
