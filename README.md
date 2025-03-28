@@ -33,7 +33,7 @@ The `Scripts` directory contains the extracted contents of the `KingdomComeDeliv
 Lua binding documentation in the official modding tools
 
 ## DLL
-
+Store different versions of DLL files for disassembly. When using Cheat Engine to search for byte patterns, it is recommended to set the base address to 0x180000C00, right-click on the scan options, and check "Scan all memory".
 
 ## Links
 
@@ -74,6 +74,9 @@ The [LINKS](LINKS.md) contains a collection of links to online tutorials and res
 
 ## script_bind_2025_01_14
 官方模组工具里的 Lua 绑定文档
+
+## DLL
+存储不同版本的DLL文件，用于反汇编，使用cheat engine打开搜索字节模式时，推荐设置基址0x180000C00 ，右键扫描选项，勾选“扫描所有内存”
 
 ## Links
 
