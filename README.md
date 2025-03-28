@@ -2,6 +2,8 @@
 [中文](#中文)
 A collection of resources and documentation for modding Kingdom Come: Deliverance 2 (KCD2).
 
+## [Official Modding Guide](https://warhorse.youtrack.cloud/articles/KM)
+
 ## Table of Contents
 
 *   [CryEngine](#cryengine)
@@ -34,6 +36,8 @@ The [LINKS](LINKS.md) contains a collection of links to online tutorials and res
 # kcd2-mod-docs
 
 用于 Kingdom Come: Deliverance 2 (KCD2) modding 的资源和文档集合。
+
+## [官方模组指南](https://warhorse.youtrack.cloud/articles/KM)
 
 ## 目录
 
