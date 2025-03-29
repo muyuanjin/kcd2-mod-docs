@@ -30,14 +30,19 @@ The `lua_dump_state` directory contains the output of the `lua_dump_state` comma
 The `Scripts` directory contains the extracted contents of the `KingdomComeDeliverance2\Data\Scripts.pak`(KCD2 V1.2.2) file.  These Lua scripts are a crucial reference for understanding game logic and modding.
 
 ## script_bind_2025_01_14
+
 Lua binding documentation in the official modding tools
 
-## DLL
-Store different versions of DLL files for disassembly. When using Cheat Engine to search for byte patterns, it is recommended to set the base address to 0x180000C00, right-click on the scan options, and check "Scan all memory".
 
 ## Links
 
 The [LINKS](LINKS.md) contains a collection of links to online tutorials and resources related to KCD2 modding.
+
+## DLL
+Store different versions of DLL files for disassembly. When using Cheat Engine to search for byte patterns, it is recommended to set the base address to 0x180000C00, right-click on the scan options, and check "Scan all memory".
+
+## CONSOLE
+[CONSOLE](CONSOLE.md) cryengine console
 
 ---
 <a name="中文"></a>
@@ -73,12 +78,20 @@ The [LINKS](LINKS.md) contains a collection of links to online tutorials and res
 `Scripts` 目录包含从 `KingdomComeDeliverance2\Data\Scripts.pak`(KCD2 V1.2.2) 文件中提取的内容。 这些 Lua 脚本是理解游戏逻辑和 modding 的重要参考。
 
 ## script_bind_2025_01_14
+
 官方模组工具里的 Lua 绑定文档
 
-## DLL
-存储不同版本的DLL文件，用于反汇编，使用cheat engine打开搜索字节模式时，推荐设置基址0x180000C00 ，右键扫描选项，勾选“扫描所有内存”
 
 ## Links
 
 [LINKS](LINKS.md)  包含指向与 KCD2 modding 相关的在线教程和资源的链接集合。
+
+## DLL
+
+存储不同版本的DLL文件，用于反汇编，使用cheat engine打开搜索字节模式时，推荐设置基址0x180000C00 ，右键扫描选项，勾选“扫描所有内存”
+
+
+## 控制台
+
+[控制台](CONSOLE.md) cryengine 控制台
 
