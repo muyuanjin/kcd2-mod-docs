@@ -21,11 +21,12 @@ You can refer to my other project [kcd2db](https://github.com/muyuanjin/kcd2db)
 4. `gEnv->pScriptSystem->CreateTable()`: Inconsistent with the source code [IScriptSystem.h](CryEngine/Code/CryEngine/CryCommon/CryScriptSystem/IScriptSystem.h#L283), CreateTable is the 14th virtual function of `IScriptSystem`, not the 13th, there is an unknown virtual function, so the offset is 13x8 = 0x68
 5. `gEnv->pScriptSystem->CreateTable()->SetValueAny()` Inconsistent with the source code [IScriptSystem.h](CryEngine/Code/CryEngine/CryCommon/CryScriptSystem/IScriptSystem.h#L566), SetValueAny is the 8th virtual function of `IScriptTable`, not the 7th, there is an unknown virtual function, so the offset is 7x8 = 0x38
 6. `gEnv->pScriptSystem->CreateTable()->AddFunction()` Inconsistent with the source code [IScriptSystem.h](CryEngine/Code/CryEngine/CryCommon/CryScriptSystem/IScriptSystem.h#L616), AddFunction is the 23rd virtual function of `IScriptTable`, not the 22nd, there is an unknown virtual function, so the offset is 22x8 = 0xB0
-7. `gEnv->pGame->GetLongName()` Inconsistent with the source code [IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L112), it is the 13th virtual function, offset is 12x8 = 0x60
-8. `gEnv->pGame->GetName()` Inconsistent with the source code [IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L115), it is the 14th virtual function, offset is 13x8 = 0x68
-9. `gEnv->pGame->GetIGameFramework()` Inconsistent with the source code [IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L128), it is the 17th virtual function, offset is 16x8 = 0x80
-10. `gEnv->pGame->GetIGameFramework()->RegisterListener()` Inconsistent with the source code [IGameFramework.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGameFramework.h#L108), it is the 101st virtual function, offset is 100x8 = 0x320
-11. `gEnv->pScriptSystem->ExecuteBuffer()` Consistent with the source code [IScriptSystem.h](CryEngine/Code/CryEngine/CryCommon/CryScriptSystem/IScriptSystem.h#L256), it is the 7th virtual function, offset is 7x8 = 0x38
+7. `gEnv->pGame->CompleteInit()` Consistent with the source code [IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L90), it is the 5th virtual function, with an offset of 4x8 = 0x20
+8. `gEnv->pGame->GetLongName()` Inconsistent with the source code [IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L112), it is the 13th virtual function, offset is 12x8 = 0x60
+9. `gEnv->pGame->GetName()` Inconsistent with the source code [IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L115), it is the 14th virtual function, offset is 13x8 = 0x68
+10. `gEnv->pGame->GetIGameFramework()` Inconsistent with the source code [IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L128), it is the 17th virtual function, offset is 16x8 = 0x80
+11. `gEnv->pGame->GetIGameFramework()->RegisterListener()` Inconsistent with the source code [IGameFramework.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGameFramework.h#L108), it is the 101st virtual function, offset is 100x8 = 0x320
+12. `gEnv->pScriptSystem->ExecuteBuffer()` Consistent with the source code [IScriptSystem.h](CryEngine/Code/CryEngine/CryCommon/CryScriptSystem/IScriptSystem.h#L256), it is the 7th virtual function, offset is 7x8 = 0x38
 
 <a name="中文"></a>
 # 如何找到gEnv的地址
@@ -50,8 +51,9 @@ IDA会分析文件, 如果如下步骤无法进行,可以尝试等待分析完�
 4. `gEnv->pScriptSystem->CreateTable()`: 和源码[IScriptSystem.h](CryEngine/Code/CryEngine/CryCommon/CryScriptSystem/IScriptSystem.h#L283)中不一致,CreateTable 是`IScriptSystem`第 14 个虚函数,而不是第13个,存在一个未知虚函数,所以偏移是 13x8 = 0x68
 5. `gEnv->pScriptSystem->CreateTable()->SetValueAny()` 和源码[IScriptSystem.h](CryEngine/Code/CryEngine/CryCommon/CryScriptSystem/IScriptSystem.h#L566)中不一致,SetValueAny 是`IScriptTable`第 8 个虚函数,而不是第7个,存在一个未知虚函数,所以偏移是 7x8 = 0x38
 6. `gEnv->pScriptSystem->CreateTable()->AddFunction()` 和源码[IScriptSystem.h](CryEngine/Code/CryEngine/CryCommon/CryScriptSystem/IScriptSystem.h#L616)中不一致,AddFunction 是`IScriptTable`第 23 个虚函数,而不是第22个,存在一个未知虚函数,所以偏移是 22x8 = 0xB0
-7. `gEnv->pGame->GetLongName()` 和源码[IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L112)中不一致,是第 13 个虚函数,偏移是 12x8 = 0x60
-8. `gEnv->pGame->GetName()`  和源码[IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L115)中不一致,是第 14 个虚函数,偏移是 13x8 = 0x68
-9. `gEnv->pGame->GetIGameFramework()` 和源码[IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L128)中不一致,是第 17 个虚函数,偏移是 16x8 = 0x80
-10. `gEnv->pGame->GetIGameFramework()->RegisterListener()` 和源码[IGameFramework.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGameFramework.h#L108)中不一致,是第 101 个虚函数,偏移是 100x8 = 0x320
-11. `gEnv->pScriptSystem->ExecuteBuffer()` 和源码[IScriptSystem.h](CryEngine/Code/CryEngine/CryCommon/CryScriptSystem/IScriptSystem.h#L256)中一致,是第 7 个虚函数,偏移是 7x8 = 0x38
+7. `gEnv->pGame->CompleteInit()` 和源码[IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L90)中一致,是第 5 个虚函数,偏移是 4x8 = 0x20
+8. `gEnv->pGame->GetLongName()` 和源码[IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L112)中不一致,是第 13 个虚函数,偏移是 12x8 = 0x60
+9. `gEnv->pGame->GetName()`  和源码[IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L115)中不一致,是第 14 个虚函数,偏移是 13x8 = 0x68
+10. `gEnv->pGame->GetIGameFramework()` 和源码[IGame.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGame.h#L128)中不一致,是第 17 个虚函数,偏移是 16x8 = 0x80
+11. `gEnv->pGame->GetIGameFramework()->RegisterListener()` 和源码[IGameFramework.h](CryEngine/Code/CryEngine/CryCommon/CryGame/IGameFramework.h#L108)中不一致,是第 101 个虚函数,偏移是 100x8 = 0x320
+12. `gEnv->pScriptSystem->ExecuteBuffer()` 和源码[IScriptSystem.h](CryEngine/Code/CryEngine/CryCommon/CryScriptSystem/IScriptSystem.h#L256)中一致,是第 7 个虚函数,偏移是 7x8 = 0x38
