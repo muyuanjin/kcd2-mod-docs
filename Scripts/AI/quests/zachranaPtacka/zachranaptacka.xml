@@ -966,43 +966,6 @@
 			<Comments />
 		</EditorData>
 	</BehaviorTree>
-	<BehaviorTree name="glutton_reportNoMoreFood" is_function="0">
-		<Variables />
-		<Parameters>
-			<Variable name="data" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
-		</Parameters>
-		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
-			<Behavior canSkip="1">
-				<Sequence>
-					<ExactMove directionType="AlignWithEntity" directionSpecification="$data" animationTriggerDist="0.150000" precise="false" changeNPCState="false" destinationSpecification="$data" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" AnimationToPlay="" AnimationContext="" />
-					<Callback_empty EventName="&apos;OnFinished&apos;" />
-				</Sequence>
-			</Behavior>
-		</Root>
-		<ForestContainer />
-		<EditorData Signature="wuidData" EventSet="endNotification">
-			<Variables>
-				<Variable name="data" comment="" />
-			</Variables>
-			<ForwardDeclarations />
-			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-				<OutputBreakpoints />
-				<Behavior>
-					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-						<OutputBreakpoints />
-						<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-						</ExactMove>
-						<Callback_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-						</Callback_empty>
-					</Sequence>
-				</Behavior>
-			</Root>
-			<Forest />
-			<Comments />
-		</EditorData>
-	</BehaviorTree>
 	<BehaviorTree name="getItemAmountInInventory" is_function="1">
 		<Variables>
 			<Variable name="currentItemAmountInStack" type="_int" values="" isPersistent="0" form="single" />
@@ -1976,9 +1939,11 @@
 	</BehaviorTree>
 	<BehaviorTree name="stayInSafeSpot" is_function="0">
 		<Variables>
-			<Variable name="currentDistanceToSafeSpot" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="currentPlayerDistanceToSafeSpot" type="_float" values="" isPersistent="0" form="single" />
 			<Variable name="currentSafeSpot" type="_wuid" values="" isPersistent="0" form="single" />
-			<Variable name="distanceToSafeSpot" type="_float" values="" isPersistent="0" form="single" />
+			<Variable name="distancesToSafeSpot" type="_float" values="" isPersistent="0" form="array" />
+			<Variable name="index" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="lowestDistanceToSafeSpotIndex" type="_int" values="" isPersistent="0" form="single" />
 			<Variable name="safeSpot" type="_wuid" values="" isPersistent="0" form="single" />
 		</Variables>
 		<Parameters>
@@ -1988,49 +1953,53 @@
 		</Parameters>
 		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
 			<Behavior canSkip="1">
-				<AnyDecorator preset="crime_keepState" enabled="true">
-					<Sequence>
-						<Selector>
-							<IsInsideArea Origin="$this.id" Area="$towerArea" FailSubtMissing="true" saveVersion="2">
-								<Then canSkip="1">
-									<IsInsideArea Origin="$__player" Area="$towerArea" FailSubtMissing="true" saveVersion="2">
-										<Else canSkip="1">
-											<Expression expressions="$safeSpot = $towerSafeSpot" />
-										</Else>
-									</IsInsideArea>
-								</Then>
-							</IsInsideArea>
-							<ForEach startIndex="0" step="1" array="$safeSpots" iterator="" value="$currentSafeSpot" break="">
-								<Sequence>
-									<MeasureDistance position1="$this.id" position2="$currentSafeSpot" mode="ThreeDimensions" result="$currentDistanceToSafeSpot" />
-									<IfCondition failOnCondition="false" condition="$currentDistanceToSafeSpot &lt; $distanceToSafeSpot | &#10;$distanceToSafeSpot == 0">
-										<Expression expressions="$safeSpot = $currentSafeSpot &#10;$distanceToSafeSpot = $currentDistanceToSafeSpot" />
-									</IfCondition>
-								</Sequence>
-							</ForEach>
-						</Selector>
-						<DistanceCondition Origin="$this.id" ReferencePt="$safeSpot" Low="2.000000" High="2.000000" Negation="true" ValueOnMiddle="false" failOnCondition="false">
-							<ExactMove directionType="AlignWithEntity" directionSpecification="$safeSpot" animationTriggerDist="0.150000" precise="false" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$safeSpot" destinationSpecification2="" destinationSpecification3="" speed="Run" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
-						</DistanceCondition>
-						<HasGenderCheck Gender="Female" SoulWUID="" FailSubtMissing="false" saveVersion="2">
-							<Then canSkip="1">
-								<UnstanceAction unstance="standingNervous" locationObject="" slaveObject="" />
-							</Then>
-							<Else canSkip="1">
-								<UnstanceAction unstance="Cower" locationObject="" slaveObject="" />
-							</Else>
-						</HasGenderCheck>
-						<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" />
-					</Sequence>
-				</AnyDecorator>
+				<EntityContext context="ForceForbidAutoTorch" target="">
+					<AnyDecorator preset="crime_keepState" enabled="true">
+						<Sequence>
+							<Selector>
+								<IsInsideArea Origin="$this.id" Area="$towerArea" FailSubtMissing="true" saveVersion="2">
+									<Then canSkip="1">
+										<IsInsideArea Origin="$__player" Area="$towerArea" FailSubtMissing="true" saveVersion="2">
+											<Else canSkip="1">
+												<Expression expressions="$safeSpot = $towerSafeSpot" />
+											</Else>
+										</IsInsideArea>
+									</Then>
+								</IsInsideArea>
+								<ForEach startIndex="0" step="1" array="$safeSpots" iterator="$index" value="$currentSafeSpot" break="">
+									<Sequence>
+										<MeasureDistance position1="$this.id" position2="$currentSafeSpot" mode="ThreeDimensions" result="$distancesToSafeSpot[$index]" />
+										<MeasureDistance position1="$__player" position2="$currentSafeSpot" mode="ThreeDimensions" result="$currentPlayerDistanceToSafeSpot" />
+										<IfCondition failOnCondition="false" condition="($distancesToSafeSpot[$index] &lt; $distancesToSafeSpot[$lowestDistanceToSafeSpotIndex] &amp;  &#10;$currentPlayerDistanceToSafeSpot &gt; 5) | &#10;($safeSpot == $__null &amp; &#10;$currentPlayerDistanceToSafeSpot &gt; 5)">
+											<Expression expressions="$safeSpot = $currentSafeSpot &#10;$lowestDistanceToSafeSpotIndex = $index" />
+										</IfCondition>
+									</Sequence>
+								</ForEach>
+							</Selector>
+							<MoveParamsDecorator speed="Run" pathFindingParams="" doorClosingPolicy="Automatic">
+								<HasGenderCheck Gender="Female" SoulWUID="" FailSubtMissing="false" saveVersion="2">
+									<Then canSkip="1">
+										<UnstanceAction unstance="waiting_nervous_lookingAround" locationObject="$safeSpot" slaveObject="" />
+									</Then>
+									<Else canSkip="1">
+										<UnstanceAction unstance="waiting_alarmed" locationObject="$safeSpot" slaveObject="" />
+									</Else>
+								</HasGenderCheck>
+							</MoveParamsDecorator>
+							<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" />
+						</Sequence>
+					</AnyDecorator>
+				</EntityContext>
 			</Behavior>
 		</Root>
 		<ForestContainer />
 		<EditorData Signature="zachranaPtacka_stayInSafeSpot" EventSet="">
 			<Variables>
-				<Variable name="currentDistanceToSafeSpot" comment="" />
+				<Variable name="currentPlayerDistanceToSafeSpot" comment="" />
 				<Variable name="currentSafeSpot" comment="" />
-				<Variable name="distanceToSafeSpot" comment="" />
+				<Variable name="distancesToSafeSpot" comment="" />
+				<Variable name="index" comment="" />
+				<Variable name="lowestDistanceToSafeSpotIndex" comment="" />
 				<Variable name="safeSpot" comment="" />
 				<Variable name="safeSpots" comment="" />
 				<Variable name="towerArea" comment="" />
@@ -2040,65 +2009,68 @@
 			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 				<OutputBreakpoints />
 				<Behavior>
-					<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 						<OutputBreakpoints />
-						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<AnyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
 							<OutputBreakpoints />
-							<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
-								<IsInsideArea hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-									<Then>
-										<IsInsideArea hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<IsInsideArea hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<IsInsideArea hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Else>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Else>
+											</IsInsideArea>
+										</Then>
+									</IsInsideArea>
+									<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
-											<Else>
+											<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</MeasureDistance>
+											<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</MeasureDistance>
+											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
 												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
 												</Expression>
-											</Else>
-										</IsInsideArea>
-									</Then>
-								</IsInsideArea>
-								<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											</IfCondition>
+										</Sequence>
+									</ForEach>
+								</Selector>
+								<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<HasGenderCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 										<OutputBreakpoints />
-										<MeasureDistance hasInputBreakpoint="0" comment="" breakpointFlags="0">
-											<OutputBreakpoints />
-										</MeasureDistance>
-										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-											<OutputBreakpoints />
-											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<Then>
+											<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
 												<OutputBreakpoints />
-											</Expression>
-										</IfCondition>
-									</Sequence>
-								</ForEach>
-							</Selector>
-							<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-								<OutputBreakpoints />
-								<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											</UnstanceAction>
+										</Then>
+										<Else>
+											<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</UnstanceAction>
+										</Else>
+									</HasGenderCheck>
+								</MoveParamsDecorator>
+								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-								</ExactMove>
-							</DistanceCondition>
-							<HasGenderCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-								<OutputBreakpoints />
-								<Then>
-									<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
-										<OutputBreakpoints />
-									</UnstanceAction>
-								</Then>
-								<Else>
-									<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
-										<OutputBreakpoints />
-									</UnstanceAction>
-								</Else>
-							</HasGenderCheck>
-							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
-								<OutputBreakpoints />
-							</Wait>
-						</Sequence>
-					</AnyDecorator>
+								</Wait>
+							</Sequence>
+						</AnyDecorator>
+					</EntityContext>
 				</Behavior>
 			</Root>
 			<Forest />
@@ -2143,56 +2115,135 @@
 		</EditorData>
 	</BehaviorTree>
 	<BehaviorTree name="roza_moveAndWait" is_function="0">
-		<Variables />
+		<Variables>
+			<Variable name="doesSeePlayer" type="_bool" values="" isPersistent="0" form="single" />
+		</Variables>
 		<Parameters>
 			<Variable name="data" type="_wuid" values="" isPersistent="0" form="single" requirementType="In" />
 		</Parameters>
 		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<OnInit canSkip="1">
+				<HasSeenPlayer NPC="$this.id" FullyAwareOnly="false" saveVersion="2">
+					<Then canSkip="1">
+						<Expression expressions="$doesSeePlayer = true" />
+					</Then>
+					<Else canSkip="1">
+						<Success />
+					</Else>
+				</HasSeenPlayer>
+			</OnInit>
 			<Behavior canSkip="1">
-				<Sequence>
-					<ExactMove directionType="AlignWithEntity" directionSpecification="$data" animationTriggerDist="0.150000" precise="true" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$data" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
-					<EntityContext context="speech_readyForSwitchDialog" target="">
-						<Loop count="-1">
-							<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="8.000000" High="8.000000" Negation="false" OpenInMiddle="false" RunLogic="Halt">
-								<ForceLook LookTarget="$__player" DisableVariations="true">
-									<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
-								</ForceLook>
-							</DistanceGate>
-						</Loop>
-					</EntityContext>
-				</Sequence>
+				<RelationContext context="PerceptionPriorityBoost" source="$this.id" target="$__player">
+					<Parallel successMode="Any" failureMode="Any">
+						<UrgencyDecorator Urgency="Slow">
+							<ContinuousSwitch>
+								<IfCondition failOnCondition="false" condition="$doesSeePlayer">
+									<Sequence>
+										<WaitAction />
+										<Loop count="-1">
+											<ForceLook LookTarget="$__player" DisableVariations="true">
+												<EntityContext context="speech_readyForSwitchDialog" target="">
+													<Sequence>
+														<Turn target="$__player" align="false" />
+														<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+													</Sequence>
+												</EntityContext>
+											</ForceLook>
+										</Loop>
+									</Sequence>
+								</IfCondition>
+								<IfCondition failOnCondition="false" condition="!$doesSeePlayer">
+									<Sequence>
+										<UnstanceAction unstance="waiting_holdingArm" locationObject="$data" slaveObject="" />
+										<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+									</Sequence>
+								</IfCondition>
+							</ContinuousSwitch>
+						</UrgencyDecorator>
+						<Function_continuousPlayerPerceptionCheck NPC="$this.id" loopTime="&apos;1s&apos;" doesSeePlayer="$doesSeePlayer" nodeLabel="50425465" />
+					</Parallel>
+				</RelationContext>
 			</Behavior>
 		</Root>
 		<ForestContainer />
 		<EditorData Signature="wuidData" EventSet="">
 			<Variables>
+				<Variable name="doesSeePlayer" comment="" />
 				<Variable name="data" comment="" />
 			</Variables>
 			<ForwardDeclarations />
 			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 				<OutputBreakpoints />
-				<Behavior>
-					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+				<OnInit>
+					<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 						<OutputBreakpoints />
-						<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-						</ExactMove>
-						<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<Then>
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
-								<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							</Expression>
+						</Then>
+						<Else>
+							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Success>
+						</Else>
+					</HasSeenPlayer>
+				</OnInit>
+				<Behavior>
+					<RelationContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<UrgencyDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-									<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 										<OutputBreakpoints />
-										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
-										</Wait>
-									</ForceLook>
-								</DistanceGate>
-							</Loop>
-						</EntityContext>
-					</Sequence>
+											<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</WaitAction>
+											<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Turn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Turn>
+															<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Wait>
+														</Sequence>
+													</EntityContext>
+												</ForceLook>
+											</Loop>
+										</Sequence>
+									</IfCondition>
+									<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</UnstanceAction>
+											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Wait>
+										</Sequence>
+									</IfCondition>
+								</ContinuousSwitch>
+							</UrgencyDecorator>
+							<Function_continuousPlayerPerceptionCheck hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_continuousPlayerPerceptionCheck>
+						</Parallel>
+					</RelationContext>
 				</Behavior>
 			</Root>
 			<Forest />
@@ -2342,7 +2393,7 @@
 						<MoveParamsDecorator speed="Walk" pathFindingParams="" doorClosingPolicy="LeaveOpened">
 							<StanceElement smartObject="$__resource.id" stance="sitting" allowAny="false" enabled="true">
 								<Parallel successMode="All" failureMode="Any">
-									<WaitAction />
+									<UnstanceAction unstance="ingameDialogPose_sitting" locationObject="$__resource.id" slaveObject="" />
 									<Function_speech_schedulerPolylog alias="$alias" amIInitiator="$amIInitiator" animationApproach="$enum:animationApproach.tryDialogAnimations" areaForPlayer="" npcs="$participants" nodeLabel="93817260" />
 								</Parallel>
 							</StanceElement>
@@ -2379,9 +2430,9 @@
 									<OutputBreakpoints />
 									<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
 										<OutputBreakpoints />
-										<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
-										</WaitAction>
+										</UnstanceAction>
 										<Function_speech_schedulerPolylog hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
 										</Function_speech_schedulerPolylog>
@@ -2861,45 +2912,80 @@
 		</EditorData>
 	</BehaviorTree>
 	<BehaviorTree name="soldier_guard" is_function="0">
-		<Variables />
+		<Variables>
+			<Variable name="movementSpeed" type="enum:movementSpeed" values="" isPersistent="0" form="single" />
+		</Variables>
 		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
 			<Behavior canSkip="1">
-				<Sequence>
-					<MoveParamsDecorator speed="Run" pathFindingParams="" doorClosingPolicy="Automatic">
-						<Selector>
-							<UnstanceAction unstance="halberdierGuard_atAttentionWithLocationObject" locationObject="$__object.id" slaveObject="" />
-							<ExactMove directionType="AlignWithEntity" directionSpecification="$__object.id" animationTriggerDist="0.150000" precise="false" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$__object.id" destinationSpecification2="" destinationSpecification3="" speed="Run" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
-						</Selector>
-					</MoveParamsDecorator>
-					<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" />
-				</Sequence>
+				<EntityContext context="soliloquy_enable" target="">
+					<EntityContextElement context="soliloquy_enable" enabled="true">
+						<Sequence>
+							<IsWeaponDrawn who="" WeaponSet="Oversized" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$movementSpeed = $enum:movementSpeed.alertedWalk" />
+								</Then>
+								<Else canSkip="1">
+									<Expression expressions="$movementSpeed = $enum:movementSpeed.run" />
+								</Else>
+							</IsWeaponDrawn>
+							<Selector>
+								<MoveParamsDecorator speed="$movementSpeed" pathFindingParams="" doorClosingPolicy="Automatic">
+									<UnstanceAction unstance="guard" locationObject="$__object.id" slaveObject="" />
+								</MoveParamsDecorator>
+								<ExactMove directionType="AlignWithEntity" directionSpecification="$__object.id" animationTriggerDist="0.150000" precise="false" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$__object.id" destinationSpecification2="" destinationSpecification3="" speed="$movementSpeed" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
+							</Selector>
+							<Wait duration="&apos;15s&apos;" timeType="GameTime" doFail="false" variation="" />
+						</Sequence>
+					</EntityContextElement>
+				</EntityContext>
 			</Behavior>
 		</Root>
 		<ForestContainer />
 		<EditorData EventSet="">
-			<Variables />
+			<Variables>
+				<Variable name="movementSpeed" comment="" />
+			</Variables>
 			<ForwardDeclarations />
 			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 				<OutputBreakpoints />
 				<Behavior>
-					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 						<OutputBreakpoints />
-						<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
 							<OutputBreakpoints />
-							<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
-								<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<IsWeaponDrawn hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 									<OutputBreakpoints />
-								</UnstanceAction>
-								<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+									<Else>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Else>
+								</IsWeaponDrawn>
+								<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-								</ExactMove>
-							</Selector>
-						</MoveParamsDecorator>
-						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-						</Wait>
-					</Sequence>
+									<MoveParamsDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<UnstanceAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</UnstanceAction>
+									</MoveParamsDecorator>
+									<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</ExactMove>
+								</Selector>
+								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Wait>
+							</Sequence>
+						</EntityContextElement>
+					</EntityContext>
 				</Behavior>
 			</Root>
 			<Forest />
@@ -2920,20 +3006,16 @@
 					<Child canSkip="1">
 						<Sequence>
 							<ExactMove directionType="AlignWithEntity" directionSpecification="$wuid" animationTriggerDist="0.150000" precise="false" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$wuid" destinationSpecification2="" destinationSpecification3="" speed="Walk" additionalParams="" pathFindingParams="" staminaPolicy="" pathInfo="" />
-							<While doFail="false" propagateChildFail="false" condition="$seenEntity.perceptible ~= $__player">
-								<DistanceGate Origin="$this.id" ReferencePt="$__player" Low="8.000000" High="8.000000" Negation="false" OpenInMiddle="false" RunLogic="KeepRunning">
+							<RelationContext context="PerceptionPriorityBoost" source="$this.id" target="$__player">
+								<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$seenEntity" senderInfo="" inbox="&apos;perceptionInfo&apos;" condition="$__content.perceptible == $__player &amp; &#10;$__content.threshold == 1 &amp; &#10;$__content.isInsideRecognitionBorder" answerVar="">
 									<ForceLook LookTarget="$__player" DisableVariations="true">
-										<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$seenEntity" senderInfo="" inbox="&apos;perceptionInfo&apos;" condition="" answerVar="">
-											<IfCondition failOnCondition="false" condition="$seenEntity.perceptible == $__player">
-												<Parallel successMode="All" failureMode="Any">
-													<AnimationAction fragment="&apos;GreetingsUpperBody&apos;" tags="&apos;waveSmall&apos;" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
-													<Function_speech_schedulerMonolog alias="$string" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" metarole="" subtitlesDown="false" nodeLabel="22893526" />
-												</Parallel>
-											</IfCondition>
-										</ProcessMessage>
+										<Parallel successMode="All" failureMode="Any">
+											<AnimationAction fragment="&apos;GreetingsUpperBody&apos;" tags="&apos;waveSmall&apos;" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
+											<Function_speech_dialogInitiator alias="$string" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="" preset="$enum:dialogPreset.chat" recipient="$__player" recipientMetaroles="" nodeLabel="90506495" />
+										</Parallel>
 									</ForceLook>
-								</DistanceGate>
-							</While>
+								</ProcessMessage>
+							</RelationContext>
 						</Sequence>
 					</Child>
 					<OnSuccess canSkip="1">
@@ -2961,30 +3043,24 @@
 								<ExactMove hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
 								</ExactMove>
-								<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<RelationContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-									<DistanceGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
 										<OutputBreakpoints />
 										<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
-											<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
 												<OutputBreakpoints />
-												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
-													<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
-														<OutputBreakpoints />
-														<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
-															<OutputBreakpoints />
-														</AnimationAction>
-														<Function_speech_schedulerMonolog hasInputBreakpoint="0" comment="" breakpointFlags="0">
-															<OutputBreakpoints />
-														</Function_speech_schedulerMonolog>
-													</Parallel>
-												</IfCondition>
-											</ProcessMessage>
+												</AnimationAction>
+												<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_speech_dialogInitiator>
+											</Parallel>
 										</ForceLook>
-									</DistanceGate>
-								</While>
+									</ProcessMessage>
+								</RelationContext>
 							</Sequence>
 						</Child>
 						<OnSuccess>
@@ -3482,6 +3558,48 @@
 				</Behavior>
 			</Root>
 			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="interrupt_crimeRestart" is_function="0">
+		<Variables>
+			<Variable name="corpseData" type="crime:corpseData" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<Sequence>
+					<Expression expressions="$corpseData.state = $enum:corpseState.undiscovered &#10;$corpseData.resolved = false &#10;$corpseData.mateChecked = false" />
+					<AddLink From="$this.id" To="$this.id" Tag="&apos;switch_corpse&apos;" Data="$corpseData" LinkOpHandleMode="OverWrite" />
+				</Sequence>
+			</Behavior>
+		</Root>
+		<ForestContainer>
+			<Function_crime_addCorpseLink corpse="" corpseState="$enum:corpseState.undiscovered" mateReacting="false" overridePublicEnemyCheck="false" resolve="false" storeTime="false" nodeLabel="80615634" />
+		</ForestContainer>
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="corpseData" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</Expression>
+						<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</AddLink>
+					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest>
+				<Function_crime_addCorpseLink editorPosX="-20" editorPosY="440" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</Function_crime_addCorpseLink>
+			</Forest>
 			<Comments />
 		</EditorData>
 	</BehaviorTree>

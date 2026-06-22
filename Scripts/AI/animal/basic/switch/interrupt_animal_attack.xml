@@ -6,7 +6,7 @@
 			<Variable name="receivedAttackState" type="enum:crime_interruptAttackState" values="" isPersistent="0" form="single" />
 			<Variable name="stopAttacking" type="_bool" values="false" isPersistent="0" form="single" />
 			<Variable name="stopFight" type="stopFight" values="" isPersistent="0" form="single" />
-			<Variable name="wolfsTarget" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="target" type="_wuid" values="" isPersistent="0" form="single" />
 		</Variables>
 		<Parameters>
 			<Variable name="animalAttackData" type="switch:animal_interruptData:attack" values="" isPersistent="0" form="single" requirementType="In" />
@@ -61,9 +61,44 @@
 																			<MeleeGuardAutomationDecorator GuardMode="automate" active="true">
 																				<CombatFollowerDecorator ProbablisticDrivenSweetSpot="true" RPGSweetSpotArcDriver="true" active="true">
 																					<Sequence>
-																						<SuppressFailure>
-																							<CombatAction TargetNPC="$animalAttackData.target" RelationOverride="$animalAttackData.skirmishRelationOverride" />
-																						</SuppressFailure>
+																						<Parallel successMode="Any" failureMode="Any">
+																							<Loop count="-1">
+																								<Sequence>
+																									<SuppressFailure>
+																										<GetTarget ReferenceNPC="$this.id" TargetVarOut="$target" />
+																									</SuppressFailure>
+																									<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" />
+																								</Sequence>
+																							</Loop>
+																							<SuppressFailure>
+																								<CombatAction TargetNPC="$animalAttackData.target" RelationOverride="$animalAttackData.skirmishRelationOverride" />
+																							</SuppressFailure>
+																						</Parallel>
+																						<IfCondition failOnCondition="false" condition="$target == $__player">
+																							<IsUnconsciousCheck SoulWUID="$__player" FailSubtMissing="false" saveVersion="2">
+																								<Then canSkip="1">
+																									<EntityContextCheck context="crime_preventKillingUnconsciousHostilePlayer" target="$this.id" saveVersion="2">
+																										<Else canSkip="1">
+																											<Switch>
+																												<EntityContextCheck context="switch_isWildDog" target="" saveVersion="2">
+																													<Then canSkip="1">
+																														<GameOver Reason="DiedWhileUnconscious" />
+																													</Then>
+																												</EntityContextCheck>
+																												<EntityContextCheck context="switch_isWolf" target="" saveVersion="2">
+																													<Then canSkip="1">
+																														<GameOver Reason="DiedWhileUnconscious" />
+																													</Then>
+																												</EntityContextCheck>
+																												<DefaultBranch>
+																													<Success />
+																												</DefaultBranch>
+																											</Switch>
+																										</Else>
+																									</EntityContextCheck>
+																								</Then>
+																							</IsUnconsciousCheck>
+																						</IfCondition>
 																						<Expression expressions="$stopAttacking = true" />
 																					</Sequence>
 																				</CombatFollowerDecorator>
@@ -76,23 +111,13 @@
 														<Function_switch_animal_fleeDecision attackData="$animalAttackData" nodeLabel="88247919" />
 														<EntityContextCheck context="switch_isWolf" target="" saveVersion="2">
 															<Then canSkip="1">
-																<Parallel successMode="Any" failureMode="Any">
-																	<Loop count="-1">
-																		<Sequence>
-																			<SuppressFailure>
-																				<GetTarget ReferenceNPC="$this.id" TargetVarOut="$wolfsTarget" />
-																			</SuppressFailure>
-																			<Wait duration="&apos;2s&apos;" timeType="GameTime" doFail="false" variation="" />
-																		</Sequence>
-																	</Loop>
-																	<Loop count="-1">
-																		<IfGate atomic="false" condition="$wolfsTarget == $__player" RunLogic="KeepRunning">
-																			<GameContext context="combat_disablePlayerSurrenderDistanceCondition">
-																				<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
-																			</GameContext>
-																		</IfGate>
-																	</Loop>
-																</Parallel>
+																<Loop count="-1">
+																	<IfGate atomic="false" condition="$target == $__player" RunLogic="KeepRunning">
+																		<GameContext context="combat_disablePlayerSurrenderDistanceCondition">
+																			<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																		</GameContext>
+																	</IfGate>
+																</Loop>
 															</Then>
 															<Else canSkip="1">
 																<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
@@ -129,7 +154,7 @@
 				<Variable name="receivedAttackState" comment="" />
 				<Variable name="stopAttacking" comment="" />
 				<Variable name="stopFight" comment="" />
-				<Variable name="wolfsTarget" comment="" />
+				<Variable name="target" comment="" />
 				<Variable name="animalAttackData" comment="" />
 			</Variables>
 			<ForwardDeclarations />
@@ -230,12 +255,67 @@
 																						<OutputBreakpoints />
 																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																							<OutputBreakpoints />
-																							<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																								<OutputBreakpoints />
-																								<CombatAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																									<OutputBreakpoints />
-																								</CombatAction>
-																							</SuppressFailure>
+																									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<GetTarget hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</GetTarget>
+																										</SuppressFailure>
+																										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																										</Wait>
+																									</Sequence>
+																								</Loop>
+																								<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<CombatAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</CombatAction>
+																								</SuppressFailure>
+																							</Parallel>
+																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																									<OutputBreakpoints />
+																									<Then>
+																										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																											<OutputBreakpoints />
+																											<Else>
+																												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<OutputBreakpoints />
+																													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																														<OutputBreakpoints />
+																														<Then>
+																															<GameOver hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</GameOver>
+																														</Then>
+																													</EntityContextCheck>
+																													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																														<OutputBreakpoints />
+																														<Then>
+																															<GameOver hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<OutputBreakpoints />
+																															</GameOver>
+																														</Then>
+																													</EntityContextCheck>
+																													<DefaultBranch>
+																														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<OutputBreakpoints />
+																														</Success>
+																													</DefaultBranch>
+																												</Switch>
+																											</Else>
+																										</EntityContextCheck>
+																									</Then>
+																								</IsUnconsciousCheck>
+																							</IfCondition>
 																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																								<OutputBreakpoints />
 																							</Expression>
@@ -253,36 +333,18 @@
 															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																<OutputBreakpoints />
 																<Then>
-																	<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																		<OutputBreakpoints />
-																		<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																			<OutputBreakpoints />
-																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<GameContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																				<OutputBreakpoints />
-																				<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																					<OutputBreakpoints />
-																					<GetTarget hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																						<OutputBreakpoints />
-																					</GetTarget>
-																				</SuppressFailure>
 																				<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																					<OutputBreakpoints />
 																				</Wait>
-																			</Sequence>
-																		</Loop>
-																		<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																			<OutputBreakpoints />
-																			<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																				<OutputBreakpoints />
-																				<GameContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																					<OutputBreakpoints />
-																					<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																						<OutputBreakpoints />
-																					</Wait>
-																				</GameContext>
-																			</IfGate>
-																		</Loop>
-																	</Parallel>
+																			</GameContext>
+																		</IfGate>
+																	</Loop>
 																</Then>
 																<Else>
 																	<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">

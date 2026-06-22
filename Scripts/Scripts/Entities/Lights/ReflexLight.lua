@@ -63,7 +63,7 @@ ReflexLight =
 			vFadeDimensionsTop =0,
 			vFadeDimensionsBottom =0,
 			fFadeInRadius = 0.35,
-			fWallThickness = 0.2, --[0,5,0.1,"Set to positive value to enable thick wall shade model."]
+			fWallThickness = 0.2, --[0,15,0.1,"Set to positive value to enable thick wall shade model."]
 			fWindowMarginHorizontal = 0, --[0,5,0.1,"Sets how far from the window is the chamfered wall. To use this you must first set nonzero wall thickness."]
 			fWindowMarginVertical = 0, --[0,5,0.1,"Sets how far from the window is the chamfered wall. To use this you must first set nonzero wall thickness."]
 			fWallChamferHorizontal = 0, --[0,90,0.1,"Angle of the left-right wall chamfer."]
@@ -214,8 +214,12 @@ function ReflexLight:LoadLightToSlot( nSlot )
 	local Shape = props.Shape
 	local Shadows = props.Shadows
 
-	local diffuse_mul = Color.fDiffuseMultiplier
-	local specular_mul = Color.fSpecularMultiplier
+	-- KCD2-508361
+	local globalDiffuseMult = System.GetCVar("wh_e_ReflexLightDiffuseMultiplier")
+	local globalSpecMult = System.GetCVar("wh_e_ReflexLightSpecularMultiplier")
+
+	local diffuse_mul = Color.fDiffuseMultiplier * globalDiffuseMult
+	local specular_mul = Color.fSpecularMultiplier * globalSpecMult
 
 	local lt = self._LightTable
 

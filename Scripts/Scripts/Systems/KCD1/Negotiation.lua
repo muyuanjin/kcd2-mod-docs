@@ -233,6 +233,7 @@ function Negotiation:CalcReaction (proposedPlayerPrice)
 	-- In case the merchant's and player's proposed prices
 	-- are now within tolerance, accept the player's proposition.
 	local acceptableTolerance = self:CalcAcceptableTolerance()
+	TError(StrFormat('Silver tongue Debug min acceptable without perk: %f, min with perk: %f', (newMerchantPrice - acceptableTolerance*volume)*0.1, (newMerchantPrice - (acceptableTolerance+0.025)*volume)*0.1))
 	if (newMerchantPrice - proposedPlayerPrice) / volume <= acceptableTolerance then
 
 		return NegotiationReactionKind.Accept

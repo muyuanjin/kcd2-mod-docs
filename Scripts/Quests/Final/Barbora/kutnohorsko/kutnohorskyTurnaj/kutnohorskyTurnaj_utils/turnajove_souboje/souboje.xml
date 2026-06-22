@@ -213,9 +213,6 @@
 				<Port Name="cs_beforeplay" Direction="In" Type="trigger">
 					<DesignName StringName="souboje_cs_beforeplay_uqRr" Text="CS beforeplay" />
 				</Port>
-				<Port Name="hrac_daleko_pri_objecitvu" Direction="Out" Type="trigger">
-					<DesignName StringName="souboje_hrac_daleko_pri_o_Rtic" Text="hráč daleko při objecitvu počkej do konce" />
-				</Port>
 				<Port Name="vsechny_souboje_a_kole_probehly" Direction="Out" Type="bool">
 					<DesignName StringName="souboje_vsechny_souboje_a_vnvM" Text="všechny souboje a kole proběhly" />
 				</Port>
@@ -240,6 +237,9 @@
 				<Port Name="divaci_k_ohradce" Direction="In" Type="trigger">
 					<DesignName StringName="souboje_divaci_k_ohradce_PNBZ" Text="diváci k ohradce" />
 				</Port>
+				<Port Name="pujcena_vybava_obj_" Direction="Out" Type="trigger">
+					<DesignName StringName="souboje_pujcena_vybava_ob_sXdL" Text="Pujčena výbava obj " />
+				</Port>
 			</Ports>
 			<Definitions>
 				<Definition File="souboje/nastaveni_souboje.xml" />
@@ -251,6 +251,8 @@
 				<Definition File="souboje/kontrola_potreby_vybaveni_pro_discipliny.xml" />
 				<Definition File="souboje/prihlasene_discipliny.xml" />
 				<Definition File="souboje/guard_truhel.xml" />
+				<Definition File="souboje/safe_heal_before_fight.xml" />
+				<Definition File="souboje/skiptime_skip_souboju.xml" />
 			</Definitions>
 			<Nodes>
 				<DistanceTrigger Name="distancetrigger93" PositionY="-1830" PositionX="3310">
@@ -283,7 +285,6 @@
 						<Vertex>vertex335</Vertex>
 						<Vertex>vertex408</Vertex>
 					</Edge>
-					<Edge From="souboj.start_souboje" To="fightstart" />
 					<Edge From="souboj.diskvalifikace_b" To="diskvalifikaceb">
 						<Vertex>vertex183</Vertex>
 					</Edge>
@@ -302,14 +303,6 @@
 						<Vertex>MjnGJc9V</Vertex>
 						<Vertex>CnGJy4XJ</Vertex>
 					</Edge>
-					<Edge From="pockejdokonceobjective.hrac_daleko_pri_objecitvu" To="stop_fight_skip">
-						<Vertex>7o7Ixuyh</Vertex>
-						<Vertex>Irjxf3Qh</Vertex>
-						<Vertex>pnj3lKBV</Vertex>
-						<Vertex>NfzyYNA1</Vertex>
-						<Vertex>EfLgD6gb</Vertex>
-						<Vertex>lgercKVG</Vertex>
-					</Edge>
 					<Edge From="souboj.konec_kola" To="start_fightconfinguration_earlier" />
 					<Edge From="souboj.fight_oznamen" To="start_fightconfinguration_earlier" />
 					<Edge From="nekdo_si_vsiml_hracova_vetsiho_crimu" To="stop_fight_skip">
@@ -317,6 +310,13 @@
 						<Vertex>3IAooTSd</Vertex>
 						<Vertex>QLBvEbAc</Vertex>
 						<Vertex>rVGlnzqr</Vertex>
+					</Edge>
+					<Edge From="safe_heal_before_fight.done" To="fightstart">
+						<Vertex>IbzURapK</Vertex>
+						<Vertex>ozMJH9VH</Vertex>
+					</Edge>
+					<Edge From="skiptime_skip_souboju.skip_souboj" To="restart_fightprogress_">
+						<Vertex>D2Ibovsu</Vertex>
 					</Edge>
 				</fight>
 				<guard_truhel Name="guard_truhel" PositionY="-830" PositionX="550">
@@ -377,6 +377,14 @@
 						<Vertex>vertex108</Vertex>
 						<Vertex>vertex109</Vertex>
 					</Edge>
+					<Edge From="skiptime_skip_souboju.skip_souboj" To="Exec">
+						<Vertex>8IRk6kaG</Vertex>
+						<Vertex>vertex107</Vertex>
+						<Vertex>vertex409</Vertex>
+						<Vertex>5bQvm5Uv</Vertex>
+						<Vertex>vertex108</Vertex>
+						<Vertex>vertex109</Vertex>
+					</Edge>
 				</If>
 				<IfFunction Name="ifcompare91" PositionY="-530" PositionX="150" TypeT="KutnohorskyTurnaj_rounds" MethodName="Control::Compare" DeclaringType="Control">
 					<Constant Name="Op" Value="Equals" />
@@ -393,7 +401,7 @@
 						<Vertex>vertex369</Vertex>
 					</Edge>
 				</IfFunction>
-				<If Name="ifDiskvalifikaceB_objNone" PositionY="-220" PositionX="6700">
+				<If Name="ifDiskvalifikaceB_objNone" PositionY="-280" PositionX="6700">
 					<Edge From="souboj.diskvalifikace_b" To="Condition">
 						<Vertex>KPPJVgzR</Vertex>
 					</Edge>
@@ -405,6 +413,11 @@
 						<Vertex>vertex483</Vertex>
 						<Vertex>FmXG17R2</Vertex>
 					</Edge>
+					<Edge From="skiptime_skip_souboju.skip_souboj" To="Exec">
+						<Vertex>PL24CDYu</Vertex>
+						<Vertex>vertex483</Vertex>
+						<Vertex>FmXG17R2</Vertex>
+					</Edge>
 				</If>
 				<If Name="ifHracVSouboji" PositionY="-2500" PositionX="150">
 					<Edge From="mensi_crime_quest_fail" To="Exec" />
@@ -413,6 +426,15 @@
 						<Vertex>m1nDbFkP</Vertex>
 					</Edge>
 				</If>
+				<IfFunction Name="ifKategorieOznamenaAHracVsouboji" PositionY="-1130" PositionX="5890" MethodName="math::boolean::And" DeclaringType="math::boolean">
+					<Edge From="souboj.kategorie_oznamena" To="Exec" />
+					<Edge From="nastaveni_souboje.kategorie_zmena" To="A">
+						<Vertex>JaWNvRMz</Vertex>
+					</Edge>
+					<Edge From="nastaveni_souboje.hrac_v_souboji" To="B">
+						<Vertex>kG2y5R76</Vertex>
+					</Edge>
+				</IfFunction>
 				<If Name="ifPlayerReigstrovanStartForceD" PositionY="380" PositionX="3440">
 					<Edge From="zacatecni_cutscena_afterplay" To="Exec">
 						<Vertex>NrIgwYDr</Vertex>
@@ -423,7 +445,7 @@
 						<Vertex>99c4IFHV</Vertex>
 					</Edge>
 				</If>
-				<IfFunction Name="ifZacinaSoubojHracNeniVSouboji" PositionY="-320" PositionX="5920" MethodName="math::boolean::Not" DeclaringType="math::boolean">
+				<IfFunction Name="ifZacinaSoubojHracNeniVSouboji" PositionY="-460" PositionX="5900" MethodName="math::boolean::Not" DeclaringType="math::boolean">
 					<Edge From="souboj.start_souboje" To="Exec" />
 					<Edge From="nastaveni_souboje.hrac_v_souboji" To="Value">
 						<Vertex>kG2y5R76</Vertex>
@@ -500,11 +522,25 @@
 					<Edge From="naNecoRegistrovan.bool" To="hrac_je_na_neco_registrovan">
 						<Vertex>Mq5pDQVl</Vertex>
 					</Edge>
+					<Edge From="skiptime_skip_souboju.skip_souboj" To="start">
+						<Vertex>sLq4nyJ6</Vertex>
+						<Vertex>vertex113</Vertex>
+						<Vertex>vertex415</Vertex>
+						<Vertex>vertex115</Vertex>
+					</Edge>
 				</leceniobjective>
 				<Timer Name="meziSoubojiTimerVzdycky" PositionY="-2900" PositionX="330">
 					<Constant Name="Duration" Value="15s" />
 					<Constant Name="TimeType" Value="WorldTime" />
 					<Edge From="souboj.konec_celeho_souboje" To="SetRunning">
+						<Vertex>vertex113</Vertex>
+						<Vertex>vertex415</Vertex>
+						<Vertex>vertex115</Vertex>
+						<Vertex>eF6lgXoj</Vertex>
+						<Vertex>DaHApRqL</Vertex>
+					</Edge>
+					<Edge From="skiptime_skip_souboju.skip_souboj" To="SetRunning">
+						<Vertex>sLq4nyJ6</Vertex>
 						<Vertex>vertex113</Vertex>
 						<Vertex>vertex415</Vertex>
 						<Vertex>vertex115</Vertex>
@@ -568,10 +604,6 @@
 					<Edge From="ifBdiskvalifikace.True" To="diskvalifikace_b" />
 					<Edge From="ifAdiskvalifikace.False" To="fighter_b_vyhral" />
 					<Edge From="ifBdiskvalifikace.False" To="fighter_a_vyhral" />
-					<Edge From="pockejdokonceobjective.hrac_daleko_pri_objecitvu" To="finish_tournament">
-						<Vertex>dGUhBgng</Vertex>
-						<Vertex>2TL5uUjR</Vertex>
-					</Edge>
 					<Edge From="nekdo_si_vsiml_hracova_vetsiho_crimu" To="crime_konec_turnaje">
 						<Vertex>Y46jmsAS</Vertex>
 						<Vertex>u6dLVUBF</Vertex>
@@ -659,10 +691,6 @@
 					<Edge From="kontrola_potreby_vybaveni_pro_discipliny.hrac_muze_vratit_vybavu" To="hrac_muze_vratit_vybavu">
 						<Vertex>6a473ArN</Vertex>
 					</Edge>
-					<Edge From="uvadeni_souboju_a_fandeni.konec_turnaje_reditel_ohlasil" To="konec_turnaje_ohlasen">
-						<Vertex>u11WmE8q</Vertex>
-						<Vertex>7puD1ADn</Vertex>
-					</Edge>
 					<Edge From="nastaveni_souboje.hrac_vyhral_volnou_disciplinu" To="hrac_vyhral_zapasy">
 						<Vertex>lrEz153T</Vertex>
 					</Edge>
@@ -731,10 +759,6 @@
 					<Edge From="ifZacinaSoubojHracNeniVSouboji.True" To="zacina_souboj_bez_hrace">
 						<Vertex>bM03dY2X</Vertex>
 					</Edge>
-					<Edge From="pockejdokonceobjective.hrac_daleko_pri_objecitvu" To="hrac_daleko_pri_objecitvu">
-						<Vertex>m6Dfchqe</Vertex>
-						<Vertex>0IKVno1Q</Vertex>
-					</Edge>
 					<Edge From="nastaveni_souboje.vsechny_souboje_a_kole_probehly" To="vsechny_souboje_a_kole_probehly">
 						<Vertex>PDn0HLQa</Vertex>
 						<Vertex>XHjHtYd8</Vertex>
@@ -756,6 +780,27 @@
 					<Edge From="pockejdokonceobjective.obj_pockejnakonec_done" To="obj_vyckej_do_konce_turnaje_done">
 						<Vertex>nYFGVKsD</Vertex>
 						<Vertex>1uxEU2PB</Vertex>
+					</Edge>
+					<Edge From="ifKategorieOznamenaAHracVsouboji.True" To="reditel_jde_oznamit_hracuv_fight">
+						<Vertex>QopzWfSV</Vertex>
+					</Edge>
+					<Edge From="vybavaobjective.hrac_si_pujcil_vybavu" To="pujcena_vybava_obj_">
+						<Vertex>4o9nSUbe</Vertex>
+						<Vertex>Qw5lFEtN</Vertex>
+					</Edge>
+					<Edge From="skiptime_skip_souboju.skip_souboj" To="konci_souboj">
+						<Vertex>PL24CDYu</Vertex>
+						<Vertex>vertex483</Vertex>
+						<Vertex>FmXG17R2</Vertex>
+					</Edge>
+					<Edge From="skiptime_skip_souboju.skip_souboj" To="fight_po_vyhlaseni">
+						<Vertex>u5d8dP5N</Vertex>
+						<Vertex>vertex391</Vertex>
+						<Vertex>vertex392</Vertex>
+					</Edge>
+					<Edge From="triggersequence94.B" To="konec_turnaje_ohlasen">
+						<Vertex>u11WmE8q</Vertex>
+						<Vertex>7puD1ADn</Vertex>
 					</Edge>
 				</Output>
 				<pockejdokonceobjective Name="pockejdokonceobjective" PositionY="-340" PositionX="1180" RequiredForOutput="kutnohorsko">
@@ -812,6 +857,33 @@
 					</Edge>
 					<Edge From="souboj.fightresult_state" To="fight_result" />
 				</reditel_standing_point>
+				<safe_heal_before_fight Name="safe_heal_before_fight" PositionY="-170" PositionX="5850">
+					<Edge From="souboj.start_souboje" To="start" />
+					<Edge From="nastaveni_souboje.fighter_a" To="soul__fighter_a">
+						<Vertex>vertex185</Vertex>
+						<Vertex>vertex186</Vertex>
+						<Vertex>vertex318</Vertex>
+						<Vertex>vertex397</Vertex>
+					</Edge>
+					<Edge From="nastaveni_souboje.fighter_b" To="soul__fighter_b">
+						<Vertex>vertex187</Vertex>
+						<Vertex>vertex188</Vertex>
+						<Vertex>vertex319</Vertex>
+						<Vertex>vertex399</Vertex>
+					</Edge>
+				</safe_heal_before_fight>
+				<skiptime_skip_souboju Name="skiptime_skip_souboju" PositionY="-920" PositionX="4930">
+					<Edge From="nastaveni_souboje.start_souboje" To="start">
+						<Vertex>9bGmVM4j</Vertex>
+					</Edge>
+					<Edge From="uvadeni_souboju_a_fandeni.prvni_souboj_turnaje_muze_zacit" To="start" />
+					<Edge From="nastaveni_souboje.souboj" To="currentsouboj">
+						<Vertex>jTfkvl21</Vertex>
+					</Edge>
+					<Edge From="nastaveni_souboje.hrac_v_souboji" To="hrac_v_souboji">
+						<Vertex>vertex434</Vertex>
+					</Edge>
+				</skiptime_skip_souboju>
 				<souboj Name="souboj" PositionY="-630" PositionX="5000" Namespace="">
 					<Constant Name="dialog_alias__disciplina" Value="kutnohorskyTurnaj_reditelZahajeniDiscipliny2_1" />
 					<Constant Name="dialog_alias__oznameni_souboje" Value="kutnohorskyTurnaj_reditelVyvolavaNeboVyhlasuje2_1" />
@@ -866,7 +938,6 @@
 						<Vertex>vertex413</Vertex>
 						<Vertex>vertex414</Vertex>
 					</Edge>
-					<Edge From="uvadeni_souboju_a_fandeni.prvni_souboj_turnaje_muze_zacit" To="start" />
 					<Edge From="reditel_standing_point.standing_point" To="reditel_pri_souboji_tagpoint">
 						<Vertex>vertex437</Vertex>
 						<Vertex>vertex438</Vertex>
@@ -896,9 +967,6 @@
 						<Vertex>NknxX7tN</Vertex>
 						<Vertex>PV9X81zX</Vertex>
 					</Edge>
-					<Edge From="nastaveni_souboje.start_souboje" To="start">
-						<Vertex>9bGmVM4j</Vertex>
-					</Edge>
 					<Edge From="nekdo_si_vsiml_hracova_vetsiho_crimu" To="crime__quest_aborted">
 						<Vertex>hP3mrPIn</Vertex>
 						<Vertex>3IAooTSd</Vertex>
@@ -923,7 +991,24 @@
 						<Vertex>unLvzo5Q</Vertex>
 					</Edge>
 					<Edge From="uvadeni_souboju_a_fandeni.reditel_jde_vyhlasit_konec_turnaje" To="konec_turnaje" />
+					<Edge From="mensi_crime_quest_fail" To="crime_mensi__quest_jede_bez_hrace">
+						<Vertex>2nToHwrm</Vertex>
+						<Vertex>5CGfV45m</Vertex>
+					</Edge>
+					<Edge From="skiptime_skip_souboju.pokracovat" To="start" />
+					<Edge From="skiptime_skip_souboju.skip_souboj" To="fight__vyhrava_fighter_a">
+						<Vertex>8IRk6kaG</Vertex>
+						<Vertex>vertex107</Vertex>
+						<Vertex>vertex409</Vertex>
+					</Edge>
+					<Edge From="fight.boj_probiha" To="fight_probiha">
+						<Vertex>C2cPRXJj</Vertex>
+						<Vertex>07gbtgfa</Vertex>
+					</Edge>
 				</souboj>
+				<TriggerSequence Name="triggersequence94" PositionY="1110" PositionX="5020">
+					<Edge From="uvadeni_souboju_a_fandeni.konec_turnaje_reditel_ohlasil" To="Exec" />
+				</TriggerSequence>
 				<uvadeni_souboju_a_fandeni Name="uvadeni_souboju_a_fandeni" PositionY="-640" PositionX="4500" Namespace="">
 					<Asset Name="reditel_soul" Alias="reditel" />
 					<Asset Name="audio_spectators_point" Alias="tournamentAudioSpectators" />
@@ -1166,15 +1251,27 @@
 						<Vertex>g21n0xzE</Vertex>
 						<Vertex>GGktC2D8</Vertex>
 					</Edge>
-					<Edge From="pockejdokonceobjective.hrac_daleko_pri_objecitvu" To="konec_turnaje">
-						<Vertex>7o7Ixuyh</Vertex>
-						<Vertex>Irjxf3Qh</Vertex>
-						<Vertex>pnj3lKBV</Vertex>
-						<Vertex>NfzyYNA1</Vertex>
-					</Edge>
 					<Edge From="divaci_k_ohradce" To="divaci_u_ohradky">
 						<Vertex>5mltt56v</Vertex>
 						<Vertex>85mytwWf</Vertex>
+					</Edge>
+					<Edge From="skiptime_skip_souboju.skip_souboj" To="konec_souboje">
+						<Vertex>sLq4nyJ6</Vertex>
+						<Vertex>vertex113</Vertex>
+						<Vertex>vertex415</Vertex>
+						<Vertex>vertex115</Vertex>
+						<Vertex>51YHK6zL</Vertex>
+					</Edge>
+					<Edge From="skiptime_skip_souboju.skip_souboj" To="divaci_rozchod">
+						<Vertex>t8M7bYN5</Vertex>
+						<Vertex>vertex407</Vertex>
+						<Vertex>vertex255</Vertex>
+					</Edge>
+					<Edge From="skiptime_skip_souboju.skip_souboj" To="divaci__fight_stop">
+						<Vertex>8IRk6kaG</Vertex>
+						<Vertex>vertex107</Vertex>
+						<Vertex>vertex409</Vertex>
+						<Vertex>5bQvm5Uv</Vertex>
 					</Edge>
 				</uvadeni_souboju_a_fandeni>
 				<vybavaobjective Name="vybavaobjective" PositionY="-280" PositionX="3080" RequiredForOutput="kutnohorsko">
@@ -1236,6 +1333,10 @@
 					<Edge From="hrac_vraci_equip" To="none">
 						<Vertex>IVmbgCFN</Vertex>
 						<Vertex>HBCw5DkG</Vertex>
+					</Edge>
+					<Edge From="triggersequence94.A" To="none">
+						<Vertex>KqlCme8F</Vertex>
+						<Vertex>5LxogFtW</Vertex>
 					</Edge>
 				</vybavaobjective>
 				<vyhraobjective Name="vyhraobjective" PositionY="-530" PositionX="1950" RequiredForOutput="kutnohorsko">
@@ -1306,16 +1407,16 @@
 				</vyhraobjective>
 			</Nodes>
 			<EdgeVertices>
+				<EdgeVertex Name="07gbtgfa" PositionY="1054" PositionX="5048" />
 				<EdgeVertex Name="0EWzbJqT" PositionY="1429" PositionX="4718" />
-				<EdgeVertex Name="0IKVno1Q" PositionY="1606" PositionX="7357" />
 				<EdgeVertex Name="0NeU2ba5" PositionY="192" PositionX="140" />
 				<EdgeVertex Name="1gl4yvgb" PositionY="-740" PositionX="2690" />
 				<EdgeVertex Name="1HyYeFSK" PositionY="1073" PositionX="4753" />
 				<EdgeVertex Name="1uxEU2PB" PositionY="1629" PositionX="7474" />
 				<EdgeVertex Name="23xkjhM2" PositionY="-1273" PositionX="3771" />
 				<EdgeVertex Name="2DTbS8p6" PositionY="-2243" PositionX="86" />
+				<EdgeVertex Name="2nToHwrm" PositionY="1575" PositionX="100" />
 				<EdgeVertex Name="2TKo4KPy" PositionY="760" PositionX="7250" />
-				<EdgeVertex Name="2TL5uUjR" PositionY="-940" PositionX="810" />
 				<EdgeVertex Name="3gf2LDz4" PositionY="298" PositionX="1727" />
 				<EdgeVertex Name="3IAooTSd" PositionY="1165" PositionX="4118" />
 				<EdgeVertex Name="3k9wG08g" PositionY="-2903" PositionX="4008" />
@@ -1323,20 +1424,23 @@
 				<EdgeVertex Name="3vVt8U2u" PositionY="-660" PositionX="5550" />
 				<EdgeVertex Name="44lW2tCl" PositionY="230" PositionX="160" />
 				<EdgeVertex Name="4gtbvons" PositionY="134" PositionX="2755" />
+				<EdgeVertex Name="4o9nSUbe" PositionY="1514" PositionX="3413" />
 				<EdgeVertex Name="51YHK6zL" PositionY="745" PositionX="4217" />
 				<EdgeVertex Name="5bQvm5Uv" PositionY="690" PositionX="4442" />
 				<EdgeVertex Name="5C1Ld4bN" PositionY="900" PositionX="4330" />
+				<EdgeVertex Name="5CGfV45m" PositionY="1537" PositionX="4854" />
 				<EdgeVertex Name="5g1sj05M" PositionY="-2340" PositionX="6940" />
+				<EdgeVertex Name="5LxogFtW" PositionY="1530" PositionX="3090" />
 				<EdgeVertex Name="5mltt56v" PositionY="360" PositionX="240" />
 				<EdgeVertex Name="5Y84YFEB" PositionY="504" PositionX="4245" />
 				<EdgeVertex Name="6a473ArN" PositionY="-1920" PositionX="7410" />
 				<EdgeVertex Name="6caplL4P" PositionY="170" PositionX="130" />
 				<EdgeVertex Name="6EzlEYy5" PositionY="-650" PositionX="1130" />
 				<EdgeVertex Name="6uHIhISk" PositionY="754" PositionX="124" />
-				<EdgeVertex Name="7o7Ixuyh" PositionY="274" PositionX="1948" />
-				<EdgeVertex Name="7puD1ADn" PositionY="913" PositionX="7248" />
+				<EdgeVertex Name="7puD1ADn" PositionY="1010" PositionX="7320" />
 				<EdgeVertex Name="85mytwWf" PositionY="370" PositionX="4070" />
 				<EdgeVertex Name="8FTmPvdU" PositionY="-2868" PositionX="7451" />
+				<EdgeVertex Name="8IRk6kaG" PositionY="-925" PositionX="6160" />
 				<EdgeVertex Name="99c4IFHV" PositionY="510" PositionX="670" />
 				<EdgeVertex Name="9bGmVM4j" PositionY="-2960" PositionX="4420" />
 				<EdgeVertex Name="9N3emXaw" PositionY="1015" PositionX="5877" />
@@ -1351,17 +1455,17 @@
 				<EdgeVertex Name="bPH35NJf" PositionY="270" PositionX="110" />
 				<EdgeVertex Name="bt7U6HBX" PositionY="1134" PositionX="2095" />
 				<EdgeVertex Name="bW9Bhcsx" PositionY="-3540" PositionX="160" />
+				<EdgeVertex Name="C2cPRXJj" PositionY="1045" PositionX="6080" />
 				<EdgeVertex Name="cDxpN2rp" PositionY="250" PositionX="110" />
 				<EdgeVertex Name="cKTgLcEs" PositionY="432" PositionX="-3" />
 				<EdgeVertex Name="CnGJy4XJ" PositionY="1500" PositionX="5550" />
 				<EdgeVertex Name="CRApLsUC" PositionY="1120" PositionX="3403" />
+				<EdgeVertex Name="D2Ibovsu" PositionY="-969" PositionX="5658" />
 				<EdgeVertex Name="DaHApRqL" PositionY="-2785" PositionX="32" />
 				<EdgeVertex Name="DbYvpWmA" PositionY="963" PositionX="5427" />
-				<EdgeVertex Name="dGUhBgng" PositionY="-942" PositionX="1419" />
 				<EdgeVertex Name="DjDjFzzY" PositionY="100" PositionX="330" />
 				<EdgeVertex Name="DuTUqCuA" PositionY="450" PositionX="-20" />
 				<EdgeVertex Name="eF6lgXoj" PositionY="719" PositionX="55" />
-				<EdgeVertex Name="EfLgD6gb" PositionY="1510" PositionX="4480" />
 				<EdgeVertex Name="efz6CrWp" PositionY="563" PositionX="7266" />
 				<EdgeVertex Name="ELAJGLjR" PositionY="150" PositionX="130" />
 				<EdgeVertex Name="eT8XIbGf" PositionY="1538" PositionX="4908" />
@@ -1391,31 +1495,32 @@
 				<EdgeVertex Name="hqzNffoA" PositionY="504" PositionX="3697" />
 				<EdgeVertex Name="HtWJwe2I" PositionY="399" PositionX="1741" />
 				<EdgeVertex Name="hywRyKsS" PositionY="-890" PositionX="3850" />
+				<EdgeVertex Name="IbzURapK" PositionY="80" PositionX="6110" />
 				<EdgeVertex Name="ILFg9GBb" PositionY="337" PositionX="1726" />
 				<EdgeVertex Name="IoR3Mcfy" PositionY="930" PositionX="4530" />
-				<EdgeVertex Name="Irjxf3Qh" PositionY="280" PositionX="3408" />
 				<EdgeVertex Name="IVmbgCFN" PositionY="338" PositionX="262" />
 				<EdgeVertex Name="J8IcDxy4" PositionY="-1253" PositionX="4718" />
+				<EdgeVertex Name="JaWNvRMz" PositionY="-2819" PositionX="5471" />
 				<EdgeVertex Name="jeDvWcXL" PositionY="-820" PositionX="730" />
 				<EdgeVertex Name="jf3qgRyY" PositionY="310" PositionX="1710" />
 				<EdgeVertex Name="jFnS3JgC" PositionY="260" PositionX="1730" />
 				<EdgeVertex Name="JmwlBfWB" PositionY="-650" PositionX="4500" />
 				<EdgeVertex Name="jrUD8veD" PositionY="-843" PositionX="743" />
+				<EdgeVertex Name="jTfkvl21" PositionY="-2791" PositionX="4361" />
 				<EdgeVertex Name="K7I8QwDx" PositionY="1469" PositionX="4886" />
 				<EdgeVertex Name="KbfAbv7w" PositionY="1542" PositionX="7498" />
 				<EdgeVertex Name="kG2y5R76" PositionY="-3160" PositionX="5480" />
 				<EdgeVertex Name="KK9J85NV" PositionY="800" PositionX="4110" />
 				<EdgeVertex Name="Kmls0gn3" PositionY="152" PositionX="2747" />
-				<EdgeVertex Name="KPPJVgzR" PositionY="-124" PositionX="5860" />
+				<EdgeVertex Name="KPPJVgzR" PositionY="-160" PositionX="5840" />
+				<EdgeVertex Name="KqlCme8F" PositionY="1540" PositionX="5200" />
 				<EdgeVertex Name="KVcdjRV3" PositionY="-648" PositionX="7266" />
 				<EdgeVertex Name="L33e3W7K" PositionY="60" PositionX="2760" />
-				<EdgeVertex Name="lgercKVG" PositionY="1520" PositionX="5540" />
 				<EdgeVertex Name="LMaupg4f" PositionY="437" PositionX="3213" />
 				<EdgeVertex Name="lrEz153T" PositionY="-2680" PositionX="7420" />
 				<EdgeVertex Name="LsmLTpBS" PositionY="-605" PositionX="54" />
 				<EdgeVertex Name="lvpT7q9K" PositionY="290" PositionX="110" />
 				<EdgeVertex Name="m1nDbFkP" PositionY="-2262" PositionX="146" />
-				<EdgeVertex Name="m6Dfchqe" PositionY="1630" PositionX="2125" />
 				<EdgeVertex Name="maCvY9MB" PositionY="-2451" PositionX="4070" />
 				<EdgeVertex Name="MgcyQQlq" PositionY="1281" PositionX="4791" />
 				<EdgeVertex Name="Mh3Ysf9F" PositionY="-2261" PositionX="796" />
@@ -1430,7 +1535,6 @@
 				<EdgeVertex Name="N7LQ27dJ" PositionY="832" PositionX="3025" />
 				<EdgeVertex Name="nafvEE9E" PositionY="550" PositionX="2820" />
 				<EdgeVertex Name="NBc6v6sy" PositionY="-1760" PositionX="1440" />
-				<EdgeVertex Name="NfzyYNA1" PositionY="237" PositionX="4088" />
 				<EdgeVertex Name="nhx4GGcG" PositionY="86" PositionX="2759" />
 				<EdgeVertex Name="njSSGRwG" PositionY="1820" PositionX="1740" />
 				<EdgeVertex Name="NknxX7tN" PositionY="-1320" PositionX="1220" />
@@ -1441,6 +1545,7 @@
 				<EdgeVertex Name="o6l9Ct2N" PositionY="1141" PositionX="1176" />
 				<EdgeVertex Name="oCLmdtaf" PositionY="-2570" PositionX="7400" />
 				<EdgeVertex Name="oPmhlaLr" PositionY="98" PositionX="1169" />
+				<EdgeVertex Name="ozMJH9VH" PositionY="78" PositionX="5868" />
 				<EdgeVertex Name="P1kAbw5J" PositionY="-600" PositionX="2970" />
 				<EdgeVertex Name="P50jmoJj" PositionY="397" PositionX="227" />
 				<EdgeVertex Name="pbWgr0Fl" PositionY="-820" PositionX="80" />
@@ -1450,8 +1555,8 @@
 				<EdgeVertex Name="pebISKIX" PositionY="0" PositionX="420" />
 				<EdgeVertex Name="PGpuLBPd" PositionY="1295" PositionX="151" />
 				<EdgeVertex Name="PJlmuUbT" PositionY="-720" PositionX="7383" />
+				<EdgeVertex Name="PL24CDYu" PositionY="-900" PositionX="5650" />
 				<EdgeVertex Name="PMs1LeVq" PositionY="870" PositionX="90" />
-				<EdgeVertex Name="pnj3lKBV" PositionY="233" PositionX="3525" />
 				<EdgeVertex Name="PV9X81zX" PositionY="-1323" PositionX="4074" />
 				<EdgeVertex Name="q5EE0cHs" PositionY="1805" PositionX="7487" />
 				<EdgeVertex Name="Q9sn7CQk" PositionY="340" PositionX="3540" />
@@ -1459,8 +1564,10 @@
 				<EdgeVertex Name="QGnNqpmP" PositionY="660" PositionX="4340" />
 				<EdgeVertex Name="QLBvEbAc" PositionY="1158" PositionX="4890" />
 				<EdgeVertex Name="QoC0YQ8a" PositionY="210" PositionX="2000" />
+				<EdgeVertex Name="QopzWfSV" PositionY="-1050" PositionX="7210" />
 				<EdgeVertex Name="QSAKTJxx" PositionY="580" PositionX="3438" />
 				<EdgeVertex Name="QvEmSyM4" PositionY="1025" PositionX="4521" />
+				<EdgeVertex Name="Qw5lFEtN" PositionY="1484" PositionX="7413" />
 				<EdgeVertex Name="qXsI7mSp" PositionY="1780" PositionX="7490" />
 				<EdgeVertex Name="RAlm6CpT" PositionY="1009" PositionX="7284" />
 				<EdgeVertex Name="RcxDMy3f" PositionY="310" PositionX="2880" />
@@ -1471,18 +1578,21 @@
 				<EdgeVertex Name="S78sthn3" PositionY="284" PositionX="3547" />
 				<EdgeVertex Name="Sdx4qHC3" PositionY="-754" PositionX="1573" />
 				<EdgeVertex Name="sl7sb46H" PositionY="1507" PositionX="133" />
+				<EdgeVertex Name="sLq4nyJ6" PositionY="-870" PositionX="5660" />
 				<EdgeVertex Name="sQXjU7BJ" PositionY="-2237" PositionX="808" />
 				<EdgeVertex Name="srcHoDVE" PositionY="890" PositionX="5428" />
 				<EdgeVertex Name="sure1feD" PositionY="1240" PositionX="3160" />
 				<EdgeVertex Name="sVBurBEY" PositionY="709" PositionX="4442" />
 				<EdgeVertex Name="Sxq3XD3T" PositionY="200" PositionX="3660" />
+				<EdgeVertex Name="t8M7bYN5" PositionY="-937" PositionX="5652" />
 				<EdgeVertex Name="TCGJpoxM" PositionY="-3540" PositionX="520" />
 				<EdgeVertex Name="tFtA9dI4" PositionY="-1780" PositionX="3180" />
 				<EdgeVertex Name="TgH4Bluk" PositionY="-2130" PositionX="5550" />
 				<EdgeVertex Name="tj1BmPTI" PositionY="300" PositionX="830" />
 				<EdgeVertex Name="TnheMtHR" PositionY="170" PositionX="1890" />
 				<EdgeVertex Name="TTSWNlKJ" PositionY="230" PositionX="2760" />
-				<EdgeVertex Name="u11WmE8q" PositionY="950" PositionX="4910" />
+				<EdgeVertex Name="u11WmE8q" PositionY="1010" PositionX="5460" />
+				<EdgeVertex Name="u5d8dP5N" PositionY="-1000" PositionX="5642" />
 				<EdgeVertex Name="u6dLVUBF" PositionY="-3153" PositionX="423" />
 				<EdgeVertex Name="u6HvYUs3" PositionY="-20" PositionX="100" />
 				<EdgeVertex Name="UGbSchIn" PositionY="-270" PositionX="4270" />

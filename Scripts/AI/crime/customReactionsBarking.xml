@@ -4,6 +4,7 @@
 		<Variables>
 			<Variable name="attackKind" type="enum:crime_attackKind" values="" isPersistent="0" form="single" />
 			<Variable name="dialogContext" type="_float" values="" isPersistent="0" form="associative" />
+			<Variable name="hitReaction" type="hitReaction" values="" isPersistent="0" form="single" />
 			<Variable name="informationDiff" type="informationDiff" values="" isPersistent="0" form="single" />
 			<Variable name="metarole" type="_string" values="" isPersistent="0" form="single" />
 		</Variables>
@@ -12,52 +13,78 @@
 				<While doFail="false" propagateChildFail="false" condition="true">
 					<Sequence>
 						<ClearInbox inbox="&apos;informationDiff&apos;" type="" condition="" />
-						<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$informationDiff" senderInfo="" inbox="&apos;informationDiff&apos;" condition="" answerVar="">
-							<IfCondition failOnCondition="false" condition="$data:crime[$informationDiff.information.label].isCrime &amp; &#10;$informationDiff.status == &apos;Created&apos;">
-								<Sequence>
-									<Expression expressions="$metarole = &apos;HRAC_DELA_BORDEL_V_TRESPASSU&apos;" />
-									<Switch>
-										<IfCondition failOnCondition="false" condition="$informationDiff.information.label == &apos;pickpocket&apos;">
-											<Expression expressions="$metarole = &apos;OBET_PRISTIHLA_HRACE_(PICKPOCKET)&apos;" />
-										</IfCondition>
-										<IfCondition failOnCondition="false" condition="$data:crime[$informationDiff.information.label].isViolent">
-											<Sequence>
-												<LockDynamicInformationValues Information="$informationDiff.information">
-													<SuppressFailure>
-														<GetDynamicInformationValue Information="$informationDiff.information" Tag="&apos;kind&apos;" Out="$attackKind" />
-													</SuppressFailure>
-												</LockDynamicInformationValues>
-												<Switch>
-													<IfCondition failOnCondition="false" condition="informationDiff.information.label == &apos;assault&apos;">
-														<Function_crime_getHitMetaroleLabel attackKind="$attackKind" attacker="$__player" hitStrength="$enum:HitReactionStrength.Zero" isWitness="false" victim="$this.id" dialogContext="$dialogContext" metaroleLabel="$metarole" nodeLabel="83631782" />
-													</IfCondition>
-													<IfCondition failOnCondition="false" condition="informationDiff.information.label == &apos;aggression&apos;">
+						<ClearInbox inbox="&apos;hitReaction&apos;" type="" condition="" />
+						<Parallel successMode="Any" failureMode="Any">
+							<LoopUntil until="Success" attemptCount="0">
+								<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$informationDiff" senderInfo="" inbox="&apos;informationDiff&apos;" condition="" answerVar="">
+									<IfCondition failOnCondition="true" condition="$data:crime[$informationDiff.information.label].isCrime &amp; &#10;$informationDiff.status == &apos;Created&apos;">
+										<Sequence>
+											<Expression expressions="$metarole = &apos;HRAC_DELA_BORDEL_V_TRESPASSU&apos;" />
+											<Switch>
+												<IfCondition failOnCondition="false" condition="$informationDiff.information.label == &apos;pickpocket&apos;">
+													<Expression expressions="$metarole = &apos;OBET_PRISTIHLA_HRACE_(PICKPOCKET)&apos;" />
+												</IfCondition>
+												<IfCondition failOnCondition="false" condition="$data:crime[$informationDiff.information.label].isViolent">
+													<Sequence>
+														<LockDynamicInformationValues Information="$informationDiff.information">
+															<SuppressFailure>
+																<GetDynamicInformationValue Information="$informationDiff.information" Tag="&apos;kind&apos;" Out="$attackKind" />
+															</SuppressFailure>
+														</LockDynamicInformationValues>
 														<Switch>
-															<IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.unarmed">
-																<Expression expressions="$metarole = &apos;OBET_REAGUJE_NA_NEARMISS_(UNARMED)&apos;" />
+															<IfCondition failOnCondition="false" condition="informationDiff.information.label == &apos;assault&apos;">
+																<Function_crime_getHitMetaroleLabel attackKind="$attackKind" attacker="$__player" hitStrength="$enum:HitReactionStrength.Zero" isWitness="false" victim="$this.id" dialogContext="$dialogContext" metaroleLabel="$metarole" nodeLabel="83631782" />
 															</IfCondition>
-															<IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.armed">
-																<Expression expressions="$metarole = &apos;OBET_REAGUJE_NA_NEARMISS_(MELEE)&apos;" />
+															<IfCondition failOnCondition="false" condition="informationDiff.information.label == &apos;aggression&apos;">
+																<Switch>
+																	<IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.unarmed">
+																		<Expression expressions="$metarole = &apos;OBET_REAGUJE_NA_NEARMISS_(UNARMED)&apos;" />
+																	</IfCondition>
+																	<IfCondition failOnCondition="false" condition="$attackKind == $enum:crime_attackKind.armed">
+																		<Expression expressions="$metarole = &apos;OBET_REAGUJE_NA_NEARMISS_(MELEE)&apos;" />
+																	</IfCondition>
+																	<DefaultBranch>
+																		<Success />
+																	</DefaultBranch>
+																</Switch>
 															</IfCondition>
 															<DefaultBranch>
 																<Success />
 															</DefaultBranch>
 														</Switch>
+													</Sequence>
+												</IfCondition>
+												<DefaultBranch>
+													<Success />
+												</DefaultBranch>
+											</Switch>
+										</Sequence>
+									</IfCondition>
+								</ProcessMessage>
+							</LoopUntil>
+							<EntityContextCheck context="switch_disabledHitReaction" target="" saveVersion="2">
+								<Then canSkip="1">
+									<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+								</Then>
+								<Else canSkip="1">
+									<EntityContextCheck context="switch_disabledHitReactionFromPlayer" target="" saveVersion="2">
+										<Then canSkip="1">
+											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+										</Then>
+										<Else canSkip="1">
+											<LoopUntil until="Success" attemptCount="0">
+												<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$hitReaction" senderInfo="" inbox="&apos;hitReaction&apos;" condition="" answerVar="">
+													<IfCondition failOnCondition="true" condition="$hitReaction.hitType == $enum:HitReactionType.Decoy">
+														<Expression expressions="$metarole = &apos;PRATELSKE_NPC_DOSTALO_ZASAH_(KAMINEK)&apos;" />
 													</IfCondition>
-													<DefaultBranch>
-														<Success />
-													</DefaultBranch>
-												</Switch>
-											</Sequence>
-										</IfCondition>
-										<DefaultBranch>
-											<Success />
-										</DefaultBranch>
-									</Switch>
-									<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="$dialogContext" dramaticBark="true" lookAt="$__player" metarole="$metarole" priority="$enum:crime_barkPriority.important" nodeLabel="46453596" />
-								</Sequence>
-							</IfCondition>
-						</ProcessMessage>
+												</ProcessMessage>
+											</LoopUntil>
+										</Else>
+									</EntityContextCheck>
+								</Else>
+							</EntityContextCheck>
+						</Parallel>
+						<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="$dialogContext" dramaticBark="true" lookAt="$__player" metarole="$metarole" priority="$enum:crime_barkPriority.important" nodeLabel="46453596" />
 					</Sequence>
 				</While>
 			</Behavior>
@@ -67,6 +94,7 @@
 			<Variables>
 				<Variable name="attackKind" comment="" />
 				<Variable name="dialogContext" comment="" />
+				<Variable name="hitReaction" comment="" />
 				<Variable name="informationDiff" comment="" />
 				<Variable name="metarole" comment="" />
 			</Variables>
@@ -81,59 +109,73 @@
 							<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
 							</ClearInbox>
-							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<ClearInbox hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
-								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							</ClearInbox>
+							<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
 										<OutputBreakpoints />
-										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
-										</Expression>
-										<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
-											<OutputBreakpoints />
-											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 												<OutputBreakpoints />
 												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
 												</Expression>
-											</IfCondition>
-											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-												<OutputBreakpoints />
-												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
-													<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 														<OutputBreakpoints />
-														<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
 															<OutputBreakpoints />
-															<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																<OutputBreakpoints />
-															</GetDynamicInformationValue>
-														</SuppressFailure>
-													</LockDynamicInformationValues>
-													<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														</Expression>
+													</IfCondition>
+													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 														<OutputBreakpoints />
-														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 															<OutputBreakpoints />
-															<Function_crime_getHitMetaroleLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<LockDynamicInformationValues hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																<OutputBreakpoints />
-															</Function_crime_getHitMetaroleLabel>
-														</IfCondition>
-														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-															<OutputBreakpoints />
+																<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GetDynamicInformationValue hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetDynamicInformationValue>
+																</SuppressFailure>
+															</LockDynamicInformationValues>
 															<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																<OutputBreakpoints />
 																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																	<OutputBreakpoints />
-																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<Function_crime_getHitMetaroleLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																		<OutputBreakpoints />
-																	</Expression>
+																	</Function_crime_getHitMetaroleLabel>
 																</IfCondition>
 																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																	<OutputBreakpoints />
-																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																		<OutputBreakpoints />
-																	</Expression>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</IfCondition>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</IfCondition>
+																		<DefaultBranch>
+																			<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Success>
+																		</DefaultBranch>
+																	</Switch>
 																</IfCondition>
 																<DefaultBranch>
 																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -141,27 +183,54 @@
 																	</Success>
 																</DefaultBranch>
 															</Switch>
-														</IfCondition>
-														<DefaultBranch>
-															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																<OutputBreakpoints />
-															</Success>
-														</DefaultBranch>
-													</Switch>
-												</Sequence>
-											</IfCondition>
-											<DefaultBranch>
-												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
-													<OutputBreakpoints />
-												</Success>
-											</DefaultBranch>
-										</Switch>
-										<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														</Sequence>
+													</IfCondition>
+													<DefaultBranch>
+														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Success>
+													</DefaultBranch>
+												</Switch>
+											</Sequence>
+										</IfCondition>
+									</ProcessMessage>
+								</LoopUntil>
+								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
-										</Function_crime_crimeBark>
-									</Sequence>
-								</IfCondition>
-							</ProcessMessage>
+										</Wait>
+									</Then>
+									<Else>
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Wait>
+											</Then>
+											<Else>
+												<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</IfCondition>
+													</ProcessMessage>
+												</LoopUntil>
+											</Else>
+										</EntityContextCheck>
+									</Else>
+								</EntityContextCheck>
+							</Parallel>
+							<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Function_crime_crimeBark>
 						</Sequence>
 					</While>
 				</Behavior>

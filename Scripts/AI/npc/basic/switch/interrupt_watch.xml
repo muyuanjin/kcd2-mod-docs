@@ -18,6 +18,7 @@
 			<Variable name="endWatch" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="forceEnd" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="initialInterferenceSet" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="isIndifferent" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="isSitting" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="lookingAtTarget" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="metarole" type="_string" values="" isPersistent="0" form="single" />
@@ -33,15 +34,18 @@
 			<Variable name="skirmishParticipants" type="_wuid" values="" isPersistent="0" form="array" />
 			<Variable name="stimulus_hit" type="switch:stimulus:hit" values="" isPersistent="0" form="single" />
 			<Variable name="targetPosition" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="targetTarget" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="threat_shouldDrawWeapon" type="_bool" values="true" isPersistent="0" form="single" />
 			<Variable name="threat_waitActionFinished" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="useNonviolentAnims" type="_bool" values="true" isPersistent="0" form="single" />
+			<Variable name="useOverrideMetarole" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="useViolentAnims" type="_bool" values="true" isPersistent="0" form="single" />
 			<Variable name="useViolentAnimsForNonviolentChance" type="_float" values="0.2" isPersistent="0" form="single" />
 			<Variable name="watchBarkInProgress" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="watchedCombat" type="_bool" values="" isPersistent="1" form="single" />
 			<Variable name="watchingCombat" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="watchingCorpse" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="watchingIndifferentCombat" type="_bool" values="" isPersistent="0" form="single" />
 		</Variables>
 		<Parameters>
 			<Variable name="watchData" type="switch:interruptData:watch" values="" isPersistent="0" form="single" requirementType="In" />
@@ -96,7 +100,7 @@
 																				</IfElseCondition>
 																			</Loop>
 																			<While doFail="false" propagateChildFail="false" condition="true">
-																				<IfGate atomic="false" condition="$watchData.defenceMode |  &#10;$data:crime[$watchData.information.label].isCrime |  &#10;$watchingCombat | &#10;$watchData.stimulusKind == $enum:crime_stimulusKind.threat" RunLogic="Halt">
+																				<IfGate atomic="false" condition="$watchData.defenceMode |  &#10;$data:crime[$watchData.information.label].isCrime |  &#10;($watchingCombat &amp; (~$watchingIndifferentCombat | $playerInSkirmish)) | &#10;$watchData.stimulusKind == $enum:crime_stimulusKind.threat" RunLogic="Halt">
 																					<EntityContextPreset preset="crime_greyOutEAndDisableChat" target="$this.id">
 																						<EntityContextPresetElement contextPreset="crime_greyOutEAndDisableChat" enabled="true">
 																							<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
@@ -144,9 +148,7 @@
 																									</EntityContextCheck>
 																									<IfElseCondition failOnCondition="false" condition="$nextMostImportantInformation.label == &apos;&apos;" saveVersion="2">
 																										<Then canSkip="1">
-																											<Sequence>
-																												<ReinitVariable variable="$emitingInformation" />
-																											</Sequence>
+																											<ReinitVariable variable="$emitingInformation" />
 																										</Then>
 																										<Else canSkip="1">
 																											<Sequence>
@@ -220,7 +222,7 @@
 																							<Sequence>
 																								<IfCondition failOnCondition="false" condition="$watchData.information.label == &apos;murder&apos; | &#10;$watchData.information.label == &apos;murderByDog&apos; | &#10;$watchData.information.label == &apos;corpseViolation&apos; | &#10;$watchData.information.label == &apos;corpse&apos;">
 																									<Sequence>
-																										<Function_crime_addCorpseLink corpse="$watchData.information.perceivedWuid" corpseState="$enum:corpseState.discovered" mateReacting="false" resolve="false" storeTime="false" nodeLabel="67189616" />
+																										<Function_crime_addCorpseLink corpse="$watchData.information.perceivedWuid" corpseState="$enum:corpseState.discovered" mateReacting="false" overridePublicEnemyCheck="false" resolve="false" storeTime="false" nodeLabel="67189616" />
 																										<IfCondition failOnCondition="false" condition="$watchData.information.label == &apos;corpse&apos;">
 																											<Expression expressions="$watchingCorpse = true" />
 																										</IfCondition>
@@ -444,41 +446,59 @@
 																														</IfCondition>
 																														<IfCondition failOnCondition="false" condition="true">
 																															<EntityContext context="crime_disabledRecurrentPerceptionIgnore" target="">
-																																<Loop count="-1">
-																																	<Sequence>
-																																		<CancelPerceptionIgnore PerceptorObject="$this.id" PerceptibleObject="$watchData.target" WasIgnoredAtLeastFor="&apos;0s&apos;" />
-																																		<PerceptionSearch ComponentToBoost="$perceptionBoost" saveVersion="2">
-																																			<Search canSkip="1">
-																																				<While doFail="false" propagateChildFail="false" condition="true">
-																																					<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$perceptionInfo" senderInfo="" inbox="&apos;perceptionInfo_watch&apos;" condition="" answerVar="">
-																																						<CheckWuidValid wuid="$perceptionInfo.perceptible" FailSubtMissing="false" saveVersion="2">
-																																							<Then canSkip="1">
-																																								<IfElseCondition failOnCondition="false" condition="$perceptionInfo.threshold &gt; 0" saveVersion="2">
+																																<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+																																	<Child canSkip="1">
+																																		<Loop count="-1">
+																																			<Sequence>
+																																				<CancelPerceptionIgnore PerceptorObject="$this.id" PerceptibleObject="$watchData.target" WasIgnoredAtLeastFor="&apos;0s&apos;" />
+																																				<PerceptionSearch ComponentToBoost="$perceptionBoost" saveVersion="2">
+																																					<Search canSkip="1">
+																																						<While doFail="false" propagateChildFail="false" condition="true">
+																																							<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$perceptionInfo" senderInfo="" inbox="&apos;perceptionInfo_watch&apos;" condition="" answerVar="">
+																																								<CheckWuidValid wuid="$perceptionInfo.perceptible" FailSubtMissing="false" saveVersion="2">
 																																									<Then canSkip="1">
-																																										<IfElseCondition failOnCondition="false" condition="$perceptionInfo.perceptible ~= $watchData.target" saveVersion="2">
+																																										<IfElseCondition failOnCondition="false" condition="$perceptionInfo.threshold &gt; 0" saveVersion="2">
 																																											<Then canSkip="1">
-																																												<DismissSearchCandidate PerceptibleObject="$perceptionInfo.perceptible" />
+																																												<IfElseCondition failOnCondition="false" condition="$perceptionInfo.perceptible ~= $watchData.target" saveVersion="2">
+																																													<Then canSkip="1">
+																																														<DismissSearchCandidate PerceptibleObject="$perceptionInfo.perceptible" />
+																																													</Then>
+																																													<Else canSkip="1">
+																																														<Expression expressions="$lookingAtTarget = true" />
+																																													</Else>
+																																												</IfElseCondition>
 																																											</Then>
 																																											<Else canSkip="1">
-																																												<Expression expressions="$lookingAtTarget = true" />
+																																												<Expression expressions="$lookingAtTarget = false" />
 																																											</Else>
 																																										</IfElseCondition>
 																																									</Then>
-																																									<Else canSkip="1">
-																																										<Expression expressions="$lookingAtTarget = false" />
-																																									</Else>
-																																								</IfElseCondition>
-																																							</Then>
-																																						</CheckWuidValid>
-																																					</ProcessMessage>
-																																				</While>
-																																			</Search>
-																																			<NoCandidate canSkip="1">
-																																				<Success />
-																																			</NoCandidate>
-																																		</PerceptionSearch>
-																																	</Sequence>
-																																</Loop>
+																																								</CheckWuidValid>
+																																							</ProcessMessage>
+																																						</While>
+																																					</Search>
+																																					<NoCandidate canSkip="1">
+																																						<Success />
+																																					</NoCandidate>
+																																				</PerceptionSearch>
+																																			</Sequence>
+																																		</Loop>
+																																	</Child>
+																																	<OnFail canSkip="1">
+																																		<AtomicDecorator>
+																																			<Sequence>
+																																				<GetCurrentPerceptionFocus PerceptionNfo="$perceptionInfo" />
+																																				<IfCondition failOnCondition="false" condition="$perceptionInfo.perceptible ~= $__null">
+																																					<CheckWuidValid wuid="$perceptionInfo.perceptible" FailSubtMissing="false" saveVersion="2">
+																																						<Then canSkip="1">
+																																							<Function_crime_ignorePerceivedEntity disableIgnore="$const_false" perceivedEntity="$perceptionInfo.perceptible" nodeLabel="58362652" />
+																																						</Then>
+																																					</CheckWuidValid>
+																																				</IfCondition>
+																																			</Sequence>
+																																		</AtomicDecorator>
+																																	</OnFail>
+																																</FuseBox>
 																															</EntityContext>
 																														</IfCondition>
 																													</ContinuousSwitch>
@@ -486,7 +506,7 @@
 																														<IfGate atomic="false" condition="~$lookingAtTarget" RunLogic="Halt">
 																															<Sequence>
 																																<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" />
-																																<Function_crime_watch_checkSkirmishState watchTarget="$watchData.target" watchingCombat="$watchingCombat" playerInSkirmish="$playerInSkirmish" nodeLabel="52719519" />
+																																<Function_crime_watch_checkSkirmishState watchTarget="$watchData.target" watchingCombat="$watchingCombat" playerInSkirmish="$playerInSkirmish" skirmishIsIndifferent="$watchingIndifferentCombat" nodeLabel="52719519" />
 																																<IfElseCondition failOnCondition="false" condition="$watchingCombat" saveVersion="2">
 																																	<Then canSkip="1">
 																																		<IfCondition failOnCondition="false" condition="$playerInSkirmish">
@@ -507,7 +527,7 @@
 																														<EndWatch canSkip="1">
 																															<CallbackEventCatch_empty>
 																																<Sequence>
-																																	<Function_crime_watch_checkSkirmishState watchTarget="$watchData.target" watchingCombat="$watchingCombat" playerInSkirmish="$playerInSkirmish" nodeLabel="59283474" />
+																																	<Function_crime_watch_checkSkirmishState watchTarget="$watchData.target" watchingCombat="$watchingCombat" playerInSkirmish="$playerInSkirmish" skirmishIsIndifferent="$watchingIndifferentCombat" nodeLabel="59283474" />
 																																	<IfElseCondition failOnCondition="false" condition="$watchingCombat" saveVersion="2">
 																																		<Then canSkip="1">
 																																			<IfCondition failOnCondition="false" condition="$playerInSkirmish">
@@ -520,7 +540,7 @@
 																																					<InstantSemaphore SemaphoreCount="1" LockManagerType="Global" SemaphoreName="&apos;crime_global_watchBarks&apos;">
 																																						<HasSeenPlayer NPC="$this.id" FullyAwareOnly="true" saveVersion="2">
 																																							<Then canSkip="1">
-																																								<Function_crime_crimeBark animationApproach="$enum:animationApproach.tryDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_UKONCUJE_MINDPLAYER_HRAC_NEODESEL&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="45502042" />
+																																								<Function_crime_crimeSwitchBark animationApproach="$enum:animationApproach.tryDialogAnimations" canBarkFromSleep="false" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_UKONCUJE_MINDPLAYER_HRAC_NEODESEL&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="95742040" />
 																																							</Then>
 																																						</HasSeenPlayer>
 																																					</InstantSemaphore>
@@ -668,7 +688,7 @@
 																										<Sequence>
 																											<AtomicDecorator>
 																												<Sequence>
-																													<Function_crime_watch_checkSkirmishState watchTarget="$watchData.target" watchingCombat="$watchingCombat" playerInSkirmish="$playerInSkirmish" nodeLabel="36357043" />
+																													<Function_crime_watch_checkSkirmishState watchTarget="$watchData.target" watchingCombat="$watchingCombat" playerInSkirmish="$playerInSkirmish" skirmishIsIndifferent="$watchingIndifferentCombat" nodeLabel="36357043" />
 																													<IfCondition failOnCondition="false" condition="$watchingCombat &amp; $playerInSkirmish">
 																														<Expression expressions="$watchData.target = $__player" />
 																													</IfCondition>
@@ -745,7 +765,54 @@
 																																<Expression expressions="$metarole = &apos;NPC_SE_CITI_OHROZENE_ZBABELEC&apos;" />
 																															</IfCondition>
 																															<IfCondition failOnCondition="false" condition="$watchingCombat">
-																																<Expression expressions="$dialogContext[&apos;crime_watch_isViolent&apos;] = 1 &#10;$metarole = &apos;BARKOVANI_V_PRUBEHU_WATCHE&apos;" />
+																																<Sequence>
+																																	<ReinitVariable variable="$useOverrideMetarole" />
+																																	<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+																																		<Then canSkip="1">
+																																			<IfCondition failOnCondition="false" condition="$watchData.target ~= $__null">
+																																				<Sequence>
+																																					<ReinitVariable variable="$isIndifferent" />
+																																					<ReinitVariable variable="$targetTarget" />
+																																					<GetTarget ReferenceNPC="$watchData.target" TargetVarOut="$targetTarget" />
+																																					<IsIndifferent NPC="$watchData.target" saveVersion="2">
+																																						<Then canSkip="1">
+																																							<Expression expressions="$isIndifferent = true" />
+																																						</Then>
+																																						<Else canSkip="1">
+																																							<IfCondition failOnCondition="false" condition="$targetTarget ~= $__null">
+																																								<IsIndifferent NPC="$targetTarget" saveVersion="2">
+																																									<Then canSkip="1">
+																																										<Expression expressions="$isIndifferent = true" />
+																																									</Then>
+																																								</IsIndifferent>
+																																							</IfCondition>
+																																						</Else>
+																																					</IsIndifferent>
+																																					<IfCondition failOnCondition="false" condition="$isIndifferent">
+																																						<SuppressFailure>
+																																							<Sequence>
+																																								<Selector>
+																																									<GraphSearch Origin="$watchData.target" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																																										<LinkTagFilter tag="&apos;crime_guardBarkWhenSeeingAnIndifferentCombat&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$metarole" />
+																																									</GraphSearch>
+																																									<IfCondition failOnCondition="true" condition="$targetTarget ~= $__null">
+																																										<GraphSearch Origin="$targetTarget" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																																											<LinkTagFilter tag="&apos;crime_guardBarkWhenSeeingAnIndifferentCombat&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$metarole" />
+																																										</GraphSearch>
+																																									</IfCondition>
+																																								</Selector>
+																																								<Expression expressions="$useOverrideMetarole = true" />
+																																							</Sequence>
+																																						</SuppressFailure>
+																																					</IfCondition>
+																																				</Sequence>
+																																			</IfCondition>
+																																		</Then>
+																																	</EntityContextCheck>
+																																	<IfCondition failOnCondition="false" condition="~$useOverrideMetarole">
+																																		<Expression expressions="$dialogContext[&apos;crime_watch_isViolent&apos;] = 1 &#10;$metarole = &apos;BARKOVANI_V_PRUBEHU_WATCHE&apos;" />
+																																	</IfCondition>
+																																</Sequence>
 																															</IfCondition>
 																															<IfCondition failOnCondition="false" condition="$watchData.stimulusKind == $enum:crime_stimulusKind.corpse | &#10;$watchData.stimulusKind == $enum:crime_stimulusKind.murder">
 																																<Expression expressions="$dialogContext[&apos;crime_watch_corpse&apos;] = 1 &#10;$metarole = &apos;BARKOVANI_V_PRUBEHU_WATCHE&apos;" />
@@ -831,6 +898,7 @@
 				<Variable name="endWatch" comment="" />
 				<Variable name="forceEnd" comment="" />
 				<Variable name="initialInterferenceSet" comment="" />
+				<Variable name="isIndifferent" comment="" />
 				<Variable name="isSitting" comment="" />
 				<Variable name="lookingAtTarget" comment="" />
 				<Variable name="metarole" comment="" />
@@ -846,15 +914,18 @@
 				<Variable name="skirmishParticipants" comment="" />
 				<Variable name="stimulus_hit" comment="" />
 				<Variable name="targetPosition" comment="" />
+				<Variable name="targetTarget" comment="" />
 				<Variable name="threat_shouldDrawWeapon" comment="" />
 				<Variable name="threat_waitActionFinished" comment="" />
 				<Variable name="useNonviolentAnims" comment="" />
+				<Variable name="useOverrideMetarole" comment="" />
 				<Variable name="useViolentAnims" comment="" />
 				<Variable name="useViolentAnimsForNonviolentChance" comment="" />
 				<Variable name="watchBarkInProgress" comment="" />
 				<Variable name="watchedCombat" comment="" />
 				<Variable name="watchingCombat" comment="" />
 				<Variable name="watchingCorpse" comment="" />
+				<Variable name="watchingIndifferentCombat" comment="" />
 				<Variable name="watchData" comment="" />
 			</Variables>
 			<ForwardDeclarations />
@@ -1030,12 +1101,9 @@
 																										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																											<OutputBreakpoints />
 																											<Then>
-																												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																													<OutputBreakpoints />
-																													<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																														<OutputBreakpoints />
-																													</ReinitVariable>
-																												</Sequence>
+																												</ReinitVariable>
 																											</Then>
 																											<Else>
 																												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -1549,32 +1617,42 @@
 																																<OutputBreakpoints />
 																																<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																	<OutputBreakpoints />
-																																	<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																		<OutputBreakpoints />
-																																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																			<OutputBreakpoints />
-																																			<CancelPerceptionIgnore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<Child>
+																																			<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																				<OutputBreakpoints />
-																																			</CancelPerceptionIgnore>
-																																			<PerceptionSearch hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-																																				<OutputBreakpoints />
-																																				<Search>
-																																					<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																					<CancelPerceptionIgnore hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																						<OutputBreakpoints />
-																																						<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																							<OutputBreakpoints />
-																																							<CheckWuidValid hasInputBreakpoint="0" comment="NPC might read message AFTER the entity gets destroyed" breakpointFlags="0" saveVersion="2">
+																																					</CancelPerceptionIgnore>
+																																					<PerceptionSearch hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																						<OutputBreakpoints />
+																																						<Search>
+																																							<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																								<OutputBreakpoints />
-																																								<Then>
-																																									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																								<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<CheckWuidValid hasInputBreakpoint="0" comment="NPC might read message AFTER the entity gets destroyed" breakpointFlags="0" saveVersion="2">
 																																										<OutputBreakpoints />
 																																										<Then>
 																																											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																												<OutputBreakpoints />
 																																												<Then>
-																																													<DismissSearchCandidate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																														<OutputBreakpoints />
-																																													</DismissSearchCandidate>
+																																														<Then>
+																																															<DismissSearchCandidate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																<OutputBreakpoints />
+																																															</DismissSearchCandidate>
+																																														</Then>
+																																														<Else>
+																																															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																<OutputBreakpoints />
+																																															</Expression>
+																																														</Else>
+																																													</IfElseCondition>
 																																												</Then>
 																																												<Else>
 																																													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -1583,25 +1661,42 @@
 																																												</Else>
 																																											</IfElseCondition>
 																																										</Then>
-																																										<Else>
-																																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																												<OutputBreakpoints />
-																																											</Expression>
-																																										</Else>
-																																									</IfElseCondition>
-																																								</Then>
-																																							</CheckWuidValid>
-																																						</ProcessMessage>
-																																					</While>
-																																				</Search>
-																																				<NoCandidate>
-																																					<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									</CheckWuidValid>
+																																								</ProcessMessage>
+																																							</While>
+																																						</Search>
+																																						<NoCandidate>
+																																							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																							</Success>
+																																						</NoCandidate>
+																																					</PerceptionSearch>
+																																				</Sequence>
+																																			</Loop>
+																																		</Child>
+																																		<OnFail>
+																																			<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																					<GetCurrentPerceptionFocus hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																						<OutputBreakpoints />
-																																					</Success>
-																																				</NoCandidate>
-																																			</PerceptionSearch>
-																																		</Sequence>
-																																	</Loop>
+																																					</GetCurrentPerceptionFocus>
+																																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																						<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																							<OutputBreakpoints />
+																																							<Then>
+																																								<Function_crime_ignorePerceivedEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																								</Function_crime_ignorePerceivedEntity>
+																																							</Then>
+																																						</CheckWuidValid>
+																																					</IfCondition>
+																																				</Sequence>
+																																			</AtomicDecorator>
+																																		</OnFail>
+																																	</FuseBox>
 																																</EntityContext>
 																															</IfCondition>
 																														</ContinuousSwitch>
@@ -1671,9 +1766,9 @@
 																																							<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																								<OutputBreakpoints />
 																																								<Then>
-																																									<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<Function_crime_crimeSwitchBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																										<OutputBreakpoints />
-																																									</Function_crime_crimeBark>
+																																									</Function_crime_crimeSwitchBark>
 																																								</Then>
 																																							</HasSeenPlayer>
 																																						</InstantSemaphore>
@@ -2034,9 +2129,89 @@
 																																</IfCondition>
 																																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																	<OutputBreakpoints />
-																																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																		<OutputBreakpoints />
-																																	</Expression>
+																																		<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</ReinitVariable>
+																																		<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																			<OutputBreakpoints />
+																																			<Then>
+																																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																						<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</ReinitVariable>
+																																						<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</ReinitVariable>
+																																						<GetTarget hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</GetTarget>
+																																						<IsIndifferent hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																							<OutputBreakpoints />
+																																							<Then>
+																																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																								</Expression>
+																																							</Then>
+																																							<Else>
+																																								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<IsIndifferent hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																										<OutputBreakpoints />
+																																										<Then>
+																																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</Expression>
+																																										</Then>
+																																									</IsIndifferent>
+																																								</IfCondition>
+																																							</Else>
+																																						</IsIndifferent>
+																																						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																							<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																										<GraphSearch hasInputBreakpoint="0" comment="Quest override on KCD2-77317" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																											<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</LinkTagFilter>
+																																										</GraphSearch>
+																																										<IfCondition hasInputBreakpoint="0" comment="Quest override KCD2-77317" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<OutputBreakpoints />
+																																												</LinkTagFilter>
+																																											</GraphSearch>
+																																										</IfCondition>
+																																									</Selector>
+																																									<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</Expression>
+																																								</Sequence>
+																																							</SuppressFailure>
+																																						</IfCondition>
+																																					</Sequence>
+																																				</IfCondition>
+																																			</Then>
+																																		</EntityContextCheck>
+																																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																			</Expression>
+																																		</IfCondition>
+																																	</Sequence>
 																																</IfCondition>
 																																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																	<OutputBreakpoints />

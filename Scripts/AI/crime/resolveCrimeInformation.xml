@@ -3,6 +3,7 @@
 	<BehaviorTree name="crime_resolveCrimeInformation" is_function="1">
 		<Variables>
 			<Variable name="corpseMissingVolume" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="enoughDivisibleItemsLegalized" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="globalCooldowns" type="crime:globalCooldowns" values="" isPersistent="0" form="single" />
 			<Variable name="homeEscalationCounter" type="_int" values="1" isPersistent="0" form="single" />
 			<Variable name="isHomeEscalation" type="_bool" values="" isPersistent="0" form="single" />
@@ -11,8 +12,12 @@
 			<Variable name="owner" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="perceivedWuidType" type="_string" values="" isPersistent="0" form="single" />
 			<Variable name="preunconsciousLastHit" type="crime:preUnconsciousnessLastHit" values="" isPersistent="0" form="single" />
+			<Variable name="stolenDivisibleItem" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="stolenDivisibleItem_owner" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="stolenDivisibleItems" type="_wuid" values="" isPersistent="0" form="array" />
 			<Variable name="stolenItems" type="itemPrescriptor" values="" isPersistent="0" form="array" />
 			<Variable name="stolenItems_value" type="itemPrescriptor" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItems_value_count" type="_int" values="" isPersistent="0" form="single" />
 			<Variable name="theftMethod" type="enum:crime_theftMethod" values="" isPersistent="0" form="single" />
 			<Variable name="theftVolume" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="theftVolumes" type="_wuid" values="" isPersistent="0" form="array" />
@@ -52,7 +57,7 @@
 							<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
 								<Then canSkip="1">
 									<Sequence>
-										<Function_crime_addCorpseLink corpse="$information.perceivedWuid" corpseState="$enum:corpseState.watched" mateReacting="false" resolve="true" storeTime="false" nodeLabel="31317174" />
+										<Function_crime_addCorpseLink corpse="$information.perceivedWuid" corpseState="$enum:corpseState.watched" mateReacting="false" overridePublicEnemyCheck="false" resolve="true" storeTime="false" nodeLabel="31317174" />
 										<SuppressFailure>
 											<Sequence>
 												<GraphSearch Origin="$information.perceivedWuid" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
@@ -65,6 +70,7 @@
 												</CheckWuidValid>
 											</Sequence>
 										</SuppressFailure>
+										<RemoveLink From="$__player" To="$information.perceivedWuid" Tag="&apos;crime_lastHitByPlayer&apos;" LinkOpHandleMode="Success" />
 									</Sequence>
 								</Then>
 							</CheckWuidValid>
@@ -110,14 +116,19 @@
 										<ResolveStolenItems Items="$stolenItems" />
 										<IfCondition failOnCondition="false" condition="$resolutionKindIsSkillcheck">
 											<ForEach startIndex="0" step="1" array="$stolenItems" iterator="" value="$stolenItems_value" break="">
-												<CheckWuidValid wuid="$stolenItems_value.instance" FailSubtMissing="false" saveVersion="2">
-													<Then canSkip="1">
-														<LegalizeItem Item="$stolenItems_value.instance" />
-													</Then>
-													<Else canSkip="1">
+												<Switch>
+													<CheckWuidValid wuid="$stolenItems_value.instance" FailSubtMissing="false" saveVersion="2">
+														<Then canSkip="1">
+															<LegalizeItem Item="$stolenItems_value.instance" />
+														</Then>
+													</CheckWuidValid>
+													<IfCondition failOnCondition="false" condition="$stolenItems_value.class ~= &apos;&apos; &amp; &#10;$stolenItems_value.count &gt; 0">
+														<Function_crime_legalizeDivisibleItem itemClass="$stolenItems_value.class" itemCount="$stolenItems_value.count" itemOwner="$owner" nodeLabel="66938006" />
+													</IfCondition>
+													<DefaultBranch>
 														<Success />
-													</Else>
-												</CheckWuidValid>
+													</DefaultBranch>
+												</Switch>
 											</ForEach>
 										</IfCondition>
 										<Switch>
@@ -134,7 +145,7 @@
 														<Sequence>
 															<ResetNPCRobbedValue NPC="$information.perceivedWuid" />
 															<IfCondition failOnCondition="false" condition="$theftMethod == $enum:crime_theftMethod.lootCorpse">
-																<Function_crime_addCorpseLink corpse="$information.perceivedWuid" corpseState="$enum:corpseState.watched" mateReacting="false" resolve="true" storeTime="false" nodeLabel="47263886" />
+																<Function_crime_addCorpseLink corpse="$information.perceivedWuid" corpseState="$enum:corpseState.watched" mateReacting="false" overridePublicEnemyCheck="false" resolve="true" storeTime="false" nodeLabel="47263886" />
 															</IfCondition>
 														</Sequence>
 													</Then>
@@ -207,7 +218,7 @@
 						<IfCondition failOnCondition="false" condition="$information.label == &apos;murderAnimal&apos;">
 							<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
 								<Then canSkip="1">
-									<Function_crime_addCorpseLink corpse="$information.perceivedWuid" corpseState="$enum:corpseState.cleared" mateReacting="false" resolve="true" storeTime="false" nodeLabel="96271194" />
+									<Function_crime_addCorpseLink corpse="$information.perceivedWuid" corpseState="$enum:corpseState.cleared" mateReacting="false" overridePublicEnemyCheck="false" resolve="true" storeTime="false" nodeLabel="96271194" />
 								</Then>
 							</CheckWuidValid>
 						</IfCondition>
@@ -263,11 +274,11 @@
 					</Else>
 				</IsDeadCheck>
 			</IfCondition>
-			<AddLink From="$corpseMissingVolume" To="$this.id" Tag="&apos;crime_missingCorpse&apos;" Data="" LinkOpHandleMode="Error" />
 		</ForestContainer>
 		<EditorData EventSet="">
 			<Variables>
 				<Variable name="corpseMissingVolume" comment="" />
+				<Variable name="enoughDivisibleItemsLegalized" comment="" />
 				<Variable name="globalCooldowns" comment="" />
 				<Variable name="homeEscalationCounter" comment="" />
 				<Variable name="isHomeEscalation" comment="" />
@@ -276,8 +287,12 @@
 				<Variable name="owner" comment="" />
 				<Variable name="perceivedWuidType" comment="" />
 				<Variable name="preunconsciousLastHit" comment="" />
+				<Variable name="stolenDivisibleItem" comment="" />
+				<Variable name="stolenDivisibleItem_owner" comment="" />
+				<Variable name="stolenDivisibleItems" comment="" />
 				<Variable name="stolenItems" comment="" />
 				<Variable name="stolenItems_value" comment="" />
+				<Variable name="stolenItems_value_count" comment="" />
 				<Variable name="theftMethod" comment="" />
 				<Variable name="theftVolume" comment="" />
 				<Variable name="theftVolumes" comment="" />
@@ -370,6 +385,9 @@
 													</CheckWuidValid>
 												</Sequence>
 											</SuppressFailure>
+											<RemoveLink hasInputBreakpoint="0" comment="remove lastHit so that it can not be seen again on the body" breakpointFlags="0">
+												<OutputBreakpoints />
+											</RemoveLink>
 										</Sequence>
 									</Then>
 								</CheckWuidValid>
@@ -453,19 +471,28 @@
 												<OutputBreakpoints />
 												<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
-													<CheckWuidValid hasInputBreakpoint="0" comment="TODO: remove after KCD2-62302" breakpointFlags="0" saveVersion="2">
+													<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 														<OutputBreakpoints />
-														<Then>
-															<LegalizeItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<LegalizeItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</LegalizeItem>
+															</Then>
+														</CheckWuidValid>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Function_crime_legalizeDivisibleItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																<OutputBreakpoints />
-															</LegalizeItem>
-														</Then>
-														<Else>
+															</Function_crime_legalizeDivisibleItem>
+														</IfCondition>
+														<DefaultBranch>
 															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																<OutputBreakpoints />
 															</Success>
-														</Else>
-													</CheckWuidValid>
+														</DefaultBranch>
+													</Switch>
 												</ForEach>
 											</IfCondition>
 											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -705,9 +732,6 @@
 						</Else>
 					</IsDeadCheck>
 				</IfCondition>
-				<AddLink editorPosX="1433" editorPosY="-1313" hasInputBreakpoint="0" comment="" breakpointFlags="0">
-					<OutputBreakpoints />
-				</AddLink>
 			</Forest>
 			<Comments />
 		</EditorData>

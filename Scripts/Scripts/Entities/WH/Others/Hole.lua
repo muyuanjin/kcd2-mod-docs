@@ -24,7 +24,8 @@ Hole =
 		},
 
 		Script = {
-			bLegalToDig = false
+			bLegalToDig = false,
+			sUIHintOverride = "",
 		}
 	},
 
@@ -60,16 +61,14 @@ function Hole:OnSpawn()
 end
 
 -- =============================================================================
-function Hole:OnLoad(t)
+function Hole:OnLoad(t)			-- for backwards compatibility
 	self:Reset()
-	self.canBeUsed = t.canBeUsed
-	self.nDepth = t.nDepth
-end
-
--- =============================================================================
-function Hole:OnSave(t)
-	t.canBeUsed = self.canBeUsed
-	t.nDepth = self.nDepth
+	if (t.nDepth ~= nil) then
+		self.nDepth = t.nDepth
+	end
+	if (t.canBeUsed ~= nil) then
+		self.canBeUsed = t.canBeUsed
+	end
 end
 
 -- =============================================================================
@@ -117,6 +116,9 @@ function Hole:GetActions(user, firstFast)
 	local ui_hint = "@ui_hud_start_digging"
 	if self.Properties.Script.bLegalToDig == false then
 		ui_hint = "@ui_hud_start_digging_illegal"
+	end
+	if self.Properties.Script.sUIHintOverride ~= "" then
+		ui_hint = self.Properties.Script.sUIHintOverride
 	end
 	AddInteractorAction( output, firstFast, Action():hint( ui_hint ):action( "use" ):func( Hole.OnUsed ):interaction( inr_holeDigging ):enabled(canUseMinigame) )
 	return output

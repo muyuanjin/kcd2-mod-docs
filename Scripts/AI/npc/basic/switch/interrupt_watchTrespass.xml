@@ -137,6 +137,35 @@
 																				<Expression expressions="$wokeUpFromSleep = true" />
 																			</Then>
 																		</EntityContextCheck>
+																		<IsTimeSkipping saveVersion="2">
+																			<Then canSkip="1">
+																				<IsUnconsciousCheck SoulWUID="$__player" FailSubtMissing="false" saveVersion="2">
+																					<Else canSkip="1">
+																						<DistanceCondition Origin="$this.id" ReferencePt="$__player" Low="4.000000" High="4.000000" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+																							<Sequence>
+																								<InterruptSkipTime />
+																								<StanceCheck soul="$__player" stance="lying" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
+																									<Then canSkip="1">
+																										<ShowTutorial Name="crime_OwnedBed" />
+																									</Then>
+																									<Else canSkip="1">
+																										<Success />
+																									</Else>
+																								</StanceCheck>
+																								<Timeout duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="">
+																									<StanceBarrier soul="$__player" stance="lying" smartObject="" negate="true" failOnCondition="false" RunLogic="KeepRunning">
+																										<Success />
+																									</StanceBarrier>
+																								</Timeout>
+																							</Sequence>
+																						</DistanceCondition>
+																					</Else>
+																				</IsUnconsciousCheck>
+																			</Then>
+																			<Else canSkip="1">
+																				<Success />
+																			</Else>
+																		</IsTimeSkipping>
 																		<IfCondition failOnCondition="false" condition="~$reactionSuppressed">
 																			<IfGate atomic="false" condition="~$reactionSuppressed" RunLogic="Halt">
 																				<SubtreeDecorator saveVersion="2">
@@ -163,7 +192,10 @@
 																														<Expression expressions="$startBarkFinished = true" />
 																														<Loop count="-1">
 																															<IfGate atomic="false" condition="$canTalk &amp; ~$playerLeft" RunLogic="KeepRunning">
-																																<Function_speech_dialogInitiator alias="$overrideChatAlias" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="" preset="$enum:dialogPreset.chat" recipient="$__player" recipientMetaroles="" nodeLabel="12507268" />
+																																<Sequence>
+																																	<Function_speech_dialogInitiator alias="$overrideChatAlias" animationApproach="$enum:animationApproach.dontPlayDialogAnimations" context="" customParameters="" metarole="" preset="$enum:dialogPreset.chat" recipient="$__player" recipientMetaroles="" nodeLabel="12507268" />
+																																	<Wait duration="&apos;5s&apos;" timeType="GameTime" doFail="false" variation="" />
+																																</Sequence>
 																															</IfGate>
 																														</Loop>
 																													</Sequence>
@@ -211,7 +243,19 @@
 																															<StopMovement waitUntilStopped="false" />
 																															<IsUnconsciousCheck SoulWUID="$__player" FailSubtMissing="false" saveVersion="2">
 																																<Else canSkip="1">
-																																	<InterruptSkipTime />
+																																	<DistanceCondition Origin="$this.id" ReferencePt="$__player" Low="3.000000" High="3.000000" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+																																		<Sequence>
+																																			<InterruptSkipTime />
+																																			<StanceCheck soul="$__player" stance="lying" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
+																																				<Then canSkip="1">
+																																					<ShowTutorial Name="crime_OwnedBed" />
+																																				</Then>
+																																				<Else canSkip="1">
+																																					<Success />
+																																				</Else>
+																																			</StanceCheck>
+																																		</Sequence>
+																																	</DistanceCondition>
 																																</Else>
 																															</IsUnconsciousCheck>
 																														</Sequence>
@@ -350,7 +394,7 @@
 																																									<Expression expressions="$counter = $counter &lt; 1 ? 1 : $counter" />
 																																								</DefaultBranch>
 																																							</Switch>
-																																							<Expression expressions="$counter = $counter &gt;= $data:script_param[&apos;crime_trespassEscalationThreshold&apos;].value ? $data:script_param[&apos;crime_trespassEscalationThreshold&apos;].value - 1 : $counter" />
+																																							<Expression expressions="$counter = $counter &gt;= $data:script_param[&apos;crime_trespassEscalationThreshold&apos;].value ? $data:script_param[&apos;crime_trespassEscalationThreshold&apos;].value - 1 : $counter &#10;$firstEvaluation = false" />
 																																						</Sequence>
 																																					</Then>
 																																					<Else canSkip="1">
@@ -428,80 +472,89 @@
 																																		</AtomicDecorator>
 																																	</InstantExternalLock>
 																																</SuppressFailure>
-																																<IfElseCondition failOnCondition="false" condition="$firstEvaluation" saveVersion="2">
-																																	<Then canSkip="1">
-																																		<Expression expressions="$firstEvaluation = false" />
-																																	</Then>
-																																	<Else canSkip="1">
-																																		<IfCondition failOnCondition="false" condition="~$overrideBarksWithChat">
-																																			<Sequence>
-																																				<SuppressFailure>
-																																					<LoopUntil until="Success" attemptCount="3">
-																																						<HasSeenPlayer NPC="" FullyAwareOnly="false" saveVersion="2">
+																																<IfCondition failOnCondition="false" condition="~$firstEvaluation">
+																																	<IfCondition failOnCondition="false" condition="~$overrideBarksWithChat">
+																																		<LuaGate code="return player.human:IsInDialog()" saveVersion="2">
+																																			<Then canSkip="1">
+																																				<Success />
+																																			</Then>
+																																			<Else canSkip="1">
+																																				<Sequence>
+																																					<SuppressFailure>
+																																						<LoopUntil until="Success" attemptCount="3">
+																																							<HasSeenPlayer NPC="" FullyAwareOnly="false" saveVersion="2">
+																																								<Then canSkip="1">
+																																									<Success />
+																																								</Then>
+																																								<Else canSkip="1">
+																																									<Sequence>
+																																										<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+																																										<Fail />
+																																									</Sequence>
+																																								</Else>
+																																							</HasSeenPlayer>
+																																						</LoopUntil>
+																																					</SuppressFailure>
+																																					<Parallel successMode="All" failureMode="Any">
+																																						<StanceCheck soul="$__player" stance="lying" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
 																																							<Then canSkip="1">
 																																								<Success />
 																																							</Then>
 																																							<Else canSkip="1">
-																																								<Sequence>
-																																									<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
-																																									<Fail />
-																																								</Sequence>
-																																							</Else>
-																																						</HasSeenPlayer>
-																																					</LoopUntil>
-																																				</SuppressFailure>
-																																				<Parallel successMode="All" failureMode="Any">
-																																					<IfElseCondition failOnCondition="false" condition="~$watchTrespassData.onlyWaitingForDeparture" saveVersion="2">
-																																						<Then canSkip="1">
-																																							<IfCondition failOnCondition="false" condition="$counter &lt; $data:script_param[&apos;crime_trespassEscalationThreshold&apos;].value | ~$counterPaused">
-																																								<Function_crime_trespass_playerStayingBark counter="$counter" trespassSevereness="$trespassSevereness" nodeLabel="55338716" />
-																																							</IfCondition>
-																																						</Then>
-																																						<Else canSkip="1">
-																																							<Switch>
-																																								<EntityContextCheck context="crime_isCuman" target="" saveVersion="2">
+																																								<IfElseCondition failOnCondition="false" condition="~$watchTrespassData.onlyWaitingForDeparture" saveVersion="2">
 																																									<Then canSkip="1">
-																																										<Function_crime_trespass_playerStayingBark counter="0" trespassSevereness="$trespassSevereness" nodeLabel="42230448" />
-																																									</Then>
-																																								</EntityContextCheck>
-																																								<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
-																																									<Then canSkip="1">
-																																										<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;STRAZ_VYPROVAZI_HRACE_Z_TRESPASSU&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="86698539" />
-																																									</Then>
-																																								</EntityContextCheck>
-																																								<DefaultBranch>
-																																									<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_VYPROVAZI_HRACE_Z_TRESPASSU&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="17713833" />
-																																								</DefaultBranch>
-																																							</Switch>
-																																						</Else>
-																																					</IfElseCondition>
-																																					<IfCondition failOnCondition="false" condition="$playAnim">
-																																						<LuaGate code="return entity.soul:GetState(&apos;health&apos;) &gt; RPG.LowHealthThreshold" saveVersion="2">
-																																							<Then canSkip="1">
-																																								<Sequence>
-																																									<Expression expressions="$barkAnimFragment = &apos;CrimeGoAway&apos;" />
-																																									<Switch>
-																																										<IfCondition failOnCondition="false" condition="$trespassSevereness &gt;= $enum:trespassLevel.personal">
-																																											<Expression expressions="$barkAnimFragment += &apos;Hard&apos;" />
+																																										<IfCondition failOnCondition="false" condition="$counter &lt; $data:script_param[&apos;crime_trespassEscalationThreshold&apos;].value | ~$counterPaused">
+																																											<Function_crime_trespass_playerStayingBark counter="$counter" trespassSevereness="$trespassSevereness" nodeLabel="55338716" />
 																																										</IfCondition>
-																																										<DefaultBranch>
-																																											<Expression expressions="$barkAnimFragment += &apos;Easy&apos;" />
-																																										</DefaultBranch>
-																																									</Switch>
-																																									<PlayAdditiveAnimation Fragment="$barkAnimFragment" Tags="" />
-																																									<Expression expressions="$playAnim = false" />
-																																								</Sequence>
-																																							</Then>
-																																							<Else canSkip="1">
-																																								<Success />
+																																									</Then>
+																																									<Else canSkip="1">
+																																										<Switch>
+																																											<EntityContextCheck context="crime_isCuman" target="" saveVersion="2">
+																																												<Then canSkip="1">
+																																													<Function_crime_trespass_playerStayingBark counter="0" trespassSevereness="$trespassSevereness" nodeLabel="42230448" />
+																																												</Then>
+																																											</EntityContextCheck>
+																																											<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+																																												<Then canSkip="1">
+																																													<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;STRAZ_VYPROVAZI_HRACE_Z_TRESPASSU&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="86698539" />
+																																												</Then>
+																																											</EntityContextCheck>
+																																											<DefaultBranch>
+																																												<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;NPC_VYPROVAZI_HRACE_Z_TRESPASSU&apos;" priority="$enum:crime_barkPriority.important" nodeLabel="17713833" />
+																																											</DefaultBranch>
+																																										</Switch>
+																																									</Else>
+																																								</IfElseCondition>
 																																							</Else>
-																																						</LuaGate>
-																																					</IfCondition>
-																																				</Parallel>
-																																			</Sequence>
-																																		</IfCondition>
-																																	</Else>
-																																</IfElseCondition>
+																																						</StanceCheck>
+																																						<IfCondition failOnCondition="false" condition="$playAnim">
+																																							<LuaGate code="return entity.soul:GetState(&apos;health&apos;) &gt; RPG.LowHealthThreshold" saveVersion="2">
+																																								<Then canSkip="1">
+																																									<Sequence>
+																																										<Expression expressions="$barkAnimFragment = &apos;CrimeGoAway&apos;" />
+																																										<Switch>
+																																											<IfCondition failOnCondition="false" condition="$trespassSevereness &gt;= $enum:trespassLevel.personal">
+																																												<Expression expressions="$barkAnimFragment += &apos;Hard&apos;" />
+																																											</IfCondition>
+																																											<DefaultBranch>
+																																												<Expression expressions="$barkAnimFragment += &apos;Easy&apos;" />
+																																											</DefaultBranch>
+																																										</Switch>
+																																										<PlayAdditiveAnimation Fragment="$barkAnimFragment" Tags="" />
+																																										<Expression expressions="$playAnim = false" />
+																																									</Sequence>
+																																								</Then>
+																																								<Else canSkip="1">
+																																									<Success />
+																																								</Else>
+																																							</LuaGate>
+																																						</IfCondition>
+																																					</Parallel>
+																																				</Sequence>
+																																			</Else>
+																																		</LuaGate>
+																																	</IfCondition>
+																																</IfCondition>
 																																<Switch>
 																																	<IfCondition failOnCondition="false" condition="$counterPaused">
 																																		<LogToLabel Name="&apos;watchTrespassAdditionalLoop&apos;" Wuid="" Message="&apos;ExtraLoop_MovedToLessSevereTrespass&apos;">
@@ -527,29 +580,23 @@
 																										<Sequence>
 																											<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
 																											<DetermineTrespassReaction Observer="$this.id" Target="$__player" Position="" ForceSemipublicReaction="false" ShouldUseVec3Position="false" TrespassAreaSevereness="$trespassSevereness" TrespassArea="$trespassArea" Reaction="$reaction" ReactionSuppressed="$reactionSuppressed" />
-																											<StanceCheck soul="$__player" stance="lying" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
-																												<Then canSkip="1">
-																													<IfCondition failOnCondition="false" condition="$trespassSevereness &gt;= $enum:trespassLevel.personal">
-																														<Sequence>
-																															<IfCondition failOnCondition="false" condition="$home ~= $__null &amp; $canTalk">
-																																<AddHomeTrespassEscalation Home="$home" Counter="$counter" IsPaused="false" />
-																															</IfCondition>
-																															<Expression expressions="$stimulusEscalatedTrespass.stimulusKind = $watchTrespassData.stimulusKind &#10;$stimulusEscalatedTrespass.trespassArea = $trespassArea &#10;$stimulusEscalatedTrespass.wuidType = $enum:crime_trespassInformationWuid.homeArea &#10;$stimulusEscalatedTrespass.trespassingRepeatedly = $watchTrespassData.onlyWaitingForDeparture" />
-																															<EntityContext context="crime_stimulusInitiatedByScheduler" target="">
-																																<Function_switch_handleStimulusEscalatedTrespass stimulus="$stimulusEscalatedTrespass" nodeLabel="34956485" />
-																															</EntityContext>
-																														</Sequence>
-																													</IfCondition>
-																												</Then>
-																												<Else canSkip="1">
-																													<Success />
-																												</Else>
-																											</StanceCheck>
 																											<IsTimeSkipping saveVersion="2">
 																												<Then canSkip="1">
 																													<IsUnconsciousCheck SoulWUID="$__player" FailSubtMissing="false" saveVersion="2">
 																														<Else canSkip="1">
-																															<InterruptSkipTime />
+																															<DistanceCondition Origin="$this.id" ReferencePt="$__player" Low="4.000000" High="4.000000" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+																																<Sequence>
+																																	<InterruptSkipTime />
+																																	<StanceCheck soul="$__player" stance="lying" smartObject="" negate="false" failOnCondition="false" saveVersion="2">
+																																		<Then canSkip="1">
+																																			<ShowTutorial Name="crime_OwnedBed" />
+																																		</Then>
+																																		<Else canSkip="1">
+																																			<Success />
+																																		</Else>
+																																	</StanceCheck>
+																																</Sequence>
+																															</DistanceCondition>
 																														</Else>
 																													</IsUnconsciousCheck>
 																												</Then>
@@ -832,12 +879,29 @@
 						<Sequence>
 							<Function_crime_addLeavingInterruptCooldown nodeLabel="62766144" />
 							<Function_crime_limits_removeReactionLink information="$watchTrespassData.information" reactionKind="$enum:crime_reactionKind.watchTrespass" nodeLabel="98147911" />
+							<RemoveLink From="$__player" To="$this.id" Tag="&apos;crime_playerUrging&apos;" LinkOpHandleMode="Success" />
 						</Sequence>
 					</OnFail>
 				</FuseBox>
 			</Behavior>
 		</Root>
-		<ForestContainer />
+		<ForestContainer>
+			<StanceBarrier soul="$__player" stance="lying" smartObject="" negate="true" failOnCondition="false" RunLogic="KeepRunning">
+				<StanceBarrier soul="$__player" stance="lying" smartObject="" negate="false" failOnCondition="false" RunLogic="KeepRunning">
+					<IfCondition failOnCondition="false" condition="$trespassSevereness &gt;= $enum:trespassLevel.personal">
+						<Sequence>
+							<IfCondition failOnCondition="false" condition="$home ~= $__null &amp; $canTalk">
+								<AddHomeTrespassEscalation Home="$home" Counter="$counter" IsPaused="false" />
+							</IfCondition>
+							<Expression expressions="$stimulusEscalatedTrespass.stimulusKind = $watchTrespassData.stimulusKind &#10;$stimulusEscalatedTrespass.trespassArea = $trespassArea &#10;$stimulusEscalatedTrespass.wuidType = $enum:crime_trespassInformationWuid.homeArea &#10;$stimulusEscalatedTrespass.trespassingRepeatedly = $watchTrespassData.onlyWaitingForDeparture" />
+							<EntityContext context="crime_stimulusInitiatedByScheduler" target="">
+								<Function_switch_handleStimulusEscalatedTrespass stimulus="$stimulusEscalatedTrespass" nodeLabel="34956485" />
+							</EntityContext>
+						</Sequence>
+					</IfCondition>
+				</StanceBarrier>
+			</StanceBarrier>
+		</ForestContainer>
 		<EditorData EventSet="">
 			<Variables>
 				<Variable name="_dummyWuid" comment="" />
@@ -1044,6 +1108,52 @@
 																					</Expression>
 																				</Then>
 																			</EntityContextCheck>
+																			<IsTimeSkipping hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																						<OutputBreakpoints />
+																						<Else>
+																							<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<OutputBreakpoints />
+																									<InterruptSkipTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																									</InterruptSkipTime>
+																									<StanceCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																										<OutputBreakpoints />
+																										<Then>
+																											<ShowTutorial hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</ShowTutorial>
+																										</Then>
+																										<Else>
+																											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Success>
+																										</Else>
+																									</StanceCheck>
+																									<Timeout hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																										<OutputBreakpoints />
+																										<StanceBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																											<OutputBreakpoints />
+																											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																												<OutputBreakpoints />
+																											</Success>
+																										</StanceBarrier>
+																									</Timeout>
+																								</Sequence>
+																							</DistanceCondition>
+																						</Else>
+																					</IsUnconsciousCheck>
+																				</Then>
+																				<Else>
+																					<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Success>
+																				</Else>
+																			</IsTimeSkipping>
 																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																				<OutputBreakpoints />
 																				<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -1093,9 +1203,15 @@
 																																<OutputBreakpoints />
 																																<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																	<OutputBreakpoints />
-																																	<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																		<OutputBreakpoints />
-																																	</Function_speech_dialogInitiator>
+																																		<Function_speech_dialogInitiator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Function_speech_dialogInitiator>
+																																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</Wait>
+																																	</Sequence>
 																																</IfGate>
 																															</Loop>
 																														</Sequence>
@@ -1171,9 +1287,28 @@
 																																<IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																	<OutputBreakpoints />
 																																	<Else>
-																																		<InterruptSkipTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																			<OutputBreakpoints />
-																																		</InterruptSkipTime>
+																																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																				<InterruptSkipTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																				</InterruptSkipTime>
+																																				<StanceCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																					<OutputBreakpoints />
+																																					<Then>
+																																						<ShowTutorial hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</ShowTutorial>
+																																					</Then>
+																																					<Else>
+																																						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</Success>
+																																					</Else>
+																																				</StanceCheck>
+																																			</Sequence>
+																																		</DistanceCondition>
 																																	</Else>
 																																</IsUnconsciousCheck>
 																															</Sequence>
@@ -1545,23 +1680,48 @@
 																																			</AtomicDecorator>
 																																		</InstantExternalLock>
 																																	</SuppressFailure>
-																																	<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																		<OutputBreakpoints />
-																																		<Then>
-																																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																			<LuaGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																				<OutputBreakpoints />
-																																			</Expression>
-																																		</Then>
-																																		<Else>
-																																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																				<OutputBreakpoints />
-																																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																					<OutputBreakpoints />
-																																					<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<Then>
+																																					<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																						<OutputBreakpoints />
-																																						<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					</Success>
+																																				</Then>
+																																				<Else>
+																																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																							<OutputBreakpoints />
-																																							<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																							<LoopUntil hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<HasSeenPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																									<OutputBreakpoints />
+																																									<Then>
+																																										<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																										</Success>
+																																									</Then>
+																																									<Else>
+																																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																											<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</Wait>
+																																											<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</Fail>
+																																										</Sequence>
+																																									</Else>
+																																								</HasSeenPlayer>
+																																							</LoopUntil>
+																																						</SuppressFailure>
+																																						<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																							<StanceCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																								<OutputBreakpoints />
 																																								<Then>
 																																									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -1569,102 +1729,90 @@
 																																									</Success>
 																																								</Then>
 																																								<Else>
-																																									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																										<OutputBreakpoints />
-																																										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																											<OutputBreakpoints />
-																																										</Wait>
-																																										<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																											<OutputBreakpoints />
-																																										</Fail>
-																																									</Sequence>
-																																								</Else>
-																																							</HasSeenPlayer>
-																																						</LoopUntil>
-																																					</SuppressFailure>
-																																					<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																						<OutputBreakpoints />
-																																						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-																																							<OutputBreakpoints />
-																																							<Then>
-																																								<IfCondition hasInputBreakpoint="0" comment="KCD2-88727 - last warning would be said twice" breakpointFlags="0">
-																																									<OutputBreakpoints />
-																																									<Function_crime_trespass_playerStayingBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																										<OutputBreakpoints />
-																																									</Function_crime_trespass_playerStayingBark>
-																																								</IfCondition>
-																																							</Then>
-																																							<Else>
-																																								<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																									<OutputBreakpoints />
-																																									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																										<OutputBreakpoints />
 																																										<Then>
-																																											<Function_crime_trespass_playerStayingBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<IfCondition hasInputBreakpoint="0" comment="KCD2-88727 - last warning would be said twice" breakpointFlags="0">
 																																												<OutputBreakpoints />
-																																											</Function_crime_trespass_playerStayingBark>
-																																										</Then>
-																																									</EntityContextCheck>
-																																									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-																																										<OutputBreakpoints />
-																																										<Then>
-																																											<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																												<OutputBreakpoints />
-																																											</Function_crime_crimeBark>
-																																										</Then>
-																																									</EntityContextCheck>
-																																									<DefaultBranch>
-																																										<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																											<OutputBreakpoints />
-																																										</Function_crime_crimeBark>
-																																									</DefaultBranch>
-																																								</Switch>
-																																							</Else>
-																																						</IfElseCondition>
-																																						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																							<OutputBreakpoints />
-																																							<LuaGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-																																								<OutputBreakpoints />
-																																								<Then>
-																																									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																										<OutputBreakpoints />
-																																										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																											<OutputBreakpoints />
-																																										</Expression>
-																																										<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																											<OutputBreakpoints />
-																																											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																												<OutputBreakpoints />
-																																												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<Function_crime_trespass_playerStayingBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																													<OutputBreakpoints />
-																																												</Expression>
+																																												</Function_crime_trespass_playerStayingBark>
 																																											</IfCondition>
-																																											<DefaultBranch>
-																																												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										</Then>
+																																										<Else>
+																																											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																													<OutputBreakpoints />
-																																												</Expression>
-																																											</DefaultBranch>
-																																										</Switch>
-																																										<PlayAdditiveAnimation hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																											<OutputBreakpoints />
-																																										</PlayAdditiveAnimation>
-																																										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																											<OutputBreakpoints />
-																																										</Expression>
-																																									</Sequence>
-																																								</Then>
-																																								<Else>
-																																									<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																										<OutputBreakpoints />
-																																									</Success>
+																																													<Then>
+																																														<Function_crime_trespass_playerStayingBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																															<OutputBreakpoints />
+																																														</Function_crime_trespass_playerStayingBark>
+																																													</Then>
+																																												</EntityContextCheck>
+																																												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																													<OutputBreakpoints />
+																																													<Then>
+																																														<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																															<OutputBreakpoints />
+																																														</Function_crime_crimeBark>
+																																													</Then>
+																																												</EntityContextCheck>
+																																												<DefaultBranch>
+																																													<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																														<OutputBreakpoints />
+																																													</Function_crime_crimeBark>
+																																												</DefaultBranch>
+																																											</Switch>
+																																										</Else>
+																																									</IfElseCondition>
 																																								</Else>
-																																							</LuaGate>
-																																						</IfCondition>
-																																					</Parallel>
-																																				</Sequence>
-																																			</IfCondition>
-																																		</Else>
-																																	</IfElseCondition>
+																																							</StanceCheck>
+																																							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<LuaGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																									<OutputBreakpoints />
+																																									<Then>
+																																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</Expression>
+																																											<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<OutputBreakpoints />
+																																													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																														<OutputBreakpoints />
+																																													</Expression>
+																																												</IfCondition>
+																																												<DefaultBranch>
+																																													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																														<OutputBreakpoints />
+																																													</Expression>
+																																												</DefaultBranch>
+																																											</Switch>
+																																											<PlayAdditiveAnimation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</PlayAdditiveAnimation>
+																																											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</Expression>
+																																										</Sequence>
+																																									</Then>
+																																									<Else>
+																																										<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																										</Success>
+																																									</Else>
+																																								</LuaGate>
+																																							</IfCondition>
+																																						</Parallel>
+																																					</Sequence>
+																																				</Else>
+																																			</LuaGate>
+																																		</IfCondition>
+																																	</IfCondition>
 																																	<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																		<OutputBreakpoints />
 																																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -1708,46 +1856,34 @@
 																												<DetermineTrespassReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																													<OutputBreakpoints />
 																												</DetermineTrespassReaction>
-																												<StanceCheck hasInputBreakpoint="0" comment="escalate immediatly if player goes to sleep in personal+" breakpointFlags="0" saveVersion="2">
-																													<OutputBreakpoints />
-																													<Then>
-																														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																															<OutputBreakpoints />
-																															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																<OutputBreakpoints />
-																																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																	<OutputBreakpoints />
-																																	<AddHomeTrespassEscalation hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																		<OutputBreakpoints />
-																																	</AddHomeTrespassEscalation>
-																																</IfCondition>
-																																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																	<OutputBreakpoints />
-																																</Expression>
-																																<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																	<OutputBreakpoints />
-																																	<Function_switch_handleStimulusEscalatedTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																		<OutputBreakpoints />
-																																	</Function_switch_handleStimulusEscalatedTrespass>
-																																</EntityContext>
-																															</Sequence>
-																														</IfCondition>
-																													</Then>
-																													<Else>
-																														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																															<OutputBreakpoints />
-																														</Success>
-																													</Else>
-																												</StanceCheck>
 																												<IsTimeSkipping hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																													<OutputBreakpoints />
 																													<Then>
 																														<IsUnconsciousCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																															<OutputBreakpoints />
 																															<Else>
-																																<InterruptSkipTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																	<OutputBreakpoints />
-																																</InterruptSkipTime>
+																																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<InterruptSkipTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																		</InterruptSkipTime>
+																																		<StanceCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																			<OutputBreakpoints />
+																																			<Then>
+																																				<ShowTutorial hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																				</ShowTutorial>
+																																			</Then>
+																																			<Else>
+																																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																				</Success>
+																																			</Else>
+																																		</StanceCheck>
+																																	</Sequence>
+																																</DistanceCondition>
 																															</Else>
 																														</IsUnconsciousCheck>
 																													</Then>
@@ -2205,12 +2341,43 @@
 								<Function_crime_limits_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
 								</Function_crime_limits_removeReactionLink>
+								<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</RemoveLink>
 							</Sequence>
 						</OnFail>
 					</FuseBox>
 				</Behavior>
 			</Root>
-			<Forest />
+			<Forest>
+				<StanceBarrier editorPosX="3780" editorPosY="6800" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<StanceBarrier hasInputBreakpoint="0" comment="escalate immediatly if player goes to sleep in personal+" breakpointFlags="0">
+						<OutputBreakpoints />
+						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<AddHomeTrespassEscalation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</AddHomeTrespassEscalation>
+								</IfCondition>
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+								<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Function_switch_handleStimulusEscalatedTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</Function_switch_handleStimulusEscalatedTrespass>
+								</EntityContext>
+							</Sequence>
+						</IfCondition>
+					</StanceBarrier>
+				</StanceBarrier>
+			</Forest>
 			<Comments />
 		</EditorData>
 	</BehaviorTree>

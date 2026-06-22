@@ -2,7 +2,14 @@
 <BehaviorTrees>
 	<BehaviorTree name="switch_handleAwareness_pilloryBreak" is_function="1">
 		<Variables>
+			<Variable name="canBeAttributed" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="despawnVolume" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="despawnVolumeRequest" type="crime:despawnVolumeRequest" values="" isPersistent="0" form="single" />
+			<Variable name="mrkev" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="now" type="_int64" values="" isPersistent="0" form="single" />
+			<Variable name="pilloryBreakData" type="crime:pilloryBreakVolumeData" values="" isPersistent="0" form="single" />
 			<Variable name="stimulus" type="switch:stimulus:pilloryBreak" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus_missingNpc" type="switch:stimulus:missingNpc" values="" isPersistent="0" form="single" />
 		</Variables>
 		<Parameters>
 			<Variable name="reactionIntermediateData" type="switch:reactionIntermediateData" values="" isPersistent="0" form="single" requirementType="Reference" />
@@ -28,15 +35,111 @@
 					</IsPublicEnemy>
 					<EntityContextCheck context="crime_bff" target="" saveVersion="2">
 						<Then canSkip="1">
-							<Function_crime_addBffIntermediateBarkData corpse="" isCorpse="false" isViolent="false" reactionIntermediateData="$reactionIntermediateData" nodeLabel="26080209" />
+							<Switch>
+								<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+									<Then canSkip="1">
+										<Success />
+									</Then>
+								</EntityContextCheck>
+								<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+									<Then canSkip="1">
+										<Success />
+									</Then>
+								</EntityContextCheck>
+								<DefaultBranch>
+									<Function_crime_addBffIntermediateBarkData corpse="" isCorpse="false" isViolent="false" reactionIntermediateData="$reactionIntermediateData" nodeLabel="26080209" />
+								</DefaultBranch>
+							</Switch>
 						</Then>
 					</EntityContextCheck>
 					<DefaultBranch>
 						<Sequence>
-							<Expression expressions="$stimulus.volume = $volume" />
-							<EntityContext context="switch_doNotOpenRecognizingLock" target="">
-								<Function_switch_handleStimulusPilloryBreak stimulus="$stimulus" nodeLabel="77392350" />
-							</EntityContext>
+							<GraphSearch Origin="$volume" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+								<LinkTagFilter tag="&apos;crime_pilloryBreak&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="$pilloryBreakData" />
+							</GraphSearch>
+							<GetTime TimeType="GameTime" OutVar="$now" Delta="" />
+							<IfCondition failOnCondition="false" condition="$pilloryBreakData.timestamp + 30000 &gt; $now">
+								<DistanceCondition Origin="$volume" ReferencePt="$pilloryBreakData.prisoner" Low="6.000000" High="6.000000" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+									<DistanceCondition Origin="$volume" ReferencePt="$__player" Low="3.000000" High="3.000000" Negation="false" ValueOnMiddle="false" failOnCondition="false">
+										<Expression expressions="$canBeAttributed = true" />
+									</DistanceCondition>
+								</DistanceCondition>
+							</IfCondition>
+							<IfElseCondition failOnCondition="false" condition="$canBeAttributed" saveVersion="2">
+								<Then canSkip="1">
+									<Sequence>
+										<Expression expressions="$stimulus.volume = $volume &#10;$despawnVolume = true" />
+										<EntityContext context="switch_doNotOpenRecognizingLock" target="">
+											<Switch>
+												<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+													<Then canSkip="1">
+														<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+															<Then canSkip="1">
+																<EntityContextCheck context="crime_isGameKeeper" target="" saveVersion="2">
+																	<Else canSkip="1">
+																		<Function_stealth_recognitionState_I_reaction recognizingIconDisabled="true" target="$volume" nodeLabel="60864411" />
+																	</Else>
+																</EntityContextCheck>
+															</Then>
+														</EntityContextCheck>
+													</Then>
+												</EntityContextCheck>
+												<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
+													<Then canSkip="1">
+														<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+															<Then canSkip="1">
+																<EntityContextCheck context="crime_isGameKeeper" target="" saveVersion="2">
+																	<Else canSkip="1">
+																		<Function_stealth_recognitionState_II_reaction checkingIconDisabled="true" stimulusKind="$enum:crime_stimulusKind.lockpick" target="$volume" nodeLabel="78302505" />
+																	</Else>
+																</EntityContextCheck>
+															</Then>
+														</EntityContextCheck>
+													</Then>
+												</EntityContextCheck>
+												<DefaultBranch>
+													<Function_switch_handleStimulusPilloryBreak stimulus="$stimulus" nodeLabel="77392350" />
+												</DefaultBranch>
+											</Switch>
+										</EntityContext>
+									</Sequence>
+								</Then>
+								<Else canSkip="1">
+									<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+										<Then canSkip="1">
+											<EntityContextCheck context="crime_isGameKeeper" target="" saveVersion="2">
+												<Else canSkip="1">
+													<Switch>
+														<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
+															<Then canSkip="1">
+																<Success />
+															</Then>
+														</EntityContextCheck>
+														<EntityContextCheck context="crime_isGameKeeper" target="" saveVersion="2">
+															<Then canSkip="1">
+																<Function_stealth_recognitionState_II_reaction checkingIconDisabled="true" stimulusKind="$enum:crime_stimulusKind.lockpick" target="$volume" nodeLabel="87071930" />
+															</Then>
+														</EntityContextCheck>
+														<DefaultBranch>
+															<Sequence>
+																<Expression expressions="$stimulus_missingNpc.missingNpc = $pilloryBreakData.prisoner &#10;$stimulus_missingNpc.volume = $volume &#10;$stimulus_missingNpc.canBeFound = false &#10; &#10;$despawnVolume = true" />
+																<Function_switch_handleStimulusMissingNpc stimulus="$stimulus_missingNpc" nodeLabel="47289084" />
+															</Sequence>
+														</DefaultBranch>
+													</Switch>
+												</Else>
+											</EntityContextCheck>
+										</Then>
+									</EntityContextCheck>
+								</Else>
+							</IfElseCondition>
+							<IfCondition failOnCondition="false" condition="$despawnVolume">
+								<Sequence>
+									<Expression expressions="$despawnVolumeRequest.volume = $volume &#10;$despawnVolumeRequest.timestamp = $now" />
+									<Function_crime_getMrkev mrkev="$mrkev" nodeLabel="74848501" />
+									<InstantSendMessageToNPC target="$mrkev" variable="$despawnVolumeRequest" />
+								</Sequence>
+							</IfCondition>
 						</Sequence>
 					</DefaultBranch>
 				</Switch>
@@ -45,7 +148,14 @@
 		<ForestContainer />
 		<EditorData EventSet="">
 			<Variables>
+				<Variable name="canBeAttributed" comment="" />
+				<Variable name="despawnVolume" comment="" />
+				<Variable name="despawnVolumeRequest" comment="" />
+				<Variable name="mrkev" comment="" />
+				<Variable name="now" comment="" />
+				<Variable name="pilloryBreakData" comment="" />
 				<Variable name="stimulus" comment="" />
+				<Variable name="stimulus_missingNpc" comment="" />
 				<Variable name="reactionIntermediateData" comment="" />
 				<Variable name="volume" comment="" />
 			</Variables>
@@ -82,23 +192,171 @@
 						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 							<OutputBreakpoints />
 							<Then>
-								<Function_crime_addBffIntermediateBarkData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-								</Function_crime_addBffIntermediateBarkData>
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</Then>
+									</EntityContextCheck>
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Success>
+										</Then>
+									</EntityContextCheck>
+									<DefaultBranch>
+										<Function_crime_addBffIntermediateBarkData hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_addBffIntermediateBarkData>
+									</DefaultBranch>
+								</Switch>
 							</Then>
 						</EntityContextCheck>
 						<DefaultBranch>
 							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
-								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-								</Expression>
-								<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
-									<OutputBreakpoints />
-									<Function_switch_handleStimulusPilloryBreak hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
 										<OutputBreakpoints />
-									</Function_switch_handleStimulusPilloryBreak>
-								</EntityContext>
+									</LinkTagFilter>
+								</GraphSearch>
+								<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</GetTime>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+										</DistanceCondition>
+									</DistanceCondition>
+								</IfCondition>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Expression>
+											<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Else>
+																			<Function_stealth_recognitionState_I_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_stealth_recognitionState_I_reaction>
+																		</Else>
+																	</EntityContextCheck>
+																</Then>
+															</EntityContextCheck>
+														</Then>
+													</EntityContextCheck>
+													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Else>
+																			<Function_stealth_recognitionState_II_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Function_stealth_recognitionState_II_reaction>
+																		</Else>
+																	</EntityContextCheck>
+																</Then>
+															</EntityContextCheck>
+														</Then>
+													</EntityContextCheck>
+													<DefaultBranch>
+														<Function_switch_handleStimulusPilloryBreak hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Function_switch_handleStimulusPilloryBreak>
+													</DefaultBranch>
+												</Switch>
+											</EntityContext>
+										</Sequence>
+									</Then>
+									<Else>
+										<EntityContextCheck hasInputBreakpoint="0" comment="only authorities react to missing prisoner" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Else>
+														<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Success>
+																</Then>
+															</EntityContextCheck>
+															<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<Function_stealth_recognitionState_II_reaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_stealth_recognitionState_II_reaction>
+																</Then>
+															</EntityContextCheck>
+															<DefaultBranch>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																	<Function_switch_handleStimulusMissingNpc hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Function_switch_handleStimulusMissingNpc>
+																</Sequence>
+															</DefaultBranch>
+														</Switch>
+													</Else>
+												</EntityContextCheck>
+											</Then>
+										</EntityContextCheck>
+									</Else>
+								</IfElseCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+										<Function_crime_getMrkev hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Function_crime_getMrkev>
+										<InstantSendMessageToNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</InstantSendMessageToNPC>
+									</Sequence>
+								</IfCondition>
 							</Sequence>
 						</DefaultBranch>
 					</Switch>

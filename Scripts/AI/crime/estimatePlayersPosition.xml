@@ -12,24 +12,26 @@
 			<Variable name="state" type="enum:crime_chaseState" values="" isPersistent="0" form="single" />
 		</Variables>
 		<Parameters>
-			<Variable name="estimatePlayersPosition" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
+			<Variable name="estimateActive" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" optional="1" />
+			<Variable name="estimateEnabled" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
 			<Variable name="estimationStartPos" type="vec3" values="" isPersistent="0" form="single" requirementType="Reference" />
 			<Variable name="positionShared" type="_bool" values="" isPersistent="0" form="single" requirementType="Reference" />
 		</Parameters>
 		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
 			<Behavior canSkip="1">
 				<ContinuousSwitch>
-					<IfCondition failOnCondition="false" condition="$estimatePlayersPosition">
+					<IfCondition failOnCondition="false" condition="$estimateEnabled">
 						<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
 							<Child canSkip="1">
 								<HasPerceptionEnabled WUID="$this.id" Type="Perceptor" FailSubtMissing="false" saveVersion="2">
 									<Then canSkip="1">
 										<Parallel successMode="Any" failureMode="Any">
 											<ContinuousSwitch>
-												<IfCondition failOnCondition="false" condition="$state == $enum:crime_chaseState.lockedOn">
+												<IfCondition failOnCondition="false" condition="$state == $enum:crime_chaseState.lockedOn | &#10;$state == $enum:crime_chaseState.none">
 													<LogToLabel Name="&apos;pursue_state&apos;" Wuid="$this.id" Message="&apos;chase: locked-on&apos;">
 														<Sequence>
 															<SetEstimatedFollow EstimateTargetPosition="false" />
+															<Expression expressions="$estimateActive = false" />
 															<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
 														</Sequence>
 													</LogToLabel>
@@ -37,6 +39,7 @@
 												<IfCondition failOnCondition="false" condition="$state == $enum:crime_chaseState.lockingOut">
 													<LogToLabel Name="&apos;pursue_state&apos;" Wuid="$this.id" Message="&apos;chase: locking out&apos;">
 														<Sequence>
+															<GetSpatialInfo In="$this.id" Out="$estimationStartPos" What="Position" />
 															<NumericalOperation In1VariableName="this.id" In2VariableName="__player" In3VariableName="" OutVariableName="$distanceSq" Operation="distance2dSq_wuid" />
 															<Expression expressions="$lockingOutTimeoutFloat = $maxLockingOutTimeout *  &#10;($distanceSq / $distanceSqForMaxLockingOutTImeout &lt; 1  &#10; ? $distanceSq / $distanceSqForMaxLockingOutTImeout  &#10; : 1 &#10;)" />
 															<NumericalOperation In1VariableName="lockingOutTimeoutFloat" In2VariableName="" In3VariableName="" OutVariableName="$lockingOutTimeoutFloat" Operation="round" />
@@ -46,11 +49,11 @@
 														</Sequence>
 													</LogToLabel>
 												</IfCondition>
-												<IfCondition failOnCondition="false" condition="$state == $enum:crime_chaseState.lockedOut |  &#10;$state == $enum:crime_chaseState.none">
+												<IfCondition failOnCondition="false" condition="$state == $enum:crime_chaseState.lockedOut">
 													<LogToLabel Name="&apos;pursue_state&apos;" Wuid="$this.id" Message="&apos;chase: locked out&apos;">
 														<Sequence>
-															<GetSpatialInfo In="$this.id" Out="$estimationStartPos" What="Position" />
 															<SetEstimatedFollow EstimateTargetPosition="true" />
+															<Expression expressions="$estimateActive = true" />
 															<EntityContext context="combat_disableOffenseAutomation" target="$this.id">
 																<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
 															</EntityContext>
@@ -112,17 +115,21 @@
 									<Else canSkip="1">
 										<Sequence>
 											<SetEstimatedFollow EstimateTargetPosition="false" />
+											<Expression expressions="$estimateActive = false" />
 											<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
 										</Sequence>
 									</Else>
 								</HasPerceptionEnabled>
 							</Child>
 							<OnSuccess canSkip="1">
-								<SetEstimatedFollow EstimateTargetPosition="false" />
+								<Sequence>
+									<SetEstimatedFollow EstimateTargetPosition="false" />
+									<Expression expressions="$estimateActive = false" />
+								</Sequence>
 							</OnSuccess>
 						</FuseBox>
 					</IfCondition>
-					<IfCondition failOnCondition="false" condition="~$estimatePlayersPosition">
+					<IfCondition failOnCondition="false" condition="~$estimateEnabled">
 						<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
 					</IfCondition>
 				</ContinuousSwitch>
@@ -139,7 +146,8 @@
 				<Variable name="maxLockingOutTimeout" comment="" />
 				<Variable name="perceptionFocus" comment="" />
 				<Variable name="state" comment="" />
-				<Variable name="estimatePlayersPosition" comment="" />
+				<Variable name="estimateActive" comment="" />
+				<Variable name="estimateEnabled" comment="" />
 				<Variable name="estimationStartPos" comment="" />
 				<Variable name="positionShared" comment="" />
 			</Variables>
@@ -170,6 +178,9 @@
 																<SetEstimatedFollow hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																	<OutputBreakpoints />
 																</SetEstimatedFollow>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
 																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																	<OutputBreakpoints />
 																</Wait>
@@ -182,6 +193,9 @@
 															<OutputBreakpoints />
 															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																<OutputBreakpoints />
+																<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</GetSpatialInfo>
 																<NumericalOperation hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																	<OutputBreakpoints />
 																</NumericalOperation>
@@ -209,12 +223,12 @@
 															<OutputBreakpoints />
 															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																<OutputBreakpoints />
-																<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																	<OutputBreakpoints />
-																</GetSpatialInfo>
 																<SetEstimatedFollow hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																	<OutputBreakpoints />
 																</SetEstimatedFollow>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
 																<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																	<OutputBreakpoints />
 																	<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -315,6 +329,9 @@
 												<SetEstimatedFollow hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
 												</SetEstimatedFollow>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
 												<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
 												</Wait>
@@ -323,9 +340,15 @@
 									</HasPerceptionEnabled>
 								</Child>
 								<OnSuccess>
-									<SetEstimatedFollow hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 										<OutputBreakpoints />
-									</SetEstimatedFollow>
+										<SetEstimatedFollow hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</SetEstimatedFollow>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Sequence>
 								</OnSuccess>
 							</FuseBox>
 						</IfCondition>

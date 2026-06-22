@@ -9,7 +9,8 @@ Stash =
 		soclass_SmartObjectHelpers = "",
 		sWH_AI_EntityCategory = "",
 		sOpenMessage = "@ui_open_stash",
-
+		sUiHeaderName = "",
+		sFilterStoring = "", -- optional filter for limiting what categories of items can player store inside - category in x.y.z format, can have multiple delimited with | char (works in OR mode)
 
 		object_Model = "objects/characters/assets/chest/chest_fancy_b.cdf", 	-- use only .cga models!!!! (.cgf does not contain slot for lockpicking)
 
@@ -62,7 +63,8 @@ Stash =
 			iMinimalShopItemPrice	= 0, -- from this price we put items to stash in shop
 			sInventoryPreset 		= "",
 			sGeneratedInventory		= "", -- JFilek inventory assigned by search over AI links
-			nRestockPeriodDays 		= 7, -- in how many days does the item restock after being taken, 0 to disable restock
+			nRestockPeriodDays 		= 7, -- [0, 65535, 1] in how many days does the item restock after being taken, 0 to disable restock
+			nDestockPeriodDays 		= 7, -- [0, 65535, 1] in how many days does the item destock after being taken, 0 to disable destock
 			bReadOnly 				= false,
 		},
 
@@ -101,8 +103,7 @@ Stash =
 	nUserId = 0,					 -- is set from C_Minigame::Start and C_Minigame::Stop
 	LockType 		= "chest",	-- anim tag
 	fTutorialOpenCount = 0, -- for tutorial chest only
-	bFirstUpdateAfterResetAnimation = false, -- WH[JF] deactivation after load in the first update
-	objectPhaseChanged = false
+	nFirstUpdateAfterResetAnimation = -1, -- WH[JF] deactivation after load in the first update
 }
 
 -- =============================================================================
@@ -129,19 +130,11 @@ function Stash:OnLoad(table)
 	-- Whether the stash is being used by some NPC/player shouldn't be persistent
 	self.beingUsedByNPC = false
 	self.beingUsedByPlayer = false
-
-	if table.objectPhaseChanged ~= nil then
-		self.objectPhaseChanged = table.objectPhaseChanged
-	else
-		self.objectPhaseChanged = false
+	
+	-- Deprecated, phase is now saved in code, this is left only for compatibility with old saves
+	if table.objectPhaseChanged ~= nil and table.objectPhaseChanged then
+		self.stash:LoadPhaseModel()
 	end
-	if self.objectPhaseChanged then
-		self:LoadPhaseModel()
-	else
-		self:LoadOriginalModel()
-	end
-	-- Load model destroy character physics, need to rephysicalize
-	self:PhysicalizeThis()
 
 	-- start from default pose
 	self:ResetAnimationWithActivation()
@@ -150,19 +143,17 @@ end
 -- =============================================================================
 function Stash:ResetAnimationWithActivation()
 	self:ResetAnimation(0, -1)
-	-- one frame activation to reset animation on the chest
+	-- activation to reset animation on the chest
 	self:SetFlagsExtended(ENTITY_FLAG_EXTENDED_FORCE_UPDATE, 0) 
 	self:Activate(1)
-	self.bFirstUpdateAfterResetAnimation = true
+	-- two frames are needed for cases when activation is done too early in the frame (before Stash update)
+	-- and update will turn it off at the same frame without processing the animation
+	self.nFirstUpdateAfterResetAnimation = 2
 end
 
 -- =============================================================================
 function Stash:NeedSerialize()
 	if (not self.interactive) then		
-		return true
-	end
-
-	if (self.objectPhaseChanged == true) then		
 		return true
 	end
 
@@ -178,10 +169,6 @@ end
 function Stash:OnSave(table)
 	if (not self.interactive) then	
 		table.interactive = self.interactive
-	end
-
-	if (self.objectPhaseChanged == true) then		
-		table.objectPhaseChanged = self.objectPhaseChanged
 	end
 
 	-- tutorial
@@ -209,24 +196,12 @@ function Stash:OnSpawn()
 end
 
 -- =============================================================================
-function Stash:LoadOriginalModel()
-	self:LoadObject(0, self.Properties.object_Model)
-	self.objectPhaseChanged = false	
-end
-
--- =============================================================================
-function Stash:LoadPhaseModel()
-	self:LoadObject(0, self.Properties.Phase.object_PhaseModel)
-	self.objectPhaseChanged = true	
-end
-
--- =============================================================================
 function Stash:Reset()
 	self.bLocked = false
 	self.bOpened = 0
 	self.bUseSameAnim = (self.Properties.Animation.anim_Close == "") or (self.Properties.Animation.anim_Close == self.Properties.Animation.anim_Open)
 	if (self.Properties.object_Model ~= "") then
-		self:LoadOriginalModel()
+		self.stash:LoadOriginalModel()
 	end
 
 	self.bNoAnims = self.Properties.Animation.anim_Open == "" and self.Properties.Animation.anim_Close == ""
@@ -361,12 +336,13 @@ function Stash:GetActions(user, firstFast)
 				AddInteractorAction( output, firstFast, Action():hint("@ui_hud_unlock_and_open"):enabled(actionEnabled):action("use"):func(Stash.OnUsed):interaction(inr_stashUnlock))
 			end 
 			if ((self.nUserId == 0) and (self.Properties.Lock.bCanLockPick == true) and user.soul:HaveSkill('thievery') and (EntityCommon.IsUsableForLockpick(user, self) == 1)) then
-				local canLockpicking = Minigame.CanUseMinigame(user.id, E_MUF_CombatDanger)
+				local canLockpicking = Minigame.CanUseMinigame(user.id) or (self.Properties.Script.bAllowUsageInCombatDanger and Minigame.CanUseMinigame(user.id, E_MUF_CombatDanger))
 				AddInteractorAction(output, firstFast, Action():hint( '@' .. Crime.BuildLockpickPromptStrName(self.Properties.Lock.fLockDifficulty)):action("use_other"):hintType(AHT_HOLD):enabled(canLockpicking):func(Stash.OnUsedHold):interaction(inr_stashLockpick))
 			end
 		else
 			if (EntityModule.CanUseInventory(inventoryToOpen)) and (self.interactive) then
-				 AddInteractorAction(output, firstFast, Action():hint(Pick(usesStealUiPrompt, "@ui_open_stash_crime", self.Properties.sOpenMessage)):hintType(Pick(usesStealUiPrompt, AHT_HOLD, AHT_RELEASE)):enabled(actionEnabled ):action("use"):func(Stash.OnUsed):interaction(inr_stashOpen))
+				local emptyString = self:HasPlayerVisibleItems() and " ui_empty_stash" or ""
+				AddInteractorAction(output, firstFast, Action():hint(Pick(usesStealUiPrompt, "@ui_open_stash_crime" .. emptyString, self.Properties.sOpenMessage .. emptyString)):hintType(Pick(usesStealUiPrompt, AHT_HOLD, AHT_RELEASE)):enabled(actionEnabled ):action("use"):func(Stash.OnUsed):interaction(inr_stashOpen))
 			end
 		end
 	end
@@ -393,14 +369,14 @@ function Stash:OnItemRemoved(stashIsEmpty)
 	if (self.Properties.Phase.esStashPhaseChangeEvent == "PlayerTakesItem") or
 	   (self.Properties.Phase.esStashPhaseChangeEvent == "StashIsEmpty" and stashIsEmpty) or
 	   (self.Properties.Phase.esStashPhaseChangeEvent == "StashHasSomething" and stashIsEmpty) then
-		self:LoadPhaseModel()
+		self.stash:LoadPhaseModel()
 	end
 end
 
 -- =============================================================================
 function Stash:OnItemAdded(itemWuid)
-	if (self.Properties.Phase.esStashPhaseChangeEvent == "StashHasSomething" and self.objectPhaseChanged) then
-		self:LoadOriginalModel()
+	if (self.Properties.Phase.esStashPhaseChangeEvent == "StashHasSomething" and self.stash:IsPhaseModelLoaded()) then
+		self.stash:LoadOriginalModel()
 	end
 end
 
@@ -418,7 +394,7 @@ function Stash:Open(user)
 	local inventoryToOpen = self:GetInventoryToOpen()
 
 	XGenAIModule.LootInventoryBegin(inventoryToOpen)
-	user.actor:OpenItemTransferStore(self.id, inventoryToOpen)
+	user.actor:OpenItemTransferStore(self.id, inventoryToOpen, self.Properties.sFilterStoring, self.Properties.sUiHeaderName)
 
 	if user == player then
 		Crime.ProduceAiSoundOnDudePosition(enum_sound.door, 1)
@@ -560,7 +536,10 @@ function Stash:OnOpen()
 	--System.Log("Stash: Opened")
 	self.bOpened = 1
 	self.bUseableMsgChanged = 1
-	self:SetFlagsExtended(ENTITY_FLAG_EXTENDED_FORCE_UPDATE, 2) 
+	-- turn off update onlu when forced update is not active
+	if (self.nFirstUpdateAfterResetAnimation == -1) then
+		self:SetFlagsExtended(ENTITY_FLAG_EXTENDED_FORCE_UPDATE, 2) 
+	end
 
 	if (self.Properties.Animation.bOpenOnly == true) then
 		self.bOpened = 0 -- instatn close
@@ -574,7 +553,10 @@ function Stash:OnClose()
 	--System.Log("Stash: Closed")
 	self.bOpened = 0
 	self.bUseableMsgChanged = 1
-	self:SetFlagsExtended(ENTITY_FLAG_EXTENDED_FORCE_UPDATE, 2) 
+	-- turn off update onlu when forced update is not active
+	if (self.nFirstUpdateAfterResetAnimation == -1) then
+		self:SetFlagsExtended(ENTITY_FLAG_EXTENDED_FORCE_UPDATE, 2) 
+	end
 
 	-- If the stash is a smart object:
     if self.this ~= nil then
@@ -610,9 +592,11 @@ end
 -- =============================================================================
 function Stash.Server:OnUpdate(dt)
 
-	if (self.bFirstUpdateAfterResetAnimation) then
+	if (self.nFirstUpdateAfterResetAnimation == 0) then
 		self:SetFlagsExtended(ENTITY_FLAG_EXTENDED_FORCE_UPDATE, 2)
-		self.bFirstUpdateAfterResetAnimation = false;
+		self.nFirstUpdateAfterResetAnimation = -1
+	elseif (self.nFirstUpdateAfterResetAnimation > 0) then
+		self.nFirstUpdateAfterResetAnimation = self.nFirstUpdateAfterResetAnimation - 1
 	end
 
 	if (self.bNeedUpdate == 0) then
@@ -819,6 +803,13 @@ function Stash:UsesStealUiPrompt()
 	end
 
 	return not RPG.IsPublicEnemy(ownerWuid)
+
+end
+
+-- =============================================================================
+function Stash:HasPlayerVisibleItems()
+
+	return EntityModule.HasPlayerVisibleItems(self:GetInventoryToOpen())
 
 end
 

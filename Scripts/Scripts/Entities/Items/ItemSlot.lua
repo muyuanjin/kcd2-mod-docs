@@ -12,7 +12,8 @@ ItemSlot = {
 		icfItemClassFilter = "", --Text of item class filter (example: weapon.weapon_class_id=1)
 		bSpawnOnStart = true,
 		bHasItemPhysics = false, -- whether the item should be physicalized when in slot
-		nRestockPeriodDays = 7, -- in how many days does the item restock after being taken, 0 to disable restock
+		nRestockPeriodDays 		= 7, -- [0, 65535, 1] in how many days does the item restock after being taken, 0 to disable restock
+		nDestockPeriodDays 		= 7, -- [0, 65535, 1] in how many days does the item destock after being taken, 0 to disable destock
 
 		sManipulationAnimTag = "",
 
@@ -24,8 +25,9 @@ ItemSlot = {
 		bSaveBorrowedItem = true,
 
 		nQuality = 0,
-		ItemHealth = -1;
+		ItemHealth = -1,
 		Condition = -1,
+		Blood = 0,
 
 	Script = {
 		Misc = '',

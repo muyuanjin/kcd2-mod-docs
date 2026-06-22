@@ -7,7 +7,9 @@ CatHolder=
         SpawnDayOfWeek = 0,
         SpawnWeekLength = 7,
         RunAfterSpawn = false,
-        esIdlePose = "Sitting"
+        esIdlePose = "Sitting",
+        bIgnorePlayerProximity = false,
+        bIgnoreNightAndRain = false
     },
 
     Editor =

@@ -40,7 +40,6 @@ BasicActor =
 		Script =
 		{
 			Misc = '',
-			bIdleUntilFirstPatch = false,
 		}
 	},
 

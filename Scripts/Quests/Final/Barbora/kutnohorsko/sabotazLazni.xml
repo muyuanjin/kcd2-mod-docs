@@ -3,6 +3,9 @@
 	<Skald>
 		<Quest Name="sabotazLazni" IsLocked="false" Type="Side" Difficulty="19" ProductionCode="S42">
 			<Ports>
+				<Port Name="quest_progress" Direction="Out" Type="wh::questmodule::QuestProgress">
+					<DesignName StringName="sabotazla_quest_progress_CV9l" Text="S42 Sabotáž lázní" />
+				</Port>
 				<Port Name="uspesne_ukonceno_budovani_lazni" Direction="In" Type="trigger">
 					<DesignName StringName="sabotazla_uspesne_ukoncen_d9Cy" Text="úspěšně ukončeno budování lázní" />
 				</Port>
@@ -42,6 +45,18 @@
 				<Port Name="nastreamovat_nahradni_lazebnici" Direction="Out" Type="trigger">
 					<DesignName StringName="sabotazla_nastreamovat_na_Pvi1" Text="Nastreamovat nahradní lazebnici" />
 				</Port>
+				<Port Name="duel_gameplay_active" Direction="Out" Type="bool">
+					<DesignName StringName="sabotazla_duel_gameplay_a_h8DH" Text="duel gameplay active" />
+				</Port>
+				<Port Name="s138_vraceni_sosky_aktivni" Direction="In" Type="bool">
+					<DesignName StringName="sabotazla_s138_vraceni_so_J4OE" Text="S138 vracení sošky aktivní" />
+				</Port>
+				<Port Name="s138_posledni_cutscena_dlc_beforeplay" Direction="In" Type="bool">
+					<DesignName StringName="sabotazla_s138_posledni_c_9hnu" Text="S138 Poslední cutscena DLC beforePlay" />
+				</Port>
+				<Port Name="s138_posledni_cutscena_dlc_prehrana" Direction="In" Type="bool">
+					<DesignName StringName="sabotazla_s138_posledni_c_3SZ8" Text="S138 Poslední cutscena DLC přehrána" />
+				</Port>
 			</Ports>
 			<Definitions>
 				<Definition File="sabotazLazni/quest_tipster_muz.xml" />
@@ -57,14 +72,26 @@
 					<Edge From="tipstate.tipavailable" To="A" />
 					<Edge From="marklivingsoul_1.tipster_can_tip" To="B" />
 				</Function>
-				<Timer Name="betaWillMoveOutOfBathhouse" PositionY="260" PositionX="-150">
+				<Timer Name="betaWillMoveOutOfBathhouse" PositionY="70" PositionX="560">
 					<Constant Name="Duration" Value="3d" />
 					<Constant Name="TimeType" Value="WorldTime" />
-					<Edge From="hibernable.beta_neziskala_lazenske_pravo__s42_sabotaz_lazni" To="SetRunning" />
+					<Edge From="hibernable.beta_neziskala_lazenske_pravo__s42_sabotaz_lazni" To="SetRunning">
+						<Vertex>VUuLQhqp</Vertex>
+					</Edge>
+					<Edge From="ifnot24.True" To="SetRunning" />
 				</Timer>
-				<DistanceTrigger Name="distancetrigger18" PositionY="540" PositionX="220">
+				<Function Name="compare23" PositionY="150" PositionX="-310" TypeT="wh::questmodule::QuestProgress" MethodName="Control::Compare" DeclaringType="Control">
+					<Constant Name="Op" Value="NotEquals" />
+					<Constant Name="ValueB" Value="None" />
+					<Edge From="hibernable.quest_progress" To="ValueA" />
+				</Function>
+				<SoulDeathTrigger Name="deathtrigger20" PositionY="150" PositionX="-90">
+					<Asset Name="Souls" Alias="beta" />
+					<Edge From="compare23.bool" To="IsActive" />
+				</SoulDeathTrigger>
+				<DistanceTrigger Name="distancetrigger18" PositionY="160" PositionX="900">
 					<Asset Name="Origin" Alias="player" />
-					<Asset Name="Target" Alias="wineBarrel" />
+					<Asset Name="Target" Alias="spaAdministratorSpawning" />
 					<Constant Name="Operator" Value="GreaterEquals" />
 					<Constant Name="Distance" Value="100m" />
 					<Edge From="betaWillMoveOutOfBathhouse.Finished" To="IsActive" />
@@ -72,16 +99,25 @@
 				<HasteTrigger Name="endPreviousQuest" PositionY="-970" PositionX="-1030">
 					<Edge From="makearray15.Array" To="Prerequisites" />
 				</HasteTrigger>
-				<HasteTrigger Name="endQuest" PositionY="570" PositionX="-1100">
+				<HasteTrigger Name="endQuest" PositionY="750" PositionX="-1100">
 					<Edge From="makearray2.Array" To="Prerequisites" />
 				</HasteTrigger>
-				<hibernable Name="hibernable" PositionY="-640" PositionX="-830" RequiredForOutput="kutnohorsko">
+				<hibernable Name="hibernable" PositionY="-670" PositionX="-820" RequiredForOutput="kutnohorsko">
 					<Edge From="vitez_turnaje" To="vitez_turnaje">
 						<Vertex>vertex116</Vertex>
 					</Edge>
 					<Edge From="hibernation.Active" To="Awake" />
+					<Edge From="s138_vraceni_sosky_aktivni" To="s138_vraceni_sosky_aktivni">
+						<Vertex>Ah2uvsa8</Vertex>
+					</Edge>
+					<Edge From="s138_posledni_cutscena_dlc_prehrana" To="s138_posledni_cutscena_dlc_prehrana">
+						<Vertex>JgquKBs9</Vertex>
+					</Edge>
+					<Edge From="s138_posledni_cutscena_dlc_beforeplay" To="s138_posledni_cutscena_dlc_beforeplay">
+						<Vertex>ues6HG6b</Vertex>
+					</Edge>
 				</hibernable>
-				<State Name="hibernation" PositionY="20" PositionX="-1440" TypeT="Progress">
+				<State Name="hibernation" PositionY="60" PositionX="-1440" TypeT="Progress">
 					<Edge From="running.quest_prijat" To="SetActive">
 						<Vertex>vertex77</Vertex>
 						<Vertex>vertex78</Vertex>
@@ -92,11 +128,17 @@
 						<Vertex>vertex87</Vertex>
 					</Edge>
 				</State>
+				<IfFunction Name="ifnot24" PositionY="180" PositionX="210" MethodName="math::boolean::Not" DeclaringType="math::boolean">
+					<Edge From="deathtrigger20.OnDeath" To="Exec" />
+					<Edge From="hibernable.lazenske_pravo_neziskano" To="Value">
+						<Vertex>UewhHgj0</Vertex>
+					</Edge>
+				</IfFunction>
 				<MakeArray Name="makearray15" PositionY="-970" PositionX="-1320" TypeT="wh::conceptmodule::ConceptPaths">
 					<Constant Name="A" Value="prijezdNaSuchdol.endQuest" />
 					<Constant Name="B" Value="budovaniLazni.endQuest" />
 				</MakeArray>
-				<MakeArray Name="makearray2" PositionY="570" PositionX="-1420" TypeT="wh::conceptmodule::ConceptPaths">
+				<MakeArray Name="makearray2" PositionY="750" PositionX="-1420" TypeT="wh::conceptmodule::ConceptPaths">
 					<Constant Name="A" Value="sabotazLazni.endPreviousQuest" />
 					<Constant Name="B" Value="sabotazLazni.finishQuest" />
 				</MakeArray>
@@ -110,7 +152,7 @@
 						<Vertex>vertex108</Vertex>
 					</Edge>
 				</marklivingsoul>
-				<marklivingsoul Name="marklivingsoul_1" PositionY="-960" PositionX="210" Namespace="utils.tipsters">
+				<marklivingsoul Name="marklivingsoul_1" PositionY="-1000" PositionX="220" Namespace="utils.tipsters">
 					<Asset Name="soul" Alias="giver1" />
 					<Constant Name="markertype" Value="QuestGiver" />
 					<Edge From="tipstate.tracksouls" To="tracktipsters">
@@ -145,8 +187,14 @@
 					<Edge From="quest_tipster_zena__helga_schelm.tipGiven" To="B" />
 					<Edge From="quest_tipster_muz__custont.tipGiven" To="C" />
 				</Function>
+				<Function Name="or27" PositionY="-360" PositionX="-340" MethodName="math::boolean::Or" DeclaringType="math::boolean">
+					<Edge From="hibernable.duel_gameplay_active" To="A" />
+					<Edge From="running.afternoblemansduel_behav_active" To="B" />
+				</Function>
 				<Output Name="Output">
-					<Edge From="hibernable.quest_progress" To="Progress" />
+					<Edge From="hibernable.quest_progress" To="Progress">
+						<Vertex>KsuACLpe</Vertex>
+					</Edge>
 					<Edge From="hibernable.saty_predany" To="hrac_obdaroval_lidu_saty" />
 					<Edge From="hibernable.souboj_vyhran" To="souboj_vyhran" />
 					<Edge From="hibernable.souboj_prohran" To="souboj_prohran" />
@@ -154,10 +202,16 @@
 					<Edge From="hibernable.stream_jeronym_naz" To="stream_jeronym_naz" />
 					<Edge From="hibernable.unstream_jeronym_naz" To="unstream_jeronym_naz" />
 					<Edge From="hibernable.lazenske_pravo_ziskano" To="lazenske_pravo_ziskano" />
-					<Edge From="betaWillMoveOutOfBathhouse.OnFinished" To="beta_se_stehuje" />
+					<Edge From="betaWillMoveOutOfBathhouse.OnFinished" To="beta_se_stehuje">
+						<Vertex>M8Eyleoo</Vertex>
+					</Edge>
 					<Edge From="distancetrigger18.OnMatch" To="nastreamovat_nahradni_lazebnici" />
 					<Edge From="hibernable.s42__fifle_is_in_duel" To="s42__fifle_is_in_duel" />
 					<Edge From="hibernable.hrac_odsabotoval_vse" To="alespon_jedna_sabotaz_je_hotova" />
+					<Edge From="hibernable.quest_progress" To="quest_progress">
+						<Vertex>KsuACLpe</Vertex>
+					</Edge>
+					<Edge From="or27.bool" To="duel_gameplay_active" />
 				</Output>
 				<quest_tipster_muz Name="quest_tipster_muz" PositionY="-1140" PositionX="810">
 					<Edge From="and13.bool" To="tipster_alive_and_tip_available" />
@@ -168,7 +222,7 @@
 				<quest_tipster_zena__helga_schelm Name="quest_tipster_zena__helga_schelm" PositionY="-930" PositionX="740">
 					<Edge From="and13.bool" To="tipster_alive_and_tip_available" />
 				</quest_tipster_zena__helga_schelm>
-				<running Name="running" PositionY="-380" PositionX="-1120">
+				<running Name="running" PositionY="-350" PositionX="-1120">
 					<Edge From="uspesne_ukonceno_budovani_lazni" To="uspesne_ukonceno_budovani_lazni">
 						<Vertex>vertex121</Vertex>
 					</Edge>
@@ -204,16 +258,18 @@
 					<Edge From="hibernable.hrac_nechal_bojovat_fifleho" To="hrac_nechal_bojovat_fifleho" />
 					<Edge From="hibernable.npc_duel_is_ended" To="npc_duel_is_ended" />
 					<Edge From="hibernable.duel_ended" To="duel_ended" />
-					<Edge From="hibernable.duel_gameplay_active" To="duel_gameplay_active" />
+					<Edge From="hibernable.duel_gameplay_started" To="duel_gameplay_started" />
 					<Edge From="hibernable.lazebnice_dostala_saty" To="lazebnice_dostala_saty" />
 					<Edge From="hibernable.saty_pro_lazebnici" To="saty_pro_lazebnici" />
 					<Edge From="hibernable.saty_predany" To="saty_predany" />
 					<Edge From="hibernable.parfem_nepredan_bete" To="parfem_nepredan_bete" />
 					<Edge From="hibernable.bez_mrtvol_v_arene" To="bez_mrtvol_v_arene" />
 					<Edge From="hibernable.player_not_on_pillory" To="player_not_on_pillory" />
+					<Edge From="hibernable.onafterdlc1finale" To="onafterdlc1finale" />
+					<Edge From="hibernable.duel_done" To="duel_done" />
 				</running>
 				<sabotazlazni Name="sabotazlazni" PositionY="-860" PositionX="-690" />
-				<SaveGame Name="savegame20_1" PositionY="590" PositionX="-230">
+				<SaveGame Name="savegame20_1" PositionY="450" PositionX="-370">
 					<Constant Name="Objective" Value="vrat_se_za_betou" />
 					<Edge From="hibernable.quest_done" To="EnqueueSave" />
 				</SaveGame>
@@ -250,34 +306,41 @@
 				</tipstate>
 			</Nodes>
 			<EdgeVertices>
-				<EdgeVertex Name="Gxj4oCAr" PositionY="470" PositionX="-630" />
+				<EdgeVertex Name="Ah2uvsa8" PositionY="-580" PositionX="-1290" />
+				<EdgeVertex Name="Gxj4oCAr" PositionY="640" PositionX="-630" />
 				<EdgeVertex Name="HSnvE2Wp" PositionY="-1800" PositionX="1060" />
-				<EdgeVertex Name="I376aoM2" PositionY="420" PositionX="-830" />
-				<EdgeVertex Name="L4mgM5tp" PositionY="470" PositionX="-1110" />
-				<EdgeVertex Name="mBIT8jzV" PositionY="400" PositionX="-830" />
-				<EdgeVertex Name="rm6Mcns0" PositionY="440" PositionX="-1110" />
-				<EdgeVertex Name="sWWRcg7P" PositionY="440" PositionX="-630" />
+				<EdgeVertex Name="I376aoM2" PositionY="570" PositionX="-830" />
+				<EdgeVertex Name="JgquKBs9" PositionY="-540" PositionX="-1290" />
+				<EdgeVertex Name="KsuACLpe" PositionY="-257" PositionX="1420" />
+				<EdgeVertex Name="L4mgM5tp" PositionY="640" PositionX="-1110" />
+				<EdgeVertex Name="M8Eyleoo" PositionY="20" PositionX="930" />
+				<EdgeVertex Name="mBIT8jzV" PositionY="550" PositionX="-830" />
+				<EdgeVertex Name="rm6Mcns0" PositionY="610" PositionX="-1110" />
+				<EdgeVertex Name="sWWRcg7P" PositionY="610" PositionX="-630" />
 				<EdgeVertex Name="TVDv1XWe" PositionY="-1800" PositionX="-360" />
-				<EdgeVertex Name="vertex101" PositionY="-680" PositionX="380" />
-				<EdgeVertex Name="vertex102" PositionY="-680" PositionX="-370" />
+				<EdgeVertex Name="ues6HG6b" PositionY="-560" PositionX="-1290" />
+				<EdgeVertex Name="UewhHgj0" PositionY="390" PositionX="100" />
+				<EdgeVertex Name="vertex101" PositionY="-720" PositionX="390" />
+				<EdgeVertex Name="vertex102" PositionY="-720" PositionX="-360" />
 				<EdgeVertex Name="vertex104" PositionY="-950" PositionX="50" />
 				<EdgeVertex Name="vertex107" PositionY="-870" PositionX="40" />
 				<EdgeVertex Name="vertex108" PositionY="-1030" PositionX="20" />
-				<EdgeVertex Name="vertex110" PositionY="400" PositionX="-490" />
-				<EdgeVertex Name="vertex111" PositionY="420" PositionX="-490" />
-				<EdgeVertex Name="vertex116" PositionY="-580" PositionX="-1300" />
-				<EdgeVertex Name="vertex118" PositionY="520" PositionX="-1110" />
-				<EdgeVertex Name="vertex119" PositionY="-660" PositionX="1360" />
-				<EdgeVertex Name="vertex120" PositionY="-660" PositionX="-1100" />
+				<EdgeVertex Name="vertex110" PositionY="550" PositionX="-490" />
+				<EdgeVertex Name="vertex111" PositionY="570" PositionX="-490" />
+				<EdgeVertex Name="vertex116" PositionY="-610" PositionX="-1290" />
+				<EdgeVertex Name="vertex118" PositionY="700" PositionX="-1110" />
+				<EdgeVertex Name="vertex119" PositionY="-700" PositionX="1370" />
+				<EdgeVertex Name="vertex120" PositionY="-700" PositionX="-1090" />
 				<EdgeVertex Name="vertex121" PositionY="-360" PositionX="-1290" />
-				<EdgeVertex Name="vertex77" PositionY="490" PositionX="-930" />
-				<EdgeVertex Name="vertex78" PositionY="490" PositionX="-1450" />
-				<EdgeVertex Name="vertex86" PositionY="520" PositionX="-630" />
-				<EdgeVertex Name="vertex87" PositionY="520" PositionX="-1450" />
-				<EdgeVertex Name="vertex88" PositionY="-640" PositionX="-600" />
-				<EdgeVertex Name="vertex89" PositionY="-640" PositionX="-1100" />
+				<EdgeVertex Name="vertex77" PositionY="670" PositionX="-930" />
+				<EdgeVertex Name="vertex78" PositionY="670" PositionX="-1450" />
+				<EdgeVertex Name="vertex86" PositionY="700" PositionX="-630" />
+				<EdgeVertex Name="vertex87" PositionY="700" PositionX="-1450" />
+				<EdgeVertex Name="vertex88" PositionY="-680" PositionX="-590" />
+				<EdgeVertex Name="vertex89" PositionY="-680" PositionX="-1090" />
 				<EdgeVertex Name="vertex90" PositionY="-1780" PositionX="1060" />
 				<EdgeVertex Name="vertex91" PositionY="-1780" PositionX="-360" />
+				<EdgeVertex Name="VUuLQhqp" PositionY="100" PositionX="410" />
 			</EdgeVertices>
 			<Types>
 				<Type TypeName="improveTub_findManure">
@@ -351,6 +414,14 @@
 					<StateTypeEnumeration Name="Done" ObjectiveValueType="None" />
 					<StateTypeEnumeration Name="Disabled" ObjectiveValueType="None" />
 				</Type>
+				<Type TypeName="DLC1timeline">
+					<StateTypeEnumeration Name="Default" ObjectiveValueType="None" />
+					<StateTypeEnumeration Name="DuringDLC1finale" ObjectiveValueType="Started" />
+					<StateTypeEnumeration Name="AfterDLC1finale" ObjectiveValueType="None" />
+					<StateTypeEnumeration Name="StartedWhileDuringDLC1finale" ObjectiveValueType="None" />
+					<StateTypeEnumeration Name="CompletedOnTime" ObjectiveValueType="None" />
+					<StateTypeEnumeration Name="QuestFailed" ObjectiveValueType="None" />
+				</Type>
 			</Types>
 			<Assets>
 				<SoulAsset Name="nobleman" SharedSoulGuids="a640861e-3070-4440-8a07-b68284e9e6ad" />
@@ -400,9 +471,11 @@
 				<InteractionTriggerAsset Name="wineBarrel_trigger" />
 				<SoulAsset Name="tipster3" SharedSoulGuids="6ded9582-45a2-4993-9a70-995d9c9cdb4d" />
 				<SoulAsset Name="adamsBathhouseStaffBasic" SharedSoulGuids="9954bf55-2749-4d17-97bf-d1b44666c333 077a4e11-9be3-4fce-89fa-c0bb31dc9be4 73536e91-c0cf-49ad-ade3-9330bb42b4f3 fd8b55a3-f83e-4191-bd67-be679287d02e 2ef99edc-7ddb-4ed1-adff-809f82669e90 86ece9d7-aba5-4543-ab73-783e8355d416 393c931a-a950-4210-bd19-fe14b2a427d5" />
+				<TagPointAsset Name="spaAdministratorSpawning" />
+				<StashAsset Name="bathStash" />
 			</Assets>
 			<Notes>
-				<Note Name="note14" PositionY="720" PositionX="-1390">
+				<Note Name="note14" PositionY="860" PositionX="-1390">
 					<Text StringName="sabotazla_note14_04L0" Text="přidat &quot;skillteacher mama&quot;, až se zapojí" />
 				</Note>
 			</Notes>
@@ -672,6 +745,19 @@
 						<EnumLog Type="Canceled" Name="Canceled">
 							<Log StringName="vrat_se_z_mel_jsem_se_zas_AGjB" Text="Měl jsem se zastavit za Bětou, ale teď už je to jedno. Z plánu už nic nebude." />
 						</EnumLog>
+					</Logs>
+				</Objective>
+				<Objective TypeT="DLC1timeline" Name="pospes_si_za_fiflem">
+					<LocalizedName StringName="sabotazla_dlc1progressed_CjXE" Text="Pospěš si za Fiflem" />
+					<Logs>
+						<EnumLog Type="None" Name="Default" />
+						<EnumLog Type="Started" Name="DuringDLC1finale">
+							<Log StringName="dlc1progr_bacha_failne_to_MkT0" Text="Měl bych si pospíšit zpátky za Fiflem, jinak ten duel bude beze mě a můžu na jeho hlas na radě zapomenout." />
+						</EnumLog>
+						<EnumLog Type="None" Name="AfterDLC1finale" />
+						<EnumLog Type="None" Name="StartedWhileDuringDLC1finale" />
+						<EnumLog Type="None" Name="CompletedOnTime" />
+						<EnumLog Type="None" Name="QuestFailed" />
 					</Logs>
 				</Objective>
 			</Objectives>

@@ -375,6 +375,7 @@ function BirdsTakeoff:_SpawnParticle(direction)
         end
         
         self._ParticleTable.SpeedScale = self.Properties.Settings.ManualValues.fSpeedScale
+        self._ParticleTable.esAttachForm = "GeomForm_Vertices"
         self:FreeSlot(self._ParticleSlot)
         self:LoadParticleEffect(self._ParticleSlot, particleEffect, self._ParticleTable )
         self:SetSlotPosAndDir(self._ParticleSlot, {x=0,y=0,z=0}, direction)

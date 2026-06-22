@@ -8,17 +8,19 @@ DestroStash =
 	Properties =
 	{
 		
-		object_Model = "objects/natural/animal/bird_nest.cgf",
-		object_ShardModel = "objects/natural/stones/stone_basalt_b.cgf",
+		object_Model = "objects/manmade/task_specific_props/household/cooking_eating/jugs/jug_d.cgf",
+		sParticleEffect=  "collisions.destructibles.arrow_ceramics",
+		object_ShardModel = "objects/manmade/task_specific_props/container_making/pottery/pot_shards.cgf",
 		
 		Database =
 		{
+			sInventoryPreset = "inventory_singleApple",
 			bReadOnly = true,
 		},
 
 		Sounds =
 		{
-			snd_Hit = "",
+			snd_Hit = "c_mfx_arrow_ceramics",
 		},
 
     },

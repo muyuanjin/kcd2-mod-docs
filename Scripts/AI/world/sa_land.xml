@@ -20,7 +20,7 @@
 			<Behavior canSkip="1">
 				<Sequence>
 					<WaitAction />
-					<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" skipInLOD="false" />
+					<Wait duration="&apos;10s&apos;" timeType="GameTime" doFail="false" variation="" />
 				</Sequence>
 			</Behavior>
 		</Root>
@@ -1217,6 +1217,7 @@
 		<Variables>
 			<Variable name="aliveFriendFound" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="alreadyFled" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="currentTime" type="_int64" values="" isPersistent="0" form="single" />
 			<Variable name="myFriend" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="playerFled" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="priority" type="_int" values="" isPersistent="0" form="single" />
@@ -1248,7 +1249,10 @@
 					</IsDeadCheck>
 					<EntityContextCheck context="combat_triggerSALSearchInDuelBehaviour" target="" saveVersion="2">
 						<Then canSkip="1">
-							<DrawAction WeaponSet="Primary" fullBody="false" tags="" useSelectedWeaponSet="false" />
+							<Selector>
+								<DrawAction WeaponSet="Primary" fullBody="false" tags="" useSelectedWeaponSet="false" />
+								<WaitAction />
+							</Selector>
 						</Then>
 						<Else canSkip="1">
 							<EntityContextCheck context="combat_triggerSALSearchInDuelBehaviourUnarmed" target="" saveVersion="2">
@@ -1275,8 +1279,11 @@
 											<LinkTagFilter tag="&apos;combat_questFightStatus&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
 											<Datalyzer Tag="&apos;combat_questFightStatus&apos;" Quantifiers="ForAll" Parent="" Child="" Data="$questFightStatus" saveVersion="2" />
 										</GraphSearch>
+										<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
 										<IfCondition failOnCondition="false" condition="$questFightStatus.status == $enum:combat_questFightStatus.fled">
-											<Expression expressions="$alreadyFled = true" />
+											<IfCondition failOnCondition="false" condition="$questFightStatus.timestamp &gt; $currentTime - $data:script_param[&apos;combat_fightStatusCooldown&apos;].value">
+												<Expression expressions="$alreadyFled = true" />
+											</IfCondition>
 										</IfCondition>
 									</Sequence>
 								</SuppressFailure>
@@ -1333,6 +1340,7 @@
 			<Variables>
 				<Variable name="aliveFriendFound" comment="" />
 				<Variable name="alreadyFled" comment="" />
+				<Variable name="currentTime" comment="" />
 				<Variable name="myFriend" comment="" />
 				<Variable name="playerFled" comment="" />
 				<Variable name="priority" comment="" />
@@ -1377,9 +1385,15 @@
 						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 							<OutputBreakpoints />
 							<Then>
-								<DrawAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-								</DrawAction>
+									<DrawAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</DrawAction>
+									<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+									</WaitAction>
+								</Selector>
 							</Then>
 							<Else>
 								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
@@ -1423,11 +1437,17 @@
 													<OutputBreakpoints />
 												</Datalyzer>
 											</GraphSearch>
+											<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</GetTime>
 											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 												<OutputBreakpoints />
-												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
-												</Expression>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</IfCondition>
 											</IfCondition>
 										</Sequence>
 									</SuppressFailure>
@@ -2043,35 +2063,37 @@
 							<Expression expressions="$pathParams.usePaths = false" />
 						</Else>
 					</IfElseCondition>
-					<Selector>
-						<IfCondition failOnCondition="true" condition="$horse ~= $__null &amp; &#10;$playerHorse ~= $horse">
-							<StanceCheck soul="$__player" stance="horse" smartObject="$horse" negate="false" failOnCondition="false" saveVersion="2">
-								<Then canSkip="1">
-									<Fail />
-								</Then>
-								<Else canSkip="1">
-									<FuseBox StatusPropagation="Child" OneCleanup="false" saveVersion="2">
-										<Child canSkip="1">
-											<HorseUsageElement horse="$horse" decisionLabel="Label1" useDecision="true" enabled="true" saveVersion="2">
-												<Search canSkip="1">
-													<Success />
-												</Search>
-												<Exec canSkip="1">
-													<StanceElement smartObject="$horse" stance="horse" allowAny="false" enabled="true">
-														<Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="5.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$destination" destinationSpecification2="" destinationSpecification3="" speed="$speed" additionalParams="" pathFindingParams="$pathParams" staminaPolicy="" pathInfo="" />
-													</StanceElement>
-												</Exec>
-											</HorseUsageElement>
-										</Child>
-										<OnFail canSkip="1">
-											<AddLink From="$this.id" To="$horse" Tag="&apos;horseWasNotAvailable&apos;" Data="" LinkOpHandleMode="OverWrite" />
-										</OnFail>
-									</FuseBox>
-								</Else>
-							</StanceCheck>
-						</IfCondition>
-						<Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="5.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$destination" destinationSpecification2="" destinationSpecification3="" speed="$speed" additionalParams="" pathFindingParams="$pathParams" staminaPolicy="" pathInfo="" />
-					</Selector>
+					<EntityContextElement context="behavior_leaveLevel" enabled="true">
+						<Selector>
+							<IfCondition failOnCondition="true" condition="$horse ~= $__null &amp; &#10;$playerHorse ~= $horse">
+								<StanceCheck soul="$__player" stance="horse" smartObject="$horse" negate="false" failOnCondition="false" saveVersion="2">
+									<Then canSkip="1">
+										<Fail />
+									</Then>
+									<Else canSkip="1">
+										<FuseBox StatusPropagation="Child" OneCleanup="false" saveVersion="2">
+											<Child canSkip="1">
+												<HorseUsageElement horse="$horse" decisionLabel="Label1" useDecision="true" enabled="true" saveVersion="2">
+													<Search canSkip="1">
+														<Success />
+													</Search>
+													<Exec canSkip="1">
+														<StanceElement smartObject="$horse" stance="horse" allowAny="false" enabled="true">
+															<Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="5.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$destination" destinationSpecification2="" destinationSpecification3="" speed="$speed" additionalParams="" pathFindingParams="$pathParams" staminaPolicy="" pathInfo="" />
+														</StanceElement>
+													</Exec>
+												</HorseUsageElement>
+											</Child>
+											<OnFail canSkip="1">
+												<AddLink From="$this.id" To="$horse" Tag="&apos;horseWasNotAvailable&apos;" Data="" LinkOpHandleMode="OverWrite" />
+											</OnFail>
+										</FuseBox>
+									</Else>
+								</StanceCheck>
+							</IfCondition>
+							<Move stopWithinDistance="0.200000" stopDistanceVariation="0.100000" rayCasteFlee="false" successDistance="5.000000" changeNPCState="true" fastForwardIncludesMove="false" destinationSpecification="$destination" destinationSpecification2="" destinationSpecification3="" speed="$speed" additionalParams="" pathFindingParams="$pathParams" staminaPolicy="" pathInfo="" />
+						</Selector>
+					</EntityContextElement>
 				</Sequence>
 			</Behavior>
 		</Root>
@@ -2157,51 +2179,54 @@
 								</Expression>
 							</Else>
 						</IfElseCondition>
-						<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<EntityContextElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
 							<OutputBreakpoints />
-							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
-								<StanceCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-									<Then>
-										<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
-											<OutputBreakpoints />
-										</Fail>
-									</Then>
-									<Else>
-										<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-											<OutputBreakpoints />
-											<Child>
-												<HorseUsageElement hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-													<OutputBreakpoints />
-													<Search>
-														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
-															<OutputBreakpoints />
-														</Success>
-													</Search>
-													<Exec>
-														<StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
-															<OutputBreakpoints />
-															<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<StanceCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Then>
+											<Fail hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</Fail>
+										</Then>
+										<Else>
+											<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Child>
+													<HorseUsageElement hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Search>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																<OutputBreakpoints />
-															</Move>
-														</StanceElement>
-													</Exec>
-												</HorseUsageElement>
-											</Child>
-											<OnFail>
-												<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
-													<OutputBreakpoints />
-												</AddLink>
-											</OnFail>
-										</FuseBox>
-									</Else>
-								</StanceCheck>
-							</IfCondition>
-							<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
-								<OutputBreakpoints />
-							</Move>
-						</Selector>
+															</Success>
+														</Search>
+														<Exec>
+															<StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Move>
+															</StanceElement>
+														</Exec>
+													</HorseUsageElement>
+												</Child>
+												<OnFail>
+													<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</AddLink>
+												</OnFail>
+											</FuseBox>
+										</Else>
+									</StanceCheck>
+								</IfCondition>
+								<Move hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Move>
+							</Selector>
+						</EntityContextElement>
 					</Sequence>
 				</Behavior>
 			</Root>
@@ -2417,6 +2442,29 @@
 							</InstantSendMessageToNPC>
 						</IfCondition>
 					</Sequence>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+	<BehaviorTree name="interupt_standUp" is_function="0">
+		<Variables />
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<WaitAction />
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables />
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</WaitAction>
 				</Behavior>
 			</Root>
 			<Forest />

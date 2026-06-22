@@ -14,6 +14,7 @@ ShootingTargetOld =
 		fLightUpTime = 2,
 		fTurnSpeed = 0.5,
 		fScoreScale = 10,
+		bSaved_by_game = false,
 	},
 	Editor=
 	{

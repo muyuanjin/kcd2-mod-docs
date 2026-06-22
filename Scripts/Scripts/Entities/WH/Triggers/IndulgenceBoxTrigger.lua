@@ -23,6 +23,7 @@ function IndulgenceBoxTrigger:ReportUse(user,item,action)
     Game.ShowItemsTransfer("5ef63059-322e-4e1b-abe8-926e100c770e", -price);
     RPG.ReconcileWithPublicFriends();
     Game.SendInfoText('@reputation_penance_paid',false)
+    self.ProduceMoneySound()
 
     player.soul:AddPerk('43412723-c906-474a-a8de-3711a011a8c7') -- KCD2-377090
 
@@ -62,6 +63,12 @@ function IndulgenceBoxTrigger:IsPenanceMeaningful(user)
         local disabledReason = '@kajicna_p_tvoje_reputace__Saiv';
         return false, disabledReason,promptText;
     end
+end
+
+-- =============================================================================
+function IndulgenceBoxTrigger:ProduceMoneySound()
+    local message = table.MakeFromType('crime:produceSfxSound', { position = player.this.id, soundName = 'special_indulgence' })
+    XGenAIModule.SendMessageToEntityData(player.this.id, "crime:produceSfxSound", message)
 end
 
 -- =============================================================================

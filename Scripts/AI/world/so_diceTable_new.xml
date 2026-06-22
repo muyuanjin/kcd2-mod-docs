@@ -7,6 +7,9 @@
 			<Variable name="challengers" type="_wuid" values="" isPersistent="0" form="array" />
 			<Variable name="diceEvent" type="diceEvent" values="" isPersistent="0" form="single" />
 			<Variable name="diceInit" type="dice:init" values="" isPersistent="0" form="single" />
+			<Variable name="dogMode" type="enum:dogCompanionMode" values="" isPersistent="0" form="single" />
+			<Variable name="dogModeChanged" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="dogs" type="_wuid" values="" isPersistent="0" form="array" />
 			<Variable name="gamblers" type="_wuid" values="" isPersistent="0" form="array" />
 			<Variable name="gameType" type="enum:diceGameTypes" values="" isPersistent="0" form="single" />
 			<Variable name="initDialogResult" type="dice:initDialogResult" values="" isPersistent="0" form="single" />
@@ -70,18 +73,29 @@
 												</Sequence>
 											</AtomicDecorator>
 											<AddInterrupt Target="$__player" Host="$this.id" Behavior="&apos;interrupt_playerSit&apos;" Priority="201" IgnorePriorityOnPreviousInterrupt="false" urgency="Instant" Aliveness="Alive" Privileged="false" FastForward="false" />
-											<Synchronize SemaphoreCount="3" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;25s&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_readyToInitMinigame&apos;" RunLogic="KeepRunning">
+											<Synchronize SemaphoreCount="3" InsideTimerValue="&apos;20s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_readyToInitMinigame&apos;" RunLogic="KeepRunning">
 												<Sequence>
 													<Function_dice_getGameLevelData gameLevel="$initDialogResult.gameLevel" badgeLevel="$badgeLevel" betSize="$bet.moneyAmount" betType="$bet.type" gameType="$gameType" nodeLabel="56972619" />
 													<Function_dice_cleanTable nodeLabel="59009524" />
 													<IfCondition failOnCondition="false" condition="$npcToPlayWith ~= $__null">
-														<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;25s&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_minigameReady&apos;" RunLogic="KeepRunning">
+														<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;20s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_minigameReady&apos;" RunLogic="KeepRunning">
 															<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
 																<Child canSkip="1">
 																	<Sequence>
 																		<AddLink From="$this.id" To="$npcToPlayWith" Tag="&apos;dice_playersOpponent&apos;" Data="" LinkOpHandleMode="Error" />
 																		<AddLink From="$this.id" To="$this.id" Tag="&apos;dice_disabledTableForNpcs&apos;" Data="" LinkOpHandleMode="Error" />
 																		<Expression expressions="$trackChallenger = false" />
+																		<IfCondition failOnCondition="false" condition="$__playerDog ~= $__null">
+																			<Sequence>
+																				<GetDogCompanionMode Companion="$__playerDog" DogModeOut="$dogMode" />
+																				<IfCondition failOnCondition="false" condition="$dogMode == $enum:dogCompanionMode.free">
+																					<Sequence>
+																						<SetDogCompanionMode Companion="$__playerDog" Mode="Wait" />
+																						<Expression expressions="$dogModeChanged = true" />
+																					</Sequence>
+																				</IfCondition>
+																			</Sequence>
+																		</IfCondition>
 																		<IfElseCondition failOnCondition="false" condition="$initDialogResult.isQuest &amp; $initDialogResult.forceBadgeSubtype &gt;= 0" saveVersion="2">
 																			<Then canSkip="1">
 																				<LuaGate code="return (Minigame.StartDice( entity.id, player.id, XGenAIModule.GetEntityByWUID(data.npcToPlayWith).id, { BadgeType = data.badgeLevel, GameType = data.gameType, BadgeSubtype = data.initDialogResult.forceBadgeSubtype }))" saveVersion="2">
@@ -129,6 +143,9 @@
 																		</SuppressFailure>
 																		<RemoveLink From="$this.id" To="$npcToPlayWith" Tag="&apos;dice_playersOpponent&apos;" LinkOpHandleMode="Success" />
 																		<RemoveLink From="$this.id" To="$this.id" Tag="&apos;dice_disabledTableForNpcs&apos;" LinkOpHandleMode="Success" />
+																		<IfCondition failOnCondition="false" condition="$dogModeChanged">
+																			<SetDogCompanionMode Companion="$__playerDog" Mode="$dogMode" />
+																		</IfCondition>
 																	</Sequence>
 																</OnFail>
 															</FuseBox>
@@ -259,6 +276,9 @@
 				<Variable name="challengers" comment="" />
 				<Variable name="diceEvent" comment="" />
 				<Variable name="diceInit" comment="" />
+				<Variable name="dogMode" comment="" />
+				<Variable name="dogModeChanged" comment="" />
+				<Variable name="dogs" comment="" />
 				<Variable name="gamblers" comment="" />
 				<Variable name="gameType" comment="" />
 				<Variable name="initDialogResult" comment="" />
@@ -400,6 +420,27 @@
 																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																				<OutputBreakpoints />
 																			</Expression>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<GetDogCompanionMode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GetDogCompanionMode>
+																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<SetDogCompanionMode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</SetDogCompanionMode>
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																						</Sequence>
+																					</IfCondition>
+																				</Sequence>
+																			</IfCondition>
 																			<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																				<OutputBreakpoints />
 																				<Then>
@@ -477,6 +518,12 @@
 																			<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																				<OutputBreakpoints />
 																			</RemoveLink>
+																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<SetDogCompanionMode hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</SetDogCompanionMode>
+																			</IfCondition>
 																		</Sequence>
 																	</OnFail>
 																</FuseBox>
@@ -684,8 +731,7 @@
 	<BehaviorTree name="use_challenger" is_function="0">
 		<Variables>
 			<Variable name="amountToCheck" type="_int" values="" isPersistent="0" form="single" />
-			<Variable name="badgeTier" type="enum:badgeTier" values="" isPersistent="0" form="single" />
-			<Variable name="badgeTierInt" type="_int" values="" isPersistent="0" form="single" />
+			<Variable name="cup" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="cupSlot" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="diceInit" type="dice:init" values="" isPersistent="0" form="single" />
 			<Variable name="diceInitDialogResult" type="dice:initDialogResult" values="" isPersistent="0" form="single" />
@@ -697,14 +743,12 @@
 			<Variable name="hiddenCupSlot" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="hiddenDiceOnTable" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="inviteBarkInProgress" type="_bool" values="" isPersistent="0" form="single" />
-			<Variable name="isFemale" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="loop" type="_int" values="" isPersistent="0" form="single" />
 			<Variable name="loops" type="_int" values="4" isPersistent="0" form="single" />
 			<Variable name="minigameAvailabilityEvaluated" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="minigameEnabled" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="opponents" type="_wuid" values="" isPersistent="0" form="array" />
 			<Variable name="playWithoutMoney" type="_bool" values="" isPersistent="0" form="single" />
-			<Variable name="useFirstRollAnimation" type="_bool" values="true" isPersistent="0" form="single" />
 		</Variables>
 		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
 			<OnInit canSkip="1">
@@ -749,17 +793,9 @@
 											<Expression expressions="$hasEnoughMoney = true" />
 										</Sequence>
 									</IfCondition>
-									<Switch>
-										<IfCondition failOnCondition="false" condition="$gamblerState == $enum:dice_gamblerState.arriving">
-											<Expression expressions="$useFirstRollAnimation = true" />
-										</IfCondition>
-										<IfCondition failOnCondition="false" condition="$gamblerState == $enum:dice_gamblerState.playingAgainstNpc">
-											<Expression expressions="$gamblerState = $enum:dice_gamblerState.waitingForOpponent" />
-										</IfCondition>
-										<DefaultBranch>
-											<Success />
-										</DefaultBranch>
-									</Switch>
+									<IfCondition failOnCondition="false" condition="$gamblerState == $enum:dice_gamblerState.playingAgainstNpc">
+										<Expression expressions="$gamblerState = $enum:dice_gamblerState.waitingForOpponent" />
+									</IfCondition>
 									<IfElseCondition failOnCondition="false" condition="$hasEnoughMoney &amp; $gamblerState ~= $enum:dice_gamblerState.leaving" saveVersion="2">
 										<Then canSkip="1">
 											<ActorStateCheck Who="$__player" State="minigame" FailWithSubtreeMissing="false" saveVersion="2">
@@ -892,17 +928,21 @@
 																																																<Expression expressions="$loop += 1" />
 																																																<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;dice_challengerTurn&apos;" RunLogic="KeepRunning">
 																																																	<SuppressFailure>
-																																																		<Switch>
-																																																			<IfCondition failOnCondition="false" condition="$loop == 1 &amp; $useFirstRollAnimation">
-																																																				<Function_rollFirst opponent="$opponents[0]" table="$__object.id" nodeLabel="69937550" />
-																																																			</IfCondition>
-																																																			<IfCondition failOnCondition="false" condition="$loop &gt; $loops">
-																																																				<Function_rollFinish opponent="$opponents[0]" table="$__object.id" nodeLabel="94733766" />
-																																																			</IfCondition>
-																																																			<DefaultBranch>
-																																																				<Function_rollTurn opponent="$opponents[0]" table="$__object.id" nodeLabel="12123303" />
-																																																			</DefaultBranch>
-																																																		</Switch>
+																																																		<Sequence>
+																																																			<ReinitVariable variable="$cup" />
+																																																			<GetItemInSlot slot="$cupSlot" useHomeItem="false" item="$cup" />
+																																																			<Switch>
+																																																				<IfCondition failOnCondition="false" condition="$cup == $__null">
+																																																					<Function_rollFirst opponent="$opponents[0]" table="$__object.id" nodeLabel="69937550" />
+																																																				</IfCondition>
+																																																				<IfCondition failOnCondition="false" condition="$loop &gt; $loops">
+																																																					<Function_rollFinish opponent="$opponents[0]" table="$__object.id" nodeLabel="94733766" />
+																																																				</IfCondition>
+																																																				<DefaultBranch>
+																																																					<Function_rollTurn opponent="$opponents[0]" table="$__object.id" nodeLabel="12123303" />
+																																																				</DefaultBranch>
+																																																			</Switch>
+																																																		</Sequence>
 																																																	</SuppressFailure>
 																																																</Synchronize>
 																																																<IfCondition failOnCondition="false" condition="$loop &lt;= $loops">
@@ -1062,8 +1102,7 @@
 		<EditorData EventSet="">
 			<Variables>
 				<Variable name="amountToCheck" comment="" />
-				<Variable name="badgeTier" comment="" />
-				<Variable name="badgeTierInt" comment="" />
+				<Variable name="cup" comment="" />
 				<Variable name="cupSlot" comment="" />
 				<Variable name="diceInit" comment="" />
 				<Variable name="diceInitDialogResult" comment="" />
@@ -1075,14 +1114,12 @@
 				<Variable name="hiddenCupSlot" comment="" />
 				<Variable name="hiddenDiceOnTable" comment="" />
 				<Variable name="inviteBarkInProgress" comment="" />
-				<Variable name="isFemale" comment="" />
 				<Variable name="loop" comment="" />
 				<Variable name="loops" comment="" />
 				<Variable name="minigameAvailabilityEvaluated" comment="" />
 				<Variable name="minigameEnabled" comment="" />
 				<Variable name="opponents" comment="" />
 				<Variable name="playWithoutMoney" comment="" />
-				<Variable name="useFirstRollAnimation" comment="" />
 			</Variables>
 			<ForwardDeclarations />
 			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
@@ -1166,26 +1203,12 @@
 												</Expression>
 											</Sequence>
 										</IfCondition>
-										<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
-											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
 												<OutputBreakpoints />
-												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-													<OutputBreakpoints />
-												</Expression>
-											</IfCondition>
-											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-												<OutputBreakpoints />
-												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-													<OutputBreakpoints />
-												</Expression>
-											</IfCondition>
-											<DefaultBranch>
-												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
-													<OutputBreakpoints />
-												</Success>
-											</DefaultBranch>
-										</Switch>
+											</Expression>
+										</IfCondition>
 										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 											<OutputBreakpoints />
 											<Then>
@@ -1428,26 +1451,35 @@
 																																																		<OutputBreakpoints />
 																																																		<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																																			<OutputBreakpoints />
-																																																			<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																																				<OutputBreakpoints />
-																																																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																				<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																																					<OutputBreakpoints />
-																																																					<Function_rollFirst hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																																						<OutputBreakpoints />
-																																																					</Function_rollFirst>
-																																																				</IfCondition>
-																																																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																				</ReinitVariable>
+																																																				<GetItemInSlot hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																																					<OutputBreakpoints />
-																																																					<Function_rollFinish hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																				</GetItemInSlot>
+																																																				<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																					<OutputBreakpoints />
+																																																					<IfCondition hasInputBreakpoint="0" comment="cup not on table, must take it out of pocket" breakpointFlags="0">
 																																																						<OutputBreakpoints />
-																																																					</Function_rollFinish>
-																																																				</IfCondition>
-																																																				<DefaultBranch>
-																																																					<Function_rollTurn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																						<Function_rollFirst hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																							<OutputBreakpoints />
+																																																						</Function_rollFirst>
+																																																					</IfCondition>
+																																																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																																						<OutputBreakpoints />
-																																																					</Function_rollTurn>
-																																																				</DefaultBranch>
-																																																			</Switch>
+																																																						<Function_rollFinish hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																							<OutputBreakpoints />
+																																																						</Function_rollFinish>
+																																																					</IfCondition>
+																																																					<DefaultBranch>
+																																																						<Function_rollTurn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																							<OutputBreakpoints />
+																																																						</Function_rollTurn>
+																																																					</DefaultBranch>
+																																																				</Switch>
+																																																			</Sequence>
 																																																		</SuppressFailure>
 																																																	</Synchronize>
 																																																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -1683,6 +1715,7 @@
 		<Variables>
 			<Variable name="amountToCheck" type="_int" values="" isPersistent="0" form="single" />
 			<Variable name="challengers" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="cup" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="cupSlot" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="diceInit" type="dice:init" values="" isPersistent="0" form="single" />
 			<Variable name="diceInitDialogResult" type="dice:initDialogResult" values="" isPersistent="0" form="single" />
@@ -1697,7 +1730,6 @@
 			<Variable name="minigameAvailabilityEvaluated" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="minigameEnabled" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="playWithoutMoney" type="_bool" values="" isPersistent="0" form="single" />
-			<Variable name="useFirstRollAnimation" type="_bool" values="" isPersistent="0" form="single" />
 		</Variables>
 		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
 			<OnInit canSkip="1">
@@ -1742,17 +1774,9 @@
 											<Expression expressions="$hasEnoughMoney = true" />
 										</Sequence>
 									</IfCondition>
-									<Switch>
-										<IfCondition failOnCondition="false" condition="$gamblerState == $enum:dice_gamblerState.arriving">
-											<Expression expressions="$useFirstRollAnimation = true" />
-										</IfCondition>
-										<IfCondition failOnCondition="false" condition="$gamblerState == $enum:dice_gamblerState.playingAgainstNpc">
-											<Expression expressions="$gamblerState = $enum:dice_gamblerState.waitingForOpponent" />
-										</IfCondition>
-										<DefaultBranch>
-											<Success />
-										</DefaultBranch>
-									</Switch>
+									<IfCondition failOnCondition="false" condition="$gamblerState == $enum:dice_gamblerState.playingAgainstNpc">
+										<Expression expressions="$gamblerState = $enum:dice_gamblerState.waitingForOpponent" />
+									</IfCondition>
 									<IfElseCondition failOnCondition="false" condition="$hasEnoughMoney &amp; $gamblerState ~= $enum:dice_gamblerState.leaving" saveVersion="2">
 										<Then canSkip="1">
 											<EntityContextElement context="DisableSituationParticipation" enabled="true">
@@ -1817,14 +1841,18 @@
 																																									</Synchronize>
 																																									<IfCondition failOnCondition="false" condition="$loop &lt;= $loops">
 																																										<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;dice_opponentTurn&apos;" RunLogic="KeepRunning">
-																																											<Switch>
-																																												<IfCondition failOnCondition="false" condition="$loop == 1 &amp; $useFirstRollAnimation">
-																																													<Function_rollFirst opponent="$challengers[0]" table="$__object.id" nodeLabel="71589396" />
-																																												</IfCondition>
-																																												<DefaultBranch>
-																																													<Function_rollTurn opponent="$challengers[0]" table="$__object.id" nodeLabel="80960045" />
-																																												</DefaultBranch>
-																																											</Switch>
+																																											<Sequence>
+																																												<ReinitVariable variable="$cup" />
+																																												<GetItemInSlot slot="$cupSlot" useHomeItem="false" item="$cup" />
+																																												<Switch>
+																																													<IfCondition failOnCondition="false" condition="$cup == $__null">
+																																														<Function_rollFirst opponent="$challengers[0]" table="$__object.id" nodeLabel="71589396" />
+																																													</IfCondition>
+																																													<DefaultBranch>
+																																														<Function_rollTurn opponent="$challengers[0]" table="$__object.id" nodeLabel="80960045" />
+																																													</DefaultBranch>
+																																												</Switch>
+																																											</Sequence>
 																																										</Synchronize>
 																																									</IfCondition>
 																																								</Sequence>
@@ -1959,6 +1987,7 @@
 			<Variables>
 				<Variable name="amountToCheck" comment="" />
 				<Variable name="challengers" comment="" />
+				<Variable name="cup" comment="" />
 				<Variable name="cupSlot" comment="" />
 				<Variable name="diceInit" comment="" />
 				<Variable name="diceInitDialogResult" comment="" />
@@ -1973,7 +2002,6 @@
 				<Variable name="minigameAvailabilityEvaluated" comment="" />
 				<Variable name="minigameEnabled" comment="" />
 				<Variable name="playWithoutMoney" comment="" />
-				<Variable name="useFirstRollAnimation" comment="" />
 			</Variables>
 			<ForwardDeclarations />
 			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
@@ -2057,26 +2085,12 @@
 												</Expression>
 											</Sequence>
 										</IfCondition>
-										<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
-											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
 												<OutputBreakpoints />
-												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-													<OutputBreakpoints />
-												</Expression>
-											</IfCondition>
-											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-												<OutputBreakpoints />
-												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-													<OutputBreakpoints />
-												</Expression>
-											</IfCondition>
-											<DefaultBranch>
-												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
-													<OutputBreakpoints />
-												</Success>
-											</DefaultBranch>
-										</Switch>
+											</Expression>
+										</IfCondition>
 										<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 											<OutputBreakpoints />
 											<Then>
@@ -2202,20 +2216,29 @@
 																																											<OutputBreakpoints />
 																																											<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																												<OutputBreakpoints />
-																																												<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																													<OutputBreakpoints />
-																																													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																														<OutputBreakpoints />
-																																														<Function_rollFirst hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													</ReinitVariable>
+																																													<GetItemInSlot hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																														<OutputBreakpoints />
+																																													</GetItemInSlot>
+																																													<Switch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																														<OutputBreakpoints />
+																																														<IfCondition hasInputBreakpoint="0" comment="cup not on table, must take it out of pocket" breakpointFlags="0">
 																																															<OutputBreakpoints />
-																																														</Function_rollFirst>
-																																													</IfCondition>
-																																													<DefaultBranch>
-																																														<Function_rollTurn hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																															<OutputBreakpoints />
-																																														</Function_rollTurn>
-																																													</DefaultBranch>
-																																												</Switch>
+																																															<Function_rollFirst hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																<OutputBreakpoints />
+																																															</Function_rollFirst>
+																																														</IfCondition>
+																																														<DefaultBranch>
+																																															<Function_rollTurn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																<OutputBreakpoints />
+																																															</Function_rollTurn>
+																																														</DefaultBranch>
+																																													</Switch>
+																																												</Sequence>
 																																											</Synchronize>
 																																										</IfCondition>
 																																									</Sequence>
@@ -2855,43 +2878,7 @@
 				</AnyDecorator>
 			</Behavior>
 		</Root>
-		<ForestContainer>
-			<RandomGate opensWithChance="0.500000" saveVersion="2">
-				<Then canSkip="1">
-					<Expression expressions="$success = true" />
-				</Then>
-				<Else canSkip="1">
-					<Expression expressions="$success = false" />
-				</Else>
-			</RandomGate>
-			<IfElseCondition failOnCondition="false" condition="$success" saveVersion="2">
-				<Else canSkip="1">
-					<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;diceFail&apos;" RunLogic="KeepRunning">
-						<AnimationAction fragment="&apos;DiceGameFinish&apos;" tags="&apos;DiceGameFail&apos;" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false">
-							<EventData_place Slot="$hiddenSlot" name="&apos;hiddenSlot&apos;" />
-						</AnimationAction>
-					</Synchronize>
-				</Else>
-			</IfElseCondition>
-			<EventData_pickup Slot="$cupSlot" name="&apos;cupSlot&apos;" />
-			<EventData_place Slot="$hiddenSlot" name="&apos;hiddenSlot&apos;" />
-			<AnimationAction fragment="&apos;DiceNew_StartFailure&apos;" tags="" eventReferenceObject="$this.id" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
-			<AnimationAction fragment="&apos;DiceGameFinish&apos;" tags="&apos;DiceGameSuccess&apos;" eventReferenceObject="$this.id" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
-			<Sequence>
-				<AnimationAction fragment="&apos;DiceGameNewTurn&apos;" tags="" eventReferenceObject="$this.id" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
-				<RandomGate opensWithChance="0.500000" saveVersion="2">
-					<Then canSkip="1">
-						<AnimationAction fragment="&apos;DiceGameContinueTurn&apos;" tags="" eventReferenceObject="" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
-					</Then>
-					<Else canSkip="1">
-						<Success />
-					</Else>
-				</RandomGate>
-			</Sequence>
-			<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Local" SemaphoreName="&apos;diceSuccess&apos;" RunLogic="KeepRunning">
-				<AnimationAction fragment="&apos;DiceNew_EndSuccess&apos;" tags="" eventReferenceObject="$this.id" alignObject="" slaveObject="" resourceOverride="" allowTorchForPlayer="false" />
-			</Synchronize>
-		</ForestContainer>
+		<ForestContainer />
 		<EditorData EventSet="">
 			<Variables>
 				<Variable name="bark" comment="" />
@@ -2978,72 +2965,7 @@
 					</AnyDecorator>
 				</Behavior>
 			</Root>
-			<Forest>
-				<RandomGate editorPosX="2730" editorPosY="-300" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-					<OutputBreakpoints />
-					<Then>
-						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-						</Expression>
-					</Then>
-					<Else>
-						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-						</Expression>
-					</Else>
-				</RandomGate>
-				<IfElseCondition editorPosX="2130" editorPosY="210" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-					<OutputBreakpoints />
-					<Else>
-						<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-							<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
-								<OutputBreakpoints />
-								<EventData_place hasInputBreakpoint="0" comment="" breakpointFlags="0">
-									<OutputBreakpoints />
-								</EventData_place>
-							</AnimationAction>
-						</Synchronize>
-					</Else>
-				</IfElseCondition>
-				<EventData_pickup editorPosX="2400" editorPosY="-350" hasInputBreakpoint="0" comment="" breakpointFlags="0">
-					<OutputBreakpoints />
-				</EventData_pickup>
-				<EventData_place editorPosX="2950" editorPosY="-480" hasInputBreakpoint="0" comment="" breakpointFlags="0">
-					<OutputBreakpoints />
-				</EventData_place>
-				<AnimationAction editorPosX="2880" editorPosY="60" hasInputBreakpoint="0" comment="" breakpointFlags="0">
-					<OutputBreakpoints />
-				</AnimationAction>
-				<AnimationAction editorPosX="2680" editorPosY="-480" hasInputBreakpoint="0" comment="" breakpointFlags="0">
-					<OutputBreakpoints />
-				</AnimationAction>
-				<Sequence editorPosX="2060" editorPosY="-510" hasInputBreakpoint="0" comment="last turn" breakpointFlags="0">
-					<OutputBreakpoints />
-					<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
-						<OutputBreakpoints />
-					</AnimationAction>
-					<RandomGate hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-						<OutputBreakpoints />
-						<Then>
-							<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
-								<OutputBreakpoints />
-							</AnimationAction>
-						</Then>
-						<Else>
-							<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
-								<OutputBreakpoints />
-							</Success>
-						</Else>
-					</RandomGate>
-				</Sequence>
-				<Synchronize editorPosX="1990" editorPosY="-190" hasInputBreakpoint="0" comment="" breakpointFlags="0">
-					<OutputBreakpoints />
-					<AnimationAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
-						<OutputBreakpoints />
-					</AnimationAction>
-				</Synchronize>
-			</Forest>
+			<Forest />
 			<Comments />
 		</EditorData>
 	</BehaviorTree>
@@ -3886,6 +3808,7 @@
 	<BehaviorTree name="dice_interrupt_playDiceMinigame" is_function="1">
 		<Variables>
 			<Variable name="chair" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="gamblerState" type="enum:dice_gamblerState" values="$enum:dice_gamblerState.arriving" isPersistent="0" form="single" />
 			<Variable name="otherPlayers" type="_wuid" values="" isPersistent="0" form="array" />
 			<Variable name="tableFree" type="_bool" values="" isPersistent="0" form="single" />
 		</Variables>
@@ -3901,63 +3824,87 @@
 				</GraphSearch>
 			</OnInit>
 			<Behavior canSkip="1">
-				<Sequence>
-					<Timeout duration="&apos;15s&apos;" timeType="GameTime" doFail="true" variation="">
-						<While doFail="false" propagateChildFail="false" condition="~$tableFree">
-							<Sequence>
-								<ReinitVariable variable="$otherPlayers" />
-								<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
-									<LinkTagFilter tag="&apos;dice_dicePlayer&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
-									<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
-										<Child0 canSkip="1">
-											<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
-										</Child0>
-									</NegationOp>
-									<Nodalyzer Quantifiers="ForAll" Parent="" Child="$otherPlayers" saveVersion="2" />
-								</GraphSearch>
-								<IfElseCondition failOnCondition="false" condition="#otherPlayers &gt; 0" saveVersion="2">
-									<Then canSkip="1">
-										<LinkGate from="$__object.id" to="$otherPlayers[0]" tag="&apos;dice_dicePlayer&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="KeepRunning">
-											<Success />
-										</LinkGate>
-									</Then>
-									<Else canSkip="1">
-										<Expression expressions="$tableFree = true" />
-									</Else>
-								</IfElseCondition>
-							</Sequence>
-						</While>
-					</Timeout>
-					<EntityContextPresetElement contextPreset="crime_dontCommentOnPlayer" enabled="true">
-						<StanceElement smartObject="$chair" stance="sitting" allowAny="false" enabled="true">
-							<AddLinkElement from="$this.id" to="$__object.id" tag="&apos;dice_table&apos;" data="" enabled="true">
-								<EntityContextPreset preset="crime_dontCommentOnPlayer" target="">
+				<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+					<Child canSkip="1">
+						<Sequence>
+							<Timeout duration="&apos;15s&apos;" timeType="GameTime" doFail="true" variation="">
+								<While doFail="false" propagateChildFail="false" condition="~$tableFree">
 									<Sequence>
-										<WaitAction />
-										<Synchronize SemaphoreCount="3" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;25s&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_readyToInitMinigame&apos;" RunLogic="KeepRunning">
-											<ChangeBehaviorStateElement smartEntity="$__object.id" behavior="&apos;use_kibitzer&apos;" state="Enabled" allowAnyState="false" enabled="true">
-												<Sequence>
-													<WaitAction />
-													<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;25s&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_minigameReady&apos;" RunLogic="KeepRunning">
-														<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_minigameFinished&apos;" RunLogic="KeepRunning">
-															<Function_dice_playEndReaction nodeLabel="68510930" />
-														</Synchronize>
-													</Synchronize>
-												</Sequence>
-											</ChangeBehaviorStateElement>
-										</Synchronize>
+										<ReinitVariable variable="$otherPlayers" />
+										<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="false" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+											<LinkTagFilter tag="&apos;dice_dicePlayer&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+											<NegationOp Results="true" Advance="true" EndOp="true" saveVersion="2">
+												<Child0 canSkip="1">
+													<WUIDFilter WUID="$this.id" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+												</Child0>
+											</NegationOp>
+											<Nodalyzer Quantifiers="ForAll" Parent="" Child="$otherPlayers" saveVersion="2" />
+										</GraphSearch>
+										<IfElseCondition failOnCondition="false" condition="#otherPlayers &gt; 0" saveVersion="2">
+											<Then canSkip="1">
+												<LinkGate from="$__object.id" to="$otherPlayers[0]" tag="&apos;dice_dicePlayer&apos;" amount="AtLeastOne" presence="NotThere" RunLogic="KeepRunning">
+													<Success />
+												</LinkGate>
+											</Then>
+											<Else canSkip="1">
+												<Expression expressions="$tableFree = true" />
+											</Else>
+										</IfElseCondition>
 									</Sequence>
-								</EntityContextPreset>
-							</AddLinkElement>
-						</StanceElement>
-					</EntityContextPresetElement>
-				</Sequence>
+								</While>
+							</Timeout>
+							<Decision decisionLabel="dice_gamblerInterruptState" variable="$gamblerState" saveVersion="2">
+								<Search canSkip="1">
+									<Success />
+								</Search>
+								<Exec canSkip="1">
+									<IfCondition failOnCondition="false" condition="$gamblerState ~= $enum:dice_gamblerState.leaving">
+										<EntityContextPresetElement contextPreset="crime_dontCommentOnPlayer" enabled="true">
+											<StanceElement smartObject="$chair" stance="sitting" allowAny="false" enabled="true">
+												<AddLinkElement from="$this.id" to="$__object.id" tag="&apos;dice_table&apos;" data="" enabled="true">
+													<EntityContextPreset preset="crime_dontCommentOnPlayer" target="">
+														<Sequence>
+															<WaitAction />
+															<Expression expressions="$gamblerState =$enum:dice_gamblerState.waitingForMinigame" />
+															<Synchronize SemaphoreCount="3" InsideTimerValue="&apos;20s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_readyToInitMinigame&apos;" RunLogic="KeepRunning">
+																<ChangeBehaviorStateElement smartEntity="$__object.id" behavior="&apos;use_kibitzer&apos;" state="Enabled" allowAnyState="false" enabled="true">
+																	<Sequence>
+																		<WaitAction />
+																		<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;20s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_minigameReady&apos;" RunLogic="KeepRunning">
+																			<Sequence>
+																				<Expression expressions="$gamblerState =$enum:dice_gamblerState.playingAgainstPlayer" />
+																				<Synchronize SemaphoreCount="2" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_minigameFinished&apos;" RunLogic="KeepRunning">
+																					<Sequence>
+																						<Expression expressions="$gamblerState =$enum:dice_gamblerState.leaving" />
+																						<Function_dice_playEndReaction nodeLabel="68510930" />
+																					</Sequence>
+																				</Synchronize>
+																			</Sequence>
+																		</Synchronize>
+																	</Sequence>
+																</ChangeBehaviorStateElement>
+															</Synchronize>
+														</Sequence>
+													</EntityContextPreset>
+												</AddLinkElement>
+											</StanceElement>
+										</EntityContextPresetElement>
+									</IfCondition>
+								</Exec>
+							</Decision>
+						</Sequence>
+					</Child>
+					<OnFail canSkip="1">
+						<ForgetDecision decisionLabel="dice_gamblerInterruptState" />
+					</OnFail>
+				</FuseBox>
 			</Behavior>
 		</Root>
 		<ForestContainer />
 		<EditorData Signature="dice_interrupt_playDiceMinigame" EventSet="">
 			<Variables>
 				<Variable name="chair" comment="" />
+				<Variable name="gamblerState" comment="" />
 				<Variable name="otherPlayers" comment="" />
 				<Variable name="tableFree" comment="" />
 				<Variable name="forceBadgeSubtype" comment="" />
@@ -3976,93 +3923,131 @@
 					</GraphSearch>
 				</OnInit>
 				<Behavior>
-					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 						<OutputBreakpoints />
-						<Timeout hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-							<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<Child>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
-								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<Timeout hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-									<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
-										<OutputBreakpoints />
-									</ReinitVariable>
-									<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
-										<OutputBreakpoints />
-										<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
-											<OutputBreakpoints />
-										</LinkTagFilter>
-										<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-											<OutputBreakpoints />
-											<Child0>
-												<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
-													<OutputBreakpoints />
-												</WUIDFilter>
-											</Child0>
-										</NegationOp>
-										<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-											<OutputBreakpoints />
-										</Nodalyzer>
-									</GraphSearch>
-									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-										<OutputBreakpoints />
-										<Then>
-											<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
-												<OutputBreakpoints />
-												<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
-													<OutputBreakpoints />
-												</Success>
-											</LinkGate>
-										</Then>
-										<Else>
-											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-												<OutputBreakpoints />
-											</Expression>
-										</Else>
-									</IfElseCondition>
-								</Sequence>
-							</While>
-						</Timeout>
-						<EntityContextPresetElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-							<StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
-								<OutputBreakpoints />
-								<AddLinkElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
-									<OutputBreakpoints />
-									<EntityContextPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
 										<OutputBreakpoints />
 										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
-											<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
 												<OutputBreakpoints />
-											</WaitAction>
-											<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											</ReinitVariable>
+											<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 												<OutputBreakpoints />
-												<ChangeBehaviorStateElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
-													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												</LinkTagFilter>
+												<NegationOp hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Child0>
+														<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</WUIDFilter>
+													</Child0>
+												</NegationOp>
+												<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+												</Nodalyzer>
+											</GraphSearch>
+											<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
 														<OutputBreakpoints />
-														<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
 															<OutputBreakpoints />
-														</WaitAction>
-														<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
-															<OutputBreakpoints />
-															<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																<OutputBreakpoints />
-																<Function_dice_playEndReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																	<OutputBreakpoints />
-																</Function_dice_playEndReaction>
-															</Synchronize>
-														</Synchronize>
-													</Sequence>
-												</ChangeBehaviorStateElement>
-											</Synchronize>
+														</Success>
+													</LinkGate>
+												</Then>
+												<Else>
+													<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+													</Expression>
+												</Else>
+											</IfElseCondition>
 										</Sequence>
-									</EntityContextPreset>
-								</AddLinkElement>
-							</StanceElement>
-						</EntityContextPresetElement>
-					</Sequence>
+									</While>
+								</Timeout>
+								<Decision hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Search>
+										<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Success>
+									</Search>
+									<Exec>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<EntityContextPresetElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<StanceElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<AddLinkElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<EntityContextPreset hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</WaitAction>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+																<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<ChangeBehaviorStateElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</WaitAction>
+																			<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																					<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Expression>
+																							<Function_dice_playEndReaction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</Function_dice_playEndReaction>
+																						</Sequence>
+																					</Synchronize>
+																				</Sequence>
+																			</Synchronize>
+																		</Sequence>
+																	</ChangeBehaviorStateElement>
+																</Synchronize>
+															</Sequence>
+														</EntityContextPreset>
+													</AddLinkElement>
+												</StanceElement>
+											</EntityContextPresetElement>
+										</IfCondition>
+									</Exec>
+								</Decision>
+							</Sequence>
+						</Child>
+						<OnFail>
+							<ForgetDecision hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</ForgetDecision>
+						</OnFail>
+					</FuseBox>
 				</Behavior>
 			</Root>
 			<Forest />
@@ -4553,18 +4538,20 @@
 					</GraphSearch>
 					<StanceElement smartObject="$chair" stance="sitting" allowAny="false" enabled="true">
 						<ForceLook LookTarget="$__object.id" DisableVariations="true">
-							<EntityContext context="crime_disabledDirectPlayerTrespassReactions" target="$__player">
-								<Sequence>
-									<WaitAction />
-									<Synchronize SemaphoreCount="3" InsideTimerValue="&apos;-1&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;25s&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_readyToInitMinigame&apos;" RunLogic="KeepRunning">
-										<ActorStateBarrier Who="$__player" ToState="minigame" NegateTo="false" RunLogic="Halt">
-											<ActorStateBarrier Who="$__player" ToState="minigame" NegateTo="true" RunLogic="Halt">
-												<Success />
+							<GameContext context="crime_global_ignorePlayerWithoutTorch">
+								<EntityContext context="crime_disabledDirectPlayerTrespassReactions" target="$__player">
+									<Sequence>
+										<WaitAction />
+										<Synchronize SemaphoreCount="3" InsideTimerValue="&apos;20s&apos;" InvalidateOnExpire="false" atomic="false" OutsideQueuePosVariable="" InsidePosVariable="" TimerType="GameTime" OutsideTimerValue="&apos;-1&apos;" LockManagerType="Global" SemaphoreName="&apos;dice_readyToInitMinigame&apos;" RunLogic="KeepRunning">
+											<ActorStateBarrier Who="$__player" ToState="minigame" NegateTo="false" RunLogic="Halt">
+												<ActorStateBarrier Who="$__player" ToState="minigame" NegateTo="true" RunLogic="Halt">
+													<Success />
+												</ActorStateBarrier>
 											</ActorStateBarrier>
-										</ActorStateBarrier>
-									</Synchronize>
-								</Sequence>
-							</EntityContext>
+										</Synchronize>
+									</Sequence>
+								</EntityContext>
+							</GameContext>
 						</ForceLook>
 					</StanceElement>
 				</Sequence>
@@ -4591,27 +4578,30 @@
 							<OutputBreakpoints />
 							<ForceLook hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
-								<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<GameContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 										<OutputBreakpoints />
-										<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
-										</WaitAction>
-										<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
-											<OutputBreakpoints />
-											<ActorStateBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<WaitAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+											</WaitAction>
+											<Synchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
 												<OutputBreakpoints />
 												<ActorStateBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
-													<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<ActorStateBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
 														<OutputBreakpoints />
-													</Success>
+														<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Success>
+													</ActorStateBarrier>
 												</ActorStateBarrier>
-											</ActorStateBarrier>
-										</Synchronize>
-									</Sequence>
-								</EntityContext>
+											</Synchronize>
+										</Sequence>
+									</EntityContext>
+								</GameContext>
 							</ForceLook>
 						</StanceElement>
 					</Sequence>
@@ -5010,7 +5000,10 @@
 									<Sequence>
 										<IfCondition failOnCondition="false" condition="$bet.type == $enum:dice_betType.money |  &#10;$bet.type == $enum:dice_betType.mixed">
 											<IfCondition failOnCondition="false" condition="~$isQuest">
-												<MoveItem Item="" ItemGUID="&apos;5ef63059-322e-4e1b-abe8-926e100c770e&apos;" Source="$opponent" Target="$__player" Amount="$bet.moneyAmount" FailOnDoesntExist="false" NotifyUI="true" MovedItem="" ChangeOwnership="true" />
+												<Sequence>
+													<MoveItem Item="" ItemGUID="&apos;5ef63059-322e-4e1b-abe8-926e100c770e&apos;" Source="$opponent" Target="$__player" Amount="$bet.moneyAmount" FailOnDoesntExist="false" NotifyUI="true" MovedItem="" ChangeOwnership="true" />
+													<ExecuteLua code="Statistics.Increment(&apos;ScriptMoneyWonOnDices&apos;, data.bet.moneyAmount)" />
+												</Sequence>
 											</IfCondition>
 										</IfCondition>
 										<IfCondition failOnCondition="false" condition="$bet.type == $enum:dice_betType.token |  &#10;$bet.type == $enum:dice_betType.mixed">
@@ -5105,9 +5098,15 @@
 												<OutputBreakpoints />
 												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
-													<MoveItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 														<OutputBreakpoints />
-													</MoveItem>
+														<MoveItem hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</MoveItem>
+														<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</ExecuteLua>
+													</Sequence>
 												</IfCondition>
 											</IfCondition>
 											<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">

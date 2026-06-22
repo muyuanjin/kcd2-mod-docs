@@ -37,6 +37,16 @@ function SO_LyingHarmed_Healing:Reset()
 		self.unstanceName = 'lyingInjured_bedHigh'
 	elseif variant == 'male_sittingInjured_groundSitPlace_treating' then
 		self.unstanceName = 'sittingInjured'
+	elseif variant == 'male_lyingInjured_bed_high_typhus01' then
+		self.unstanceName = 'lyingInjured_bedHigh_typhus01'
+	elseif variant == 'male_lyingInjured_bed_high_typhus02' then
+		self.unstanceName = 'lyingInjured_bedHigh_typhus02'
+	elseif variant == 'female_lyingInjured_bed_high_typhus' then
+		self.unstanceName = 'lyingInjured_bedHigh_typhus_female'
+	elseif variant == 'male_lyingInjured_dying' then
+		self.unstanceName = 'lyingInjured_dying'
+	elseif variant == 'male_lyingInjured_dead' then
+		self.unstanceName = 'lyingInjured_dead'
 	end
 end
 

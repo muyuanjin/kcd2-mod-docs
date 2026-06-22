@@ -20,7 +20,6 @@
 			<Variable name="iterator" type="_int" values="" isPersistent="0" form="single" />
 			<Variable name="ladder" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="ladderActive" type="_wuid" values="" isPersistent="0" form="single" />
-			<Variable name="ladderAvailability" type="_wuid,_int" values="" isPersistent="0" form="custom_associative" />
 			<Variable name="ladderEntity" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="ladderSlot" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="ladderSlots" type="_wuid" values="" isPersistent="0" form="array" />
@@ -71,12 +70,6 @@
 					</GraphSearch>
 					<ForEach startIndex="0" step="1" array="$ladders" iterator="" value="$ladder" break="">
 						<Sequence>
-							<ReinitVariable variable="$queueTps" />
-							<GraphSearch Origin="$ladder" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
-								<LinkTagFilter tag="&apos;queue&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
-								<Nodalyzer Quantifiers="ForAll" Parent="" Child="$queueTps" saveVersion="2" />
-							</GraphSearch>
-							<Expression expressions="$ladderAvailability[$ladder] = #queueTps" />
 							<GraphSearch Origin="$ladder" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
 								<LinkTagFilter tag="&apos;ladderSlot&apos;" prune="true" negprune="unknown" Parent="" Child="$ladderSlot" Data="" />
 							</GraphSearch>
@@ -103,8 +96,8 @@
 									<Expression expressions="$alreadyStarted = true" />
 								</Sequence>
 							</IfCondition>
-							<Parallel successMode="Any" failureMode="Any">
-								<Loop count="-1">
+							<Loop count="-1">
+								<Sequence>
 									<LinkGate from="$ladders" to="" tag="&apos;battleLadder_active&apos;" amount="AtLeastOne" presence="Present" RunLogic="Halt">
 										<While doFail="false" propagateChildFail="false" condition="#controllers &gt; 0">
 											<IfGate atomic="false" condition="#freeLadders &gt; 0" RunLogic="KeepRunning">
@@ -119,42 +112,37 @@
 																	<LinkTagFilter tag="&apos;groupAwakeLink&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
 																</GraphSearch>
 															</IfCondition>
-															<IfCondition failOnCondition="true" condition="$ladderAvailability[$freeLadder] &gt; 0 | $controllersNpcs[$index] == 0">
-																<FuseBox StatusPropagation="Child" OneCleanup="false" saveVersion="2">
-																	<Child canSkip="1">
-																		<Sequence>
-																			<RequestBattleNPC TargetObject="$controllers[$index]" ReferencePoint="$freeLadder" Priority="Normal" RequestedNPCVarOut="$awakenNpc" />
-																			<Wait duration="&apos;500ms&apos;" timeType="GameTime" doFail="false" variation="" />
-																		</Sequence>
-																	</Child>
-																	<OnSuccess canSkip="1">
-																		<Sequence>
-																			<Expression expressions="$ladderAvailability[$freeLadder] -= 1 &#10;$controllersNpcs[$index] += 1" />
-																			<IfElseCondition failOnCondition="false" condition="$index + 1 &lt; #controllers" saveVersion="2">
-																				<Then canSkip="1">
-																					<Expression expressions="$index += 1" />
-																				</Then>
-																				<Else canSkip="1">
-																					<Expression expressions="$index = 0" />
-																				</Else>
-																			</IfElseCondition>
-																		</Sequence>
-																	</OnSuccess>
-																	<OnFail canSkip="1">
-																		<Sequence>
-																			<EraseFromArray array="$controllers" condition="$__key == $index" />
-																			<IfElseCondition failOnCondition="false" condition="$index &lt; #controllers" saveVersion="2">
-																				<Then canSkip="1">
-																					<Success />
-																				</Then>
-																				<Else canSkip="1">
-																					<Expression expressions="$index = 0" />
-																				</Else>
-																			</IfElseCondition>
-																		</Sequence>
-																	</OnFail>
-																</FuseBox>
-															</IfCondition>
+															<FuseBox StatusPropagation="Child" OneCleanup="false" saveVersion="2">
+																<Child canSkip="1">
+																	<Sequence>
+																		<RequestBattleNPC TargetObject="$controllers[$index]" ReferencePoint="$freeLadder" Priority="Normal" RequestedNPCVarOut="$awakenNpc" />
+																		<Wait duration="&apos;500ms&apos;" timeType="GameTime" doFail="false" variation="" />
+																	</Sequence>
+																</Child>
+																<OnSuccess canSkip="1">
+																	<Sequence>
+																		<Expression expressions="$controllersNpcs[$index] += 1" />
+																		<IfElseCondition failOnCondition="false" condition="$index + 1 &lt; #controllers" saveVersion="2">
+																			<Then canSkip="1">
+																				<Expression expressions="$index += 1" />
+																			</Then>
+																			<Else canSkip="1">
+																				<Expression expressions="$index = 0" />
+																			</Else>
+																		</IfElseCondition>
+																	</Sequence>
+																</OnSuccess>
+																<OnFail canSkip="1">
+																	<IfElseCondition failOnCondition="false" condition="$index &lt; #controllers" saveVersion="2">
+																		<Then canSkip="1">
+																			<Success />
+																		</Then>
+																		<Else canSkip="1">
+																			<Expression expressions="$index = 0" />
+																		</Else>
+																	</IfElseCondition>
+																</OnFail>
+															</FuseBox>
 														</Sequence>
 														<IfElseCondition failOnCondition="false" condition="$index + 1 &lt; #controllers" saveVersion="2">
 															<Then canSkip="1">
@@ -169,13 +157,9 @@
 											</IfGate>
 										</While>
 									</LinkGate>
-								</Loop>
-								<Loop count="-1">
-									<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$behaviorSuccess" senderInfo="$sender" inbox="&apos;battle_behaviorCompleted&apos;" condition="" answerVar="">
-										<Expression expressions="$ladderAvailability[$ladder] += 1" />
-									</ProcessMessage>
-								</Loop>
-							</Parallel>
+									<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
+								</Sequence>
+							</Loop>
 						</Sequence>
 						<Loop count="-1">
 							<IfGate atomic="false" condition="#ladderSlots &gt; 0" RunLogic="KeepRunning">
@@ -314,6 +298,58 @@
 					</Sequence>
 				</Then>
 			</IfElseCondition>
+			<Parallel successMode="Any" failureMode="Any">
+				<Loop count="-1">
+					<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$behaviorSuccess" senderInfo="$sender" inbox="&apos;battle_behaviorCompleted&apos;" condition="" answerVar="">
+						<Expression expressions="$ladderAvailability[$ladder] += 1" />
+					</ProcessMessage>
+				</Loop>
+			</Parallel>
+			<Sequence>
+				<ReinitVariable variable="$queueTps" />
+				<GraphSearch Origin="$ladder" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+					<LinkTagFilter tag="&apos;queue&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+					<Nodalyzer Quantifiers="ForAll" Parent="" Child="$queueTps" saveVersion="2" />
+				</GraphSearch>
+				<Expression expressions="$ladderAvailability[$ladder] = #queueTps" />
+			</Sequence>
+			<IfCondition failOnCondition="true" condition="$ladderAvailability[$freeLadder] &gt; 0 | $controllersNpcs[$index] == 0">
+				<FuseBox StatusPropagation="Child" OneCleanup="false" saveVersion="2">
+					<Child canSkip="1">
+						<Sequence>
+							<RequestBattleNPC TargetObject="$controllers[$index]" ReferencePoint="$freeLadder" Priority="Normal" RequestedNPCVarOut="$awakenNpc" />
+							<Wait duration="&apos;500ms&apos;" timeType="GameTime" doFail="false" variation="" />
+						</Sequence>
+					</Child>
+					<OnSuccess canSkip="1">
+						<Sequence>
+							<Expression expressions="$ladderAvailability[$freeLadder] -= 1 &#10;$controllersNpcs[$index] += 1" />
+							<IfElseCondition failOnCondition="false" condition="$index + 1 &lt; #controllers" saveVersion="2">
+								<Then canSkip="1">
+									<Expression expressions="$index += 1" />
+								</Then>
+								<Else canSkip="1">
+									<Expression expressions="$index = 0" />
+								</Else>
+							</IfElseCondition>
+						</Sequence>
+					</OnSuccess>
+					<OnFail canSkip="1">
+						<Sequence>
+							<EraseFromArray array="$controllers" condition="$__key == $index" />
+							<IfElseCondition failOnCondition="false" condition="$index &lt; #controllers" saveVersion="2">
+								<Then canSkip="1">
+									<Success />
+								</Then>
+								<Else canSkip="1">
+									<Expression expressions="$index = 0" />
+								</Else>
+							</IfElseCondition>
+						</Sequence>
+					</OnFail>
+				</FuseBox>
+			</IfCondition>
+			<IfCondition failOnCondition="true" condition="$controllersNpcs[$index] == 0" />
 		</ForestContainer>
 		<EditorData EventSet="">
 			<Variables>
@@ -335,7 +371,6 @@
 				<Variable name="iterator" comment="" />
 				<Variable name="ladder" comment="" />
 				<Variable name="ladderActive" comment="" />
-				<Variable name="ladderAvailability" comment="" />
 				<Variable name="ladderEntity" comment="" />
 				<Variable name="ladderSlot" comment="" />
 				<Variable name="ladderSlots" comment="" />
@@ -428,21 +463,6 @@
 							<OutputBreakpoints />
 							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
-								<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
-									<OutputBreakpoints />
-								</ReinitVariable>
-								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
-									<OutputBreakpoints />
-									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
-										<OutputBreakpoints />
-									</LinkTagFilter>
-									<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-										<OutputBreakpoints />
-									</Nodalyzer>
-								</GraphSearch>
-								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-									<OutputBreakpoints />
-								</Expression>
 								<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
 									<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -494,9 +514,9 @@
 										</Expression>
 									</Sequence>
 								</IfCondition>
-								<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-									<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 										<OutputBreakpoints />
 										<LinkGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
@@ -525,65 +545,56 @@
 																		</LinkTagFilter>
 																	</GraphSearch>
 																</IfCondition>
-																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																	<OutputBreakpoints />
-																	<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-																		<OutputBreakpoints />
-																		<Child>
-																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<Child>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<RequestBattleNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																				<OutputBreakpoints />
-																				<RequestBattleNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																					<OutputBreakpoints />
-																				</RequestBattleNPC>
-																				<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																					<OutputBreakpoints />
-																				</Wait>
-																			</Sequence>
-																		</Child>
-																		<OnSuccess>
-																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			</RequestBattleNPC>
+																			<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																				<OutputBreakpoints />
+																			</Wait>
+																		</Sequence>
+																	</Child>
+																	<OnSuccess>
+																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																			<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																				<OutputBreakpoints />
+																				<Then>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Then>
+																				<Else>
+																					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</Expression>
+																				</Else>
+																			</IfElseCondition>
+																		</Sequence>
+																	</OnSuccess>
+																	<OnFail>
+																		<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																			<OutputBreakpoints />
+																			<Then>
+																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Success>
+																			</Then>
+																			<Else>
 																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																					<OutputBreakpoints />
 																				</Expression>
-																				<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-																					<OutputBreakpoints />
-																					<Then>
-																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																							<OutputBreakpoints />
-																						</Expression>
-																					</Then>
-																					<Else>
-																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																							<OutputBreakpoints />
-																						</Expression>
-																					</Else>
-																				</IfElseCondition>
-																			</Sequence>
-																		</OnSuccess>
-																		<OnFail>
-																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																				<OutputBreakpoints />
-																				<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																					<OutputBreakpoints />
-																				</EraseFromArray>
-																				<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-																					<OutputBreakpoints />
-																					<Then>
-																						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																							<OutputBreakpoints />
-																						</Success>
-																					</Then>
-																					<Else>
-																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																							<OutputBreakpoints />
-																						</Expression>
-																					</Else>
-																				</IfElseCondition>
-																			</Sequence>
-																		</OnFail>
-																	</FuseBox>
-																</IfCondition>
+																			</Else>
+																		</IfElseCondition>
+																	</OnFail>
+																</FuseBox>
 															</Sequence>
 															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																<OutputBreakpoints />
@@ -603,17 +614,11 @@
 												</IfGate>
 											</While>
 										</LinkGate>
-									</Loop>
-									<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
-										<OutputBreakpoints />
-										<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
 											<OutputBreakpoints />
-											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-												<OutputBreakpoints />
-											</Expression>
-										</ProcessMessage>
-									</Loop>
-								</Parallel>
+										</Wait>
+									</Sequence>
+								</Loop>
 							</Sequence>
 							<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
@@ -861,6 +866,98 @@
 						</Sequence>
 					</Then>
 				</IfElseCondition>
+				<Parallel editorPosX="3700" editorPosY="-1150" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+							</Expression>
+						</ProcessMessage>
+					</Loop>
+				</Parallel>
+				<Sequence editorPosX="3700" editorPosY="-920" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</ReinitVariable>
+					<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</LinkTagFilter>
+						<Nodalyzer hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+						</Nodalyzer>
+					</GraphSearch>
+					<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+					</Expression>
+				</Sequence>
+				<IfCondition editorPosX="3840" editorPosY="-660" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+					<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+						<OutputBreakpoints />
+						<Child>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<RequestBattleNPC hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</RequestBattleNPC>
+								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Wait>
+							</Sequence>
+						</Child>
+						<OnSuccess>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Expression>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Then>
+									<Else>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+						</OnSuccess>
+						<OnFail>
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<EraseFromArray hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</EraseFromArray>
+								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<OutputBreakpoints />
+									<Then>
+										<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Success>
+									</Then>
+									<Else>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
+									</Else>
+								</IfElseCondition>
+							</Sequence>
+						</OnFail>
+					</FuseBox>
+				</IfCondition>
+				<IfCondition editorPosX="3840" editorPosY="-560" hasInputBreakpoint="0" comment="" breakpointFlags="0">
+					<OutputBreakpoints />
+				</IfCondition>
 			</Forest>
 			<Comments />
 		</EditorData>
@@ -1011,9 +1108,9 @@
 																		<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
 																			<LinkTagFilter tag="&apos;idle_kneel&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
 																		</GraphSearch>
-																		<UnstanceAction unstance="BattleKneelShieldCover" locationObject="" slaveObject="" />
+																		<UnstanceAction unstance="BattleKneelShieldCover_WithoutIn" locationObject="" slaveObject="" />
 																	</Sequence>
-																	<UnstanceAction unstance="BattleShswShld" locationObject="" slaveObject="" />
+																	<UnstanceAction unstance="BattleShswShld_WithoutIn" locationObject="" slaveObject="" />
 																</Selector>
 															</Then>
 															<Else canSkip="1">
@@ -1458,7 +1555,7 @@
 					<GraphSearch Origin="" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
 						<LinkTagFilter tag="&apos;placeSlot&apos;" prune="true" negprune="unknown" Parent="" Child="$ladderSlot" Data="" />
 					</GraphSearch>
-					<HandContentElement hand="Right" item="$ladderItem" allowAny="false" decisionLabel="battle_ladder" useDecision="true" enabled="true" saveVersion="2">
+					<HandContentElement hand="Right" item="$ladderItem" allowAny="false" allowHomeSlotAutoReturn="false" decisionLabel="battle_ladder" useDecision="true" enabled="true" saveVersion="2">
 						<Search canSkip="1">
 							<Selector>
 								<Sequence>

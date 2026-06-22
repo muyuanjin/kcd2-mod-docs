@@ -31,7 +31,7 @@ ShootableStashBase =
 		Database = {
 			guidInventoryDBId	= "0",
 			sInventoryPreset 	= "",
-			nRestockPeriodDays 	= 0, -- in how many days does the item restock after being taken, 0 to disable restock
+			nRestockPeriodDays 		= 0, -- [0, 65535, 1] in how many days does the item restock after being taken, 0 to disable restock
 			bReadOnly 			= false,
 		},
     },
@@ -111,7 +111,7 @@ end
 
 -- =============================================================================
 function ShootableStashBase:Open(user)
-	user.actor:OpenItemTransferStore(self.id, self.inventoryId)
+	user.actor:OpenItemTransferStore(self.id, self.inventoryId, "", "")
 
 	self:Event_Open()
 end

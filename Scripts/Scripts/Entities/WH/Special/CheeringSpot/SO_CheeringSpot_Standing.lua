@@ -34,17 +34,17 @@ end
 function SO_CheeringSpot_Standing:GetVariantData(gender, storedVariant)
 	local variant = self.Properties.CheeringSpot.esCheeringSpot_Standing_Variant
 
-	-- When random variant is selected, check whether there is any storedVariant with acceptable value to be used
-	if variant == 'random' and storedVariant ~= nil and string.find(storedVariant, '^variant_0%d$') ~= nil then
-		variant = storedVariant
-	end
-
-	-- Check if selected variant is acceptable for given gender, if not it will be randomized
+	-- Check if selected variant is acceptable for given gender, if not it will be randomized (or storedVariant will be used)
 	if variant ~= 'random' then
 		local variant_number = tonumber(string.sub(variant, -2, -1))
 		if variant_number == nil or variant_number > self:GetGenderVariantLimit(gender) or variant_number == 0 then
 			variant = 'random'
 		end
+	end
+
+	-- When random variant is selected, check whether there is any storedVariant with acceptable value to be used
+	if variant == 'random' and storedVariant ~= nil and string.find(storedVariant, '^variant_0%d$') ~= nil then
+		variant = storedVariant
 	end
 
 	-- Pick variant for random selection

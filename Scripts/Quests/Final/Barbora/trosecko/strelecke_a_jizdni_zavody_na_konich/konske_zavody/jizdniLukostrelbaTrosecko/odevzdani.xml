@@ -3,11 +3,11 @@
 	<Skald>
 		<DialogWrapper Name="odevzdani" HibernateMode="Script">
 			<Ports>
-				<Port Name="playerFinishPosition" Direction="In" Type="HorseArchery_Result">
-					<DesignName StringName="odevzdani_playerfinishpos_IC9F" Text="Player result" />
-				</Port>
 				<Port Name="evaluatingMicroquestProgression" Direction="In" Type="bool">
 					<DesignName StringName="odevzdani_evaluatingmicro_yCu6" Text="Micro quest is active" />
+				</Port>
+				<Port Name="playerFinishPosition" Direction="In" Type="HorseArchery_Result">
+					<DesignName StringName="odevzdani_playerfinishpos_IC9F" Text="Player result" />
 				</Port>
 				<Port Name="player_broke_the_rules" Direction="In" Type="bool">
 					<DesignName StringName="odevzdani_player_broke_th_Je4O" Text="Player broke the rules" />
@@ -30,30 +30,27 @@
 				<Port Name="CompleteFinalObjective" Direction="Out" Type="trigger">
 					<DesignName StringName="odevzdani_completefinalob_zMW8" Text="Complete final objective" />
 				</Port>
-				<Port Name="reset_activity_state" Direction="Out" Type="trigger">
-					<DesignName StringName="odevzdani_reset_activity__iNA9" Text="Reset activity state" />
+				<Port Name="process_rewards" Direction="Out" Type="trigger">
+					<DesignName StringName="odevzdani_pay_reward_7KzH" Text="Process rewards" />
 				</Port>
-				<Port Name="pay_reward" Direction="Out" Type="trigger">
-					<DesignName StringName="odevzdani_pay_reward_7KzH" Text="Pay reward" />
+				<Port Name="spoke_about_broken_rules" Direction="Out" Type="trigger">
+					<DesignName StringName="odevzdani_reset_activity__iNA9" Text="Spoke about broken rules" />
 				</Port>
-				<Port Name="activity_in_cooldown" Direction="In" Type="bool">
-					<DesignName StringName="odevzdani_activity_in_coo_qm6m" Text="Activity in cooldown" />
-				</Port>
-				<Port Name="stream_targets" Direction="Out" Type="trigger">
-					<DesignName StringName="odevzdani_stream_targets_odHv" Text="Stream targets" />
-				</Port>
-				<Port Name="unstream_targets" Direction="Out" Type="trigger">
-					<DesignName StringName="odevzdani_unstream_targets_EhAd" Text="Unstream targets" />
+				<Port Name="crime_cooldown" Direction="In" Type="bool">
+					<DesignName StringName="odevzdani_activity_in_coo_qm6m" Text="Crime cooldown" />
 				</Port>
 				<Port Name="dialog_beforeplay" Direction="Out" Type="trigger">
-					<DesignName StringName="odevzdani_dialog_beforepl_Cm5V" Text="Dialog BeforePlay" />
+					<DesignName StringName="odevzdani_dialog_beforepl_Cm5V" Text="On dialog started" />
 				</Port>
 			</Ports>
 			<Definitions>
 				<Definition File="odevzdani/odevzdani.xml" />
 			</Definitions>
 			<Nodes>
-				<odevzdani Name="odevzdani" PositionY="-20" PositionX="-40">
+				<horsearchery_conditions Name="horsearchery_conditions" PositionY="230" PositionX="-440" Namespace="utils.KonskeZavody_utils">
+					<Asset Name="showrunner" Alias="bibrek" />
+				</horsearchery_conditions>
+				<odevzdani Name="odevzdani" PositionY="-50" PositionX="-30">
 					<Edge From="evaluatingMicroquestProgression" To="micro_quest_is_active" />
 					<Edge From="playerFinishPosition" To="player_result" />
 					<Edge From="forced_track1_done" To="forced_track1_done" />
@@ -61,17 +58,40 @@
 					<Edge From="forced_track3_done" To="forced_track3_done" />
 					<Edge From="player_broke_the_rules" To="player_broke_the_rules" />
 					<Edge From="showrunner_has_enough_money" To="showrunner_has_enough_money" />
-					<Edge From="activity_in_cooldown" To="activity_in_cooldown" />
+					<Edge From="crime_cooldown" To="crime_cooldown" />
+					<Edge From="horsearchery_conditions.activity_is_possible" To="activity_is_possible" />
 				</odevzdani>
 				<Output Name="Output">
 					<Edge From="odevzdani.all_forced_tracks_done" To="AllQuestManadatedTracksWon" />
 					<Edge From="odevzdani.complete_final_objective" To="CompleteFinalObjective" />
-					<Edge From="odevzdani.pay_reward" To="pay_reward" />
-					<Edge From="odevzdani.reset_activity_state" To="reset_activity_state" />
-					<Edge From="odevzdani.unstream_current_targets" To="unstream_targets" />
-					<Edge From="odevzdani.stream_default_targets" To="stream_targets" />
-					<Edge From="odevzdani.BeforePlay" To="dialog_beforeplay" />
+					<Edge From="odevzdani.process_rewards" To="process_rewards" />
+					<Edge From="odevzdani.spoke_about_broken_rules" To="spoke_about_broken_rules" />
+					<Edge From="odevzdani.on_dialog_started" To="dialog_beforeplay" />
 				</Output>
+				<AddReward Name="rewardFirstPlaceInActivity" PositionY="460" PositionX="390">
+					<Edge From="odevzdani.first_place_in_activity" To="AddReward" />
+					<Rewards>
+						<SkillReward Type="horse_riding" ExperienceChange="2-minor" />
+						<SkillReward Type="marksmanship" ExperienceChange="2-minor" />
+					</Rewards>
+				</AddReward>
+				<AddReward Name="rewardForThreeChallenges" PositionY="330" PositionX="390">
+					<Edge From="odevzdani.all_forced_tracks_done" To="AddReward" />
+					<Rewards>
+						<SoulReputationReward ReputationChange="quest_reward_5_notable" Target="bibrek" />
+						<SkillReward Type="horse_riding" ExperienceChange="3-small" />
+						<SkillReward Type="marksmanship" ExperienceChange="3-small" />
+						<StatReward Type="agility" ExperienceChange="3-small" />
+						<FactionReputationReward ReputationChange="quest_reward_4_normal" Target="trosecko_outskirts_romaniCamp_commonFolk" />
+					</Rewards>
+				</AddReward>
+				<AddReward Name="rewardSecondPlaceInActivity" PositionY="620" PositionX="390">
+					<Edge From="odevzdani.second_place_in_activity" To="AddReward" />
+					<Rewards>
+						<SkillReward Type="horse_riding" ExperienceChange="1-micro" />
+						<SkillReward Type="marksmanship" ExperienceChange="1-micro" />
+					</Rewards>
+				</AddReward>
 			</Nodes>
 		</DialogWrapper>
 	</Skald>

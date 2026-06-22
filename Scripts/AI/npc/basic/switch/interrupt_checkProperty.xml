@@ -4,6 +4,7 @@
 		<Variables>
 			<Variable name="anyDecoratorPreset" type="_string" values="" isPersistent="0" form="single" />
 			<Variable name="canBeAttributedToPlayer" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="const_false" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="direction" type="vec3" values="" isPersistent="0" form="single" />
 			<Variable name="doorClosingPolicy" type="enum:movementDoorClosingPolicy" values="" isPersistent="0" form="single" />
 			<Variable name="doorPoint" type="vec3" values="" isPersistent="0" form="single" />
@@ -43,9 +44,13 @@
 															<IfCondition failOnCondition="false" condition="$checkPropertyData.suspiciousDoor ~= $__null">
 																<Sequence>
 																	<Function_crime_getEquipmentsHome equipment="$checkPropertyData.suspiciousDoor" home="$home" nodeLabel="70491911" />
-																	<Function_crime_checkLongTermMemoryTrespass home="$home" knowAboutPlayer="$canBeAttributedToPlayer" nodeLabel="38286003" />
-																	<Expression expressions="$hotEntityData.reason = $enum:switch_hotEntityReason.suspiciousDoor &#10;$hotEntityData.suspiciousDoor = $checkPropertyData.suspiciousDoor" />
-																	<Function_switch_addHotEntity data="$hotEntityData" entity="$__player" expiration="20" nodeLabel="71945335" />
+																	<IfCondition failOnCondition="false" condition="~$checkPropertyData.suspiciousDoorNonattributable">
+																		<Sequence>
+																			<Function_crime_checkLongTermMemoryTrespass home="$home" knowAboutPlayer="$canBeAttributedToPlayer" nodeLabel="38286003" />
+																			<Expression expressions="$hotEntityData.reason = $enum:switch_hotEntityReason.suspiciousDoor &#10;$hotEntityData.suspiciousDoor = $checkPropertyData.suspiciousDoor" />
+																			<Function_switch_addHotEntity data="$hotEntityData" entity="$__player" expiration="20" nodeLabel="71945335" />
+																		</Sequence>
+																	</IfCondition>
 																	<EntityContext context="crime_nrbLevel_searching" target="">
 																		<Sequence>
 																			<ShowTutorial Name="crimeIcon_general" />
@@ -127,29 +132,47 @@
 																											</Parallel>
 																											<Loop count="-1">
 																												<Sequence>
-																													<EntityContext context="crime_disabledRecurrentPerceptionIgnore" target="">
-																														<Sequence>
-																															<CancelPerceptionIgnore PerceptorObject="$this.id" PerceptibleObject="$__player" WasIgnoredAtLeastFor="&apos;0s&apos;" />
-																															<PerceptionSearch ComponentToBoost="BoostNothing" saveVersion="2">
-																																<Search canSkip="1">
-																																	<While doFail="false" propagateChildFail="false" condition="true">
-																																		<ProcessMessage Atomic="false" timeout="" timeType="GameTime" variable="$percept" senderInfo="" inbox="&apos;perceptionInfo_checkProperty&apos;" condition="" answerVar="">
-																																			<CheckWuidValid wuid="$percept.perceptible" FailSubtMissing="false" saveVersion="2">
-																																				<Then canSkip="1">
-																																					<IfCondition failOnCondition="false" condition="$percept.threshold == 1">
-																																						<DismissSearchCandidate PerceptibleObject="$percept.perceptible" />
-																																					</IfCondition>
-																																				</Then>
-																																			</CheckWuidValid>
-																																		</ProcessMessage>
-																																	</While>
-																																</Search>
-																																<NoCandidate canSkip="1">
-																																	<Success />
-																																</NoCandidate>
-																															</PerceptionSearch>
-																														</Sequence>
-																													</EntityContext>
+																													<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+																														<Child canSkip="1">
+																															<EntityContext context="crime_disabledRecurrentPerceptionIgnore" target="">
+																																<Sequence>
+																																	<CancelPerceptionIgnore PerceptorObject="$this.id" PerceptibleObject="$__player" WasIgnoredAtLeastFor="&apos;0s&apos;" />
+																																	<PerceptionSearch ComponentToBoost="BoostNothing" saveVersion="2">
+																																		<Search canSkip="1">
+																																			<While doFail="false" propagateChildFail="false" condition="true">
+																																				<ProcessMessage Atomic="false" timeout="" timeType="GameTime" variable="$percept" senderInfo="" inbox="&apos;perceptionInfo_checkProperty&apos;" condition="" answerVar="">
+																																					<CheckWuidValid wuid="$percept.perceptible" FailSubtMissing="false" saveVersion="2">
+																																						<Then canSkip="1">
+																																							<IfCondition failOnCondition="false" condition="$percept.threshold == 1">
+																																								<DismissSearchCandidate PerceptibleObject="$percept.perceptible" />
+																																							</IfCondition>
+																																						</Then>
+																																					</CheckWuidValid>
+																																				</ProcessMessage>
+																																			</While>
+																																		</Search>
+																																		<NoCandidate canSkip="1">
+																																			<Success />
+																																		</NoCandidate>
+																																	</PerceptionSearch>
+																																</Sequence>
+																															</EntityContext>
+																														</Child>
+																														<OnFail canSkip="1">
+																															<AtomicDecorator>
+																																<Sequence>
+																																	<GetCurrentPerceptionFocus PerceptionNfo="$percept" />
+																																	<IfCondition failOnCondition="false" condition="$percept.perceptible ~= $__null">
+																																		<CheckWuidValid wuid="$percept.perceptible" FailSubtMissing="false" saveVersion="2">
+																																			<Then canSkip="1">
+																																				<Function_crime_ignorePerceivedEntity disableIgnore="$const_false" perceivedEntity="$percept.perceptible" nodeLabel="64406861" />
+																																			</Then>
+																																		</CheckWuidValid>
+																																	</IfCondition>
+																																</Sequence>
+																															</AtomicDecorator>
+																														</OnFail>
+																													</FuseBox>
 																													<Wait duration="&apos;1s&apos;" timeType="GameTime" doFail="false" variation="" />
 																												</Sequence>
 																											</Loop>
@@ -173,7 +196,7 @@
 																	<Then canSkip="1">
 																		<Sequence>
 																			<GetSpatialInfo In="$checkPropertyData.home" Out="$homePos" What="Position" />
-																			<Function_crime_getCrimeSceneSearchPoint crimePos="$homePos" desiredSearchPointCount="3" direction="$direction" forceUpdate="false" searchMode="$enum:crime_crimeSceneSearchMode.widespread" searchPoint="$searchPoint" nodeLabel="26930156" />
+																			<Function_crime_getCrimeSceneSearchPoint crimePos="$homePos" desiredSearchPointCount="12" direction="$direction" forceUpdate="false" searchMode="$enum:crime_crimeSceneSearchMode.widespread" searchPoint="$searchPoint" nodeLabel="26930156" />
 																			<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="" dramaticBark="false" lookAt="$__null" metarole="&apos;BUDDY_SI_VSIML_ZMIZENI_NPC_A_JDE_HO_HLEDAT&apos;" priority="$enum:crime_barkPriority.low" nodeLabel="49287497" />
 																			<Loop count="3">
 																				<Sequence>
@@ -186,7 +209,7 @@
 																							</Parallel>
 																							<Wait duration="&apos;3s&apos;" timeType="GameTime" doFail="false" variation="&apos;2s&apos;" />
 																						</Sequence>
-																						<Function_crime_getCrimeSceneSearchPoint crimePos="$homePos" desiredSearchPointCount="3" direction="$direction" forceUpdate="false" searchMode="$enum:crime_crimeSceneSearchMode.widespread" searchPoint="$searchPoint" nodeLabel="73022075" />
+																						<Function_crime_getCrimeSceneSearchPoint crimePos="$homePos" desiredSearchPointCount="12" direction="$direction" forceUpdate="false" searchMode="$enum:crime_crimeSceneSearchMode.widespread" searchPoint="$searchPoint" nodeLabel="73022075" />
 																					</Parallel>
 																				</Sequence>
 																			</Loop>
@@ -285,6 +308,7 @@
 			<Variables>
 				<Variable name="anyDecoratorPreset" comment="" />
 				<Variable name="canBeAttributedToPlayer" comment="" />
+				<Variable name="const_false" comment="" />
 				<Variable name="direction" comment="" />
 				<Variable name="doorClosingPolicy" comment="" />
 				<Variable name="doorPoint" comment="" />
@@ -348,15 +372,21 @@
 																		<Function_crime_getEquipmentsHome hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																			<OutputBreakpoints />
 																		</Function_crime_getEquipmentsHome>
-																		<Function_crime_checkLongTermMemoryTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																			<OutputBreakpoints />
-																		</Function_crime_checkLongTermMemoryTrespass>
-																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																			<OutputBreakpoints />
-																		</Expression>
-																		<Function_switch_addHotEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																			<OutputBreakpoints />
-																		</Function_switch_addHotEntity>
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<Function_crime_checkLongTermMemoryTrespass hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_crime_checkLongTermMemoryTrespass>
+																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Expression>
+																				<Function_switch_addHotEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</Function_switch_addHotEntity>
+																			</Sequence>
+																		</IfCondition>
 																		<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																			<OutputBreakpoints />
 																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -504,42 +534,69 @@
 																													<OutputBreakpoints />
 																													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																														<OutputBreakpoints />
-																														<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																															<OutputBreakpoints />
-																															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																<OutputBreakpoints />
-																																<CancelPerceptionIgnore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<Child>
+																																<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																	<OutputBreakpoints />
-																																</CancelPerceptionIgnore>
-																																<PerceptionSearch hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-																																	<OutputBreakpoints />
-																																	<Search>
-																																		<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<CancelPerceptionIgnore hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																			<OutputBreakpoints />
-																																			<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																				<OutputBreakpoints />
-																																				<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																		</CancelPerceptionIgnore>
+																																		<PerceptionSearch hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																			<OutputBreakpoints />
+																																			<Search>
+																																				<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																					<OutputBreakpoints />
-																																					<Then>
-																																						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																						<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																							<OutputBreakpoints />
-																																							<DismissSearchCandidate hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																								<OutputBreakpoints />
-																																							</DismissSearchCandidate>
-																																						</IfCondition>
-																																					</Then>
-																																				</CheckWuidValid>
-																																			</ProcessMessage>
-																																		</While>
-																																	</Search>
-																																	<NoCandidate>
-																																		<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<Then>
+																																								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<DismissSearchCandidate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</DismissSearchCandidate>
+																																								</IfCondition>
+																																							</Then>
+																																						</CheckWuidValid>
+																																					</ProcessMessage>
+																																				</While>
+																																			</Search>
+																																			<NoCandidate>
+																																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																				</Success>
+																																			</NoCandidate>
+																																		</PerceptionSearch>
+																																	</Sequence>
+																																</EntityContext>
+																															</Child>
+																															<OnFail>
+																																<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<OutputBreakpoints />
+																																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<GetCurrentPerceptionFocus hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																			<OutputBreakpoints />
-																																		</Success>
-																																	</NoCandidate>
-																																</PerceptionSearch>
-																															</Sequence>
-																														</EntityContext>
+																																		</GetCurrentPerceptionFocus>
+																																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																			<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																				<OutputBreakpoints />
+																																				<Then>
+																																					<Function_crime_ignorePerceivedEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																					</Function_crime_ignorePerceivedEntity>
+																																				</Then>
+																																			</CheckWuidValid>
+																																		</IfCondition>
+																																	</Sequence>
+																																</AtomicDecorator>
+																															</OnFail>
+																														</FuseBox>
 																														<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																															<OutputBreakpoints />
 																														</Wait>

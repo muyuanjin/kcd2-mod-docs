@@ -7,6 +7,7 @@
 			<Variable name="assaultData" type="crime:assaultData" values="" isPersistent="0" form="single" />
 			<Variable name="bodyTurned" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="canCheckStashes" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="const_false" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="const_true" type="_bool" values="true" isPersistent="0" form="single" />
 			<Variable name="dialogContext" type="_float" values="" isPersistent="0" form="associative" />
 			<Variable name="dot" type="_float" values="" isPersistent="0" form="single" />
@@ -33,7 +34,6 @@
 			<Variable name="stimulus_unknownShooter" type="switch:stimulus:unknownShooter" values="" isPersistent="0" form="single" />
 			<Variable name="target" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="targetFound" type="_bool" values="" isPersistent="1" form="single" />
-			<Variable name="waitActionFinished" type="_bool" values="" isPersistent="0" form="single" />
 		</Variables>
 		<Parameters>
 			<Variable name="scanData" type="switch:interruptData:scan" values="" isPersistent="0" form="single" requirementType="In" />
@@ -127,7 +127,7 @@
 																														<Expression expressions="$skirmishReaction = $enum:combat_skirmishReaction.join" />
 																													</Then>
 																													<Else canSkip="1">
-																														<DecideSkirmishReactionCrime AllowFemaleJoin="true" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="Hostile" TargetNpc="$scanData.stimulusShooter.shooter" SkirmishReaction="$skirmishReaction" />
+																														<DecideSkirmishReactionCrime AllowFemaleJoin="false" UseViolentReaction="false" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="Hostile" TargetNpc="$scanData.stimulusShooter.shooter" SkirmishReaction="$skirmishReaction" />
 																													</Else>
 																												</EntityContextCheck>
 																												<IfCondition failOnCondition="false" condition="$skirmishReaction == $enum:combat_skirmishReaction.join">
@@ -211,7 +211,7 @@
 																							</IfCondition>
 																						</Sequence>
 																						<Parallel successMode="Any" failureMode="Any">
-																							<IfElseCondition failOnCondition="false" condition="$scanData.stimulusKind ~= $enum:crime_stimulusKind.dramaticBark" saveVersion="2">
+																							<IfElseCondition failOnCondition="false" condition="($scanData.stimulusKind == $enum:crime_stimulusKind.theft &amp; $data:crime[$scanData.information.label].isCrime) | &#10;($scanData.stimulusKind == $enum:crime_stimulusKind.shooter &amp; $scanData.stimulusShooter.shooter == $__player)" saveVersion="2">
 																								<Then canSkip="1">
 																									<Sequence>
 																										<Sequence>
@@ -253,27 +253,45 @@
 																													<Sequence>
 																														<Expression expressions="$priorityBoost =  &#10;($scanData.stimulusKind == $enum:crime_stimulusKind.shooter &amp; &#10;$scanData.stimulusShooter.projectileType == $enum:crime_projectileType.arrow) &#10;? $enum:priorityManipulation.boostRangedWeapon &#10;: $enum:priorityManipulation.boostPlayer" />
 																														<Parallel successMode="All" failureMode="Any">
-																															<EntityContext context="crime_disabledRecurrentPerceptionIgnore" target="">
-																																<Sequence>
-																																	<CancelPerceptionIgnore PerceptorObject="$this.id" PerceptibleObject="$__player" WasIgnoredAtLeastFor="&apos;0s&apos;" />
-																																	<PerceptionSearch ComponentToBoost="$priorityBoost" saveVersion="2">
-																																		<Search canSkip="1">
-																																			<While doFail="false" propagateChildFail="false" condition="true">
-																																				<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$percept" senderInfo="" inbox="&apos;perceptionInfo_scan&apos;" condition="" answerVar="">
-																																					<CheckWuidValid wuid="$percept.perceptible" FailSubtMissing="false" saveVersion="2">
-																																						<Then canSkip="1">
-																																							<DismissSearchCandidate PerceptibleObject="$percept.perceptible" />
-																																						</Then>
-																																					</CheckWuidValid>
-																																				</ProcessMessage>
-																																			</While>
-																																		</Search>
-																																		<NoCandidate canSkip="1">
-																																			<Success />
-																																		</NoCandidate>
-																																	</PerceptionSearch>
-																																</Sequence>
-																															</EntityContext>
+																															<FuseBox StatusPropagation="Child" OneCleanup="true" saveVersion="2">
+																																<Child canSkip="1">
+																																	<EntityContext context="crime_disabledRecurrentPerceptionIgnore" target="">
+																																		<Sequence>
+																																			<CancelPerceptionIgnore PerceptorObject="$this.id" PerceptibleObject="$__player" WasIgnoredAtLeastFor="&apos;0s&apos;" />
+																																			<PerceptionSearch ComponentToBoost="$priorityBoost" saveVersion="2">
+																																				<Search canSkip="1">
+																																					<While doFail="false" propagateChildFail="false" condition="true">
+																																						<ProcessMessage Atomic="false" timeout="&apos;-1&apos;" timeType="GameTime" variable="$percept" senderInfo="" inbox="&apos;perceptionInfo_scan&apos;" condition="" answerVar="">
+																																							<CheckWuidValid wuid="$percept.perceptible" FailSubtMissing="false" saveVersion="2">
+																																								<Then canSkip="1">
+																																									<DismissSearchCandidate PerceptibleObject="$percept.perceptible" />
+																																								</Then>
+																																							</CheckWuidValid>
+																																						</ProcessMessage>
+																																					</While>
+																																				</Search>
+																																				<NoCandidate canSkip="1">
+																																					<Success />
+																																				</NoCandidate>
+																																			</PerceptionSearch>
+																																		</Sequence>
+																																	</EntityContext>
+																																</Child>
+																																<OnFail canSkip="1">
+																																	<AtomicDecorator>
+																																		<Sequence>
+																																			<GetCurrentPerceptionFocus PerceptionNfo="$percept" />
+																																			<IfCondition failOnCondition="false" condition="$percept.perceptible ~= $__null">
+																																				<CheckWuidValid wuid="$percept.perceptible" FailSubtMissing="false" saveVersion="2">
+																																					<Then canSkip="1">
+																																						<Function_crime_ignorePerceivedEntity disableIgnore="$const_false" perceivedEntity="$percept.perceptible" nodeLabel="78954892" />
+																																					</Then>
+																																				</CheckWuidValid>
+																																			</IfCondition>
+																																		</Sequence>
+																																	</AtomicDecorator>
+																																</OnFail>
+																															</FuseBox>
 																															<IfElseCondition failOnCondition="false" condition="$scanData.stimulusKind == $enum:crime_stimulusKind.shooter &amp; &#10;$scanData.stimulusShooter.projectileType == $enum:crime_projectileType.arrow" saveVersion="2">
 																																<Then canSkip="1">
 																																	<Success />
@@ -376,7 +394,7 @@
 																																				<Expression expressions="$skirmishReaction = $enum:combat_skirmishReaction.join" />
 																																			</Then>
 																																			<Else canSkip="1">
-																																				<DecideSkirmishReactionCrime AllowFemaleJoin="true" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="Hostile" TargetNpc="$scanData.stimulusShooter.shooter" SkirmishReaction="$skirmishReaction" />
+																																				<DecideSkirmishReactionCrime AllowFemaleJoin="true" UseViolentReaction="false" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="Hostile" TargetNpc="$scanData.stimulusShooter.shooter" SkirmishReaction="$skirmishReaction" />
 																																			</Else>
 																																		</EntityContextCheck>
 																																		<IfCondition failOnCondition="false" condition="$skirmishReaction == $enum:combat_skirmishReaction.join">
@@ -431,7 +449,7 @@
 																																				<Expression expressions="$skirmishReaction = $enum:combat_skirmishReaction.join" />
 																																			</Then>
 																																			<Else canSkip="1">
-																																				<DecideSkirmishReactionCrime AllowFemaleJoin="true" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="Hostile" TargetNpc="$scanData.stimulusShooter.shooter" SkirmishReaction="$skirmishReaction" />
+																																				<DecideSkirmishReactionCrime AllowFemaleJoin="true" UseViolentReaction="false" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="Hostile" TargetNpc="$scanData.stimulusShooter.shooter" SkirmishReaction="$skirmishReaction" />
 																																			</Else>
 																																		</EntityContextCheck>
 																																		<IfCondition failOnCondition="false" condition="$skirmishReaction == $enum:combat_skirmishReaction.join">
@@ -496,7 +514,7 @@
 																																				<Expression expressions="$skirmishReaction = $enum:combat_skirmishReaction.join" />
 																																			</Then>
 																																			<Else canSkip="1">
-																																				<DecideSkirmishReactionCrime AllowFemaleJoin="true" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="Hostile" TargetNpc="$__player" SkirmishReaction="$skirmishReaction" />
+																																				<DecideSkirmishReactionCrime AllowFemaleJoin="true" UseViolentReaction="false" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="Hostile" TargetNpc="$__player" SkirmishReaction="$skirmishReaction" />
 																																			</Else>
 																																		</EntityContextCheck>
 																																		<IfElseCondition failOnCondition="false" condition="$skirmishReaction == $enum:combat_skirmishReaction.join" saveVersion="2">
@@ -520,7 +538,7 @@
 																												</IfCondition>
 																												<IfCondition failOnCondition="false" condition="$scanData.stimulusKind == $enum:crime_stimulusKind.corpse &amp;  &#10;~$targetFound">
 																													<AtomicDecorator>
-																														<CheckWuidValid wuid="$information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
+																														<CheckWuidValid wuid="$scanData.information.perceivedWuid" FailSubtMissing="false" saveVersion="2">
 																															<Then canSkip="1">
 																																<Sequence>
 																																	<Expression expressions="$information = $scanData.information &#10;$stimulusCorpse.corpse = $information.perceivedWuid &#10;$stimulusCorpse.corpseStateOverrideActive = true &#10;$stimulusCorpse.corpseStateOverride = $scanData.corpseState" />
@@ -638,6 +656,7 @@
 				<Variable name="assaultData" comment="" />
 				<Variable name="bodyTurned" comment="" />
 				<Variable name="canCheckStashes" comment="" />
+				<Variable name="const_false" comment="" />
 				<Variable name="const_true" comment="" />
 				<Variable name="dialogContext" comment="" />
 				<Variable name="dot" comment="" />
@@ -664,7 +683,6 @@
 				<Variable name="stimulus_unknownShooter" comment="" />
 				<Variable name="target" comment="" />
 				<Variable name="targetFound" comment="" />
-				<Variable name="waitActionFinished" comment="" />
 				<Variable name="scanData" comment="" />
 			</Variables>
 			<ForwardDeclarations />
@@ -1051,39 +1069,66 @@
 																															</Expression>
 																															<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																<OutputBreakpoints />
-																																<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<FuseBox hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																	<OutputBreakpoints />
-																																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																		<OutputBreakpoints />
-																																		<CancelPerceptionIgnore hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<Child>
+																																		<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																			<OutputBreakpoints />
-																																		</CancelPerceptionIgnore>
-																																		<PerceptionSearch hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-																																			<OutputBreakpoints />
-																																			<Search>
-																																				<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																				<CancelPerceptionIgnore hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																					<OutputBreakpoints />
-																																					<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																						<OutputBreakpoints />
-																																						<CheckWuidValid hasInputBreakpoint="0" comment="NPC might read message AFTER the entity gets destroyed" breakpointFlags="0" saveVersion="2">
+																																				</CancelPerceptionIgnore>
+																																				<PerceptionSearch hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																					<OutputBreakpoints />
+																																					<Search>
+																																						<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																							<OutputBreakpoints />
-																																							<Then>
-																																								<DismissSearchCandidate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<CheckWuidValid hasInputBreakpoint="0" comment="NPC might read message AFTER the entity gets destroyed" breakpointFlags="0" saveVersion="2">
 																																									<OutputBreakpoints />
-																																								</DismissSearchCandidate>
-																																							</Then>
-																																						</CheckWuidValid>
-																																					</ProcessMessage>
-																																				</While>
-																																			</Search>
-																																			<NoCandidate>
-																																				<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<Then>
+																																										<DismissSearchCandidate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																										</DismissSearchCandidate>
+																																									</Then>
+																																								</CheckWuidValid>
+																																							</ProcessMessage>
+																																						</While>
+																																					</Search>
+																																					<NoCandidate>
+																																						<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</Success>
+																																					</NoCandidate>
+																																				</PerceptionSearch>
+																																			</Sequence>
+																																		</EntityContext>
+																																	</Child>
+																																	<OnFail>
+																																		<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																				<GetCurrentPerceptionFocus hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																					<OutputBreakpoints />
-																																				</Success>
-																																			</NoCandidate>
-																																		</PerceptionSearch>
-																																	</Sequence>
-																																</EntityContext>
+																																				</GetCurrentPerceptionFocus>
+																																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																					<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																						<OutputBreakpoints />
+																																						<Then>
+																																							<Function_crime_ignorePerceivedEntity hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																							</Function_crime_ignorePerceivedEntity>
+																																						</Then>
+																																					</CheckWuidValid>
+																																				</IfCondition>
+																																			</Sequence>
+																																		</AtomicDecorator>
+																																	</OnFail>
+																																</FuseBox>
 																																<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																	<OutputBreakpoints />
 																																	<Then>

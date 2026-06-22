@@ -1,0 +1,106 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Database xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="brambora">
+	<Skald>
+		<Module Name="lapka_streaming">
+			<Ports>
+				<Port Name="lapka_nastreamovan" Direction="Out" Type="trigger">
+					<DesignName StringName="lapka_str_lapka_nastreamo_6qSH" Text="Lapka nastreamován" />
+				</Port>
+				<Port Name="quest_aktivovan" Direction="In" Type="trigger">
+					<DesignName StringName="lapka_str_quest_aktivovan_VKQ0" Text="Quest aktivován" />
+				</Port>
+				<Port Name="quest_dokoncen" Direction="In" Type="trigger">
+					<DesignName StringName="lapka_str_quest_dokoncen_KGGW" Text="Quest dokončen" />
+				</Port>
+			</Ports>
+			<Nodes>
+				<HasteTrigger Name="18_completeCorpseTimer" PositionY="230" PositionX="-1710" />
+				<Function Name="addbuff15" PositionY="10" PositionX="1270" MethodName="wh::rpgmodule::AddBuff" DeclaringType="wh::rpgmodule">
+					<Asset Name="Souls" Alias="lapkaSoul" />
+					<Constant Name="Buff" Value="ab827233-116c-4366-ab1f-704de01d628b" />
+					<Edge From="addbuff9.OnExec" To="Exec" />
+				</Function>
+				<Function Name="addbuff9" PositionY="10" PositionX="840" MethodName="wh::rpgmodule::AddBuff" DeclaringType="wh::rpgmodule">
+					<Asset Name="Souls" Alias="lapkaSoul" />
+					<Constant Name="Buff" Value="3702b27b-2591-4dd7-9353-4ae569151d98" />
+					<Edge From="streamprofileshandling.onloaded" To="Exec" />
+				</Function>
+				<HasItems_Soul Name="HasItems_Soul" PositionY="400" PositionX="-1000" Namespace="utils.item">
+					<Asset Name="soul" Alias="lapkaSoul" />
+					<Constant Name="amount" Value="1" />
+					<Edge From="VrahKonstanty.helma_nepomalovana" To="itemclass" />
+				</HasItems_Soul>
+				<If Name="if1" PositionY="190" PositionX="-730">
+					<Edge From="HasItems_Soul.hasitems" To="Condition" />
+					<Edge From="vrah_lapkaStreaming_timer.OnFinished" To="Exec" />
+				</If>
+				<IfFunction Name="ifdeathcheck16" PositionY="40" PositionX="-1650" MethodName="wh::rpgmodule::DeathCheck" DeclaringType="wh::rpgmodule">
+					<Asset Name="Souls" Alias="lapkaSoul" />
+					<Edge From="quest_dokoncen" To="Exec" />
+				</IfFunction>
+				<ObjectProperties Name="isoulproperties8" PositionY="430" PositionX="-730" DeclaringType="wh::rpgmodule::I_Soul">
+					<Asset Name="I_Soul" Alias="lapkaSoul" />
+				</ObjectProperties>
+				<HasteTrigger Name="lapkaUnstream" PositionY="280" PositionX="50">
+					<Constant Name="IsHidden" Value="true" />
+				</HasteTrigger>
+				<moveitem Name="moveitem" PositionY="80" PositionX="-350" Namespace="utils.item">
+					<Constant Name="amount" Value="1" />
+					<Constant Name="allowpartialmatch" Value="false" />
+					<Constant Name="showuinotification" Value="false" />
+					<Edge From="stashproperties7.Inventory" To="toinventory" />
+					<Edge From="isoulproperties8.Inventory" To="frominventory" />
+					<Edge From="if1.True" To="exec" />
+					<Edge From="VrahKonstanty.helma_nepomalovana" To="itemclass">
+						<Vertex>0wlSdkKI</Vertex>
+						<Vertex>AXLnxpya</Vertex>
+					</Edge>
+				</moveitem>
+				<Output Name="Output">
+					<Edge From="addbuff15.OnExec" To="lapka_nastreamovan" />
+				</Output>
+				<PermaDeath Name="PermaDeath" PositionY="220" PositionX="840" Namespace="utils.general">
+					<Asset Name="souls" Alias="lapkaSoul" />
+					<Edge From="streamprofileshandling.profileactive" To="isactive" />
+				</PermaDeath>
+				<Function Name="removebuff10" PositionY="100" PositionX="0" MethodName="wh::rpgmodule::RemoveBuff" DeclaringType="wh::rpgmodule">
+					<Asset Name="Souls" Alias="lapkaSoul" />
+					<Constant Name="Buff" Value="3702b27b-2591-4dd7-9353-4ae569151d98" />
+					<Edge From="moveitem.onexec" To="Exec" />
+					<Edge From="if1.False" To="Exec">
+						<Vertex>mgnxh7SJ</Vertex>
+						<Vertex>FpN7M6v5</Vertex>
+					</Edge>
+				</Function>
+				<ObjectProperties Name="stashproperties7" PositionY="70" PositionX="-730" DeclaringType="wh::entitymodule::Stash">
+					<Asset Name="Stash" Alias="campStash" />
+				</ObjectProperties>
+				<streamprofileshandling Name="streamprofileshandling" PositionY="-10" PositionX="430" Namespace="utils.streaming">
+					<Asset Name="profiles" Alias="lapkaProfile" />
+					<Constant Name="autodeactivatenotificationafterstream" Value="false" />
+					<Edge From="quest_aktivovan" To="streamprofiles" />
+					<Edge From="removebuff10.OnExec" To="unstreamprofiles" />
+					<Edge From="lapkaUnstream.OnTrigger" To="unstreamprofiles" />
+					<Edge From="ifdeathcheck16.False" To="unstreamprofiles">
+						<Vertex>kP9xYW6w</Vertex>
+					</Edge>
+				</streamprofileshandling>
+				<Timer Name="vrah_lapkaStreaming_timer" PositionY="70" PositionX="-1310">
+					<Constant Name="Duration" Value="2d" />
+					<Constant Name="TimeType" Value="WorldTime" />
+					<Edge From="18_completeCorpseTimer.OnTrigger" To="SetFinished" />
+					<Edge From="ifdeathcheck16.True" To="SetRunning" />
+				</Timer>
+				<VrahKonstanty Name="VrahKonstanty" PositionY="350" PositionX="-1310" Namespace="VrahLibrary" />
+			</Nodes>
+			<EdgeVertices>
+				<EdgeVertex Name="0wlSdkKI" PositionY="400" PositionX="-990" />
+				<EdgeVertex Name="AXLnxpya" PositionY="400" PositionX="-540" />
+				<EdgeVertex Name="FpN7M6v5" PositionY="430" PositionX="-160" />
+				<EdgeVertex Name="kP9xYW6w" PositionY="50" PositionX="-1300" />
+				<EdgeVertex Name="mgnxh7SJ" PositionY="430" PositionX="-340" />
+			</EdgeVertices>
+			<Text StringName="lapka_streaming_hlQi" Text="Lapka streaming" />
+		</Module>
+	</Skald>
+</Database>

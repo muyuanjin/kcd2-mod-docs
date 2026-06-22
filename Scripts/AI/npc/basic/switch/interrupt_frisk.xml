@@ -15,6 +15,7 @@
 			<Variable name="distanceStartToPlayer" type="_float" values="" isPersistent="0" form="single" />
 			<Variable name="escalateReaction" type="_bool" values="" isPersistent="1" form="single" />
 			<Variable name="escalationContext" type="_float" values="" isPersistent="1" form="associative" />
+			<Variable name="estimatingPlayersPosition" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="feedbackReceived" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="friskChatFeedback" type="crime:friskChatFeedback" values="" isPersistent="0" form="single" />
 			<Variable name="friskDialogFeedback" type="crime:friskDialogFeedback" values="" isPersistent="0" form="single" />
@@ -28,7 +29,8 @@
 			<Variable name="perkChance" type="_float" values="" isPersistent="0" form="single" />
 			<Variable name="playerFrisked" type="_bool" values="" isPersistent="1" form="single" />
 			<Variable name="playersCooldowns" type="crime:globalCooldowns" values="" isPersistent="0" form="single" />
-			<Variable name="searchDirection_useless" type="vec3" values="" isPersistent="0" form="single" />
+			<Variable name="resetPlayersEscape" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="searchDirection" type="vec3" values="" isPersistent="0" form="single" />
 			<Variable name="skipToDialog" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="startBarkFinished" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="stolenItems" type="_wuid" values="" isPersistent="0" form="array" />
@@ -121,10 +123,10 @@
 																															</Loop>
 																														</Sequence>
 																													</MoveParamsDecorator>
-																													<Function_crime_estimatePlayersPosition estimatePlayersPosition="$const_true" estimationStartPos="$directionStartPos" positionShared="$lockOnFromSharedPerception" nodeLabel="68012233" />
+																													<Function_crime_estimatePlayersPosition estimateActive="$estimatingPlayersPosition" estimateEnabled="$const_true" estimationStartPos="$directionStartPos" positionShared="$lockOnFromSharedPerception" nodeLabel="68012233" />
 																													<CallDecorator_crime_sharePlayersPosition>
 																														<Subtree canSkip="1">
-																															<Function_crime_sharePlayersLastSeenPosition allowedAssistance="$enum:crime_allowedSharePlayerPosAssistance.none" requestVisualAssistanceFromOthers="false" direction="" position="" nodeLabel="44518191" />
+																															<Function_crime_sharePlayersLastSeenPosition allowedAssistance="$enum:crime_allowedSharePlayerPosAssistance.none" requestVisualAssistanceFromOthers="false" direction="$searchDirection" position="" nodeLabel="44518191" />
 																														</Subtree>
 																														<PositionUpdatedFromOtherNpc canSkip="1">
 																															<CallbackEventCatch_empty>
@@ -133,7 +135,7 @@
 																														</PositionUpdatedFromOtherNpc>
 																														<PlayerFound canSkip="1">
 																															<CallbackEventCatch_empty>
-																																<Expression expressions="$lockOnFromSharedPerception = true" />
+																																<Expression expressions="$resetPlayersEscape = true &#10;$lockOnFromSharedPerception = true" />
 																															</CallbackEventCatch_empty>
 																														</PlayerFound>
 																														<PointingStart canSkip="1">
@@ -167,7 +169,7 @@
 																														<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
 																													</Sequence>
 																													<ContinuousSwitch>
-																														<IfCondition failOnCondition="false" condition="$escalateReaction &amp;  &#10;$friskChatFeedback.action == $enum:crime_friskChatResult.evade">
+																														<IfCondition failOnCondition="false" condition="$escalateReaction &amp;  &#10;$friskChatFeedback.action == $enum:crime_friskChatResult.evade &amp; &#10;~$estimatingPlayersPosition">
 																															<AtomicDecorator>
 																																<Sequence>
 																																	<CreateInformationWrapper Label="&apos;friskRefusal&apos;" PerceivedWuid="$__player" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$information" />
@@ -178,6 +180,33 @@
 																														<IfCondition failOnCondition="false" condition="true">
 																															<Parallel successMode="Any" failureMode="Any">
 																																<Function_crime_managePlayerUrging canUrge="$canUrge" priority="$urgingPriority" nodeLabel="64246696" />
+																																<Loop count="-1">
+																																	<IfGate atomic="false" condition="~$escalateReaction" RunLogic="Halt">
+																																		<Sequence>
+																																			<Expression expressions="$resetPlayersEscape = false" />
+																																			<IfGate atomic="false" condition="~$resetPlayersEscape" RunLogic="Halt">
+																																				<CallDecorator_crime_handlePlayersEscape>
+																																					<Subtree canSkip="1">
+																																						<Function_crime_handlePlayersEscape npcPersistency="7" nodeLabel="34819176" />
+																																					</Subtree>
+																																					<PlayerLost canSkip="1">
+																																						<CallbackEventCatch_empty>
+																																							<Sequence>
+																																								<Function_crime_getSearchDirectionTowardsPlayer startPos="$directionStartPos" direction="$searchDirection" nodeLabel="42598330" />
+																																								<AtomicDecorator>
+																																									<Sequence>
+																																										<CreateInformationWrapper Label="&apos;friskRefusal&apos;" PerceivedWuid="$__player" PositionType="perceivedWuid" PositionVec3="" PositionWuid="" Information="$information" />
+																																										<Function_callInterrupt_lookAround alarmReactionType="$enum:crime_alarmReactionType.none" amIBuddy="false" corpseState="$enum:corpseState.undiscovered" directHit="false" forceSubscribedSoundReaction="false" ignorePriority="true" information_look="$information" initiator="$enum:switch_interruptInitiator.scheduler" missingNpc="$__null" position="" previousReaction="$enum:crime_reactionKind.frisk" reactingToSoundBecauseAlone="false" reportedBy="$__null" searchDirection="$searchDirection" searchPointsFromDirection="true" shooter="$__player" soundType="$enum:sound.movement" source="$enum:crime_source.direct" stimulusAnimalAbuse="" stimulusKind="$enum:crime_stimulusKind.friskRefusal" nodeLabel="45337377" />
+																																									</Sequence>
+																																								</AtomicDecorator>
+																																							</Sequence>
+																																						</CallbackEventCatch_empty>
+																																					</PlayerLost>
+																																				</CallDecorator_crime_handlePlayersEscape>
+																																			</IfGate>
+																																		</Sequence>
+																																	</IfGate>
+																																</Loop>
 																																<ContinuousSwitch>
 																																	<IfCondition failOnCondition="false" condition="$managedToGetCloseToPlayer">
 																																		<Parallel successMode="Any" failureMode="Any">
@@ -338,7 +367,9 @@
 																																																							<Expression expressions="$escalateReaction = true &#10;$friskChatFeedback.action = $enum:crime_friskChatResult.evade" />
 																																																						</Then>
 																																																						<Else canSkip="1">
-																																																							<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="$escalationContext" dramaticBark="false" lookAt="$__player" metarole="&apos;STRAZ_VYZYVA_K_FRISKU_OPAKOVANA_VYZVA&apos;" priority="$enum:crime_barkPriority.addressingPlayer" nodeLabel="17859701" />
+																																																							<IfCondition failOnCondition="false" condition="~$estimatingPlayersPosition">
+																																																								<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="false" dialogContext="$escalationContext" dramaticBark="false" lookAt="$__player" metarole="&apos;STRAZ_VYZYVA_K_FRISKU_OPAKOVANA_VYZVA&apos;" priority="$enum:crime_barkPriority.addressingPlayer" nodeLabel="17859701" />
+																																																							</IfCondition>
 																																																						</Else>
 																																																					</IfElseCondition>
 																																																				</Sequence>
@@ -366,7 +397,9 @@
 																																														</IfGate>
 																																														<Sequence>
 																																															<Function_crime_waitForWeaponChange npc="$__player" succeedOnArmed="true" nodeLabel="95976474" />
-																																															<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;STRAZ_REAGUJE_NA_VYTAZENI_ZBRANE_PRI_FRISKU&apos;" priority="$enum:crime_barkPriority.addressingPlayer_important" nodeLabel="29400596" />
+																																															<IfCondition failOnCondition="false" condition="~$estimatingPlayersPosition">
+																																																<Function_crime_crimeBark animationApproach="$enum:animationApproach.dontPlayDialogAnimations" canBeDelayed="true" dialogContext="" dramaticBark="false" lookAt="$__player" metarole="&apos;STRAZ_REAGUJE_NA_VYTAZENI_ZBRANE_PRI_FRISKU&apos;" priority="$enum:crime_barkPriority.addressingPlayer_important" nodeLabel="29400596" />
+																																															</IfCondition>
 																																															<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
 																																														</Sequence>
 																																														<IfGate atomic="false" condition="$canInterruptLootLockpickAndReading" RunLogic="KeepRunning">
@@ -493,6 +526,7 @@
 						<Sequence>
 							<Function_crime_addLeavingInterruptCooldown nodeLabel="24455979" />
 							<Function_crime_limits_removeReactionLink information="$friskData.information" reactionKind="$enum:crime_reactionKind.frisk" nodeLabel="78655258" />
+							<RemoveLink From="$__player" To="$this.id" Tag="&apos;crime_playerUrging&apos;" LinkOpHandleMode="Success" />
 						</Sequence>
 					</OnSuccess>
 				</FuseBox>
@@ -514,6 +548,7 @@
 				<Variable name="distanceStartToPlayer" comment="" />
 				<Variable name="escalateReaction" comment="" />
 				<Variable name="escalationContext" comment="" />
+				<Variable name="estimatingPlayersPosition" comment="" />
 				<Variable name="feedbackReceived" comment="" />
 				<Variable name="friskChatFeedback" comment="" />
 				<Variable name="friskDialogFeedback" comment="" />
@@ -527,7 +562,8 @@
 				<Variable name="perkChance" comment="" />
 				<Variable name="playerFrisked" comment="" />
 				<Variable name="playersCooldowns" comment="" />
-				<Variable name="searchDirection_useless" comment="" />
+				<Variable name="resetPlayersEscape" comment="" />
+				<Variable name="searchDirection" comment="" />
 				<Variable name="skipToDialog" comment="" />
 				<Variable name="startBarkFinished" comment="" />
 				<Variable name="stolenItems" comment="" />
@@ -789,6 +825,52 @@
 																																	<Function_crime_managePlayerUrging hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																		<OutputBreakpoints />
 																																	</Function_crime_managePlayerUrging>
+																																	<Loop hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<OutputBreakpoints />
+																																		<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																			<OutputBreakpoints />
+																																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																				<OutputBreakpoints />
+																																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																				</Expression>
+																																				<IfGate hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<OutputBreakpoints />
+																																					<CallDecorator_crime_handlePlayersEscape hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																						<OutputBreakpoints />
+																																						<Subtree>
+																																							<Function_crime_handlePlayersEscape hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																							</Function_crime_handlePlayersEscape>
+																																						</Subtree>
+																																						<PlayerLost>
+																																							<CallbackEventCatch_empty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																								<OutputBreakpoints />
+																																								<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																									<Function_crime_getSearchDirectionTowardsPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																									</Function_crime_getSearchDirectionTowardsPlayer>
+																																									<AtomicDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																										<OutputBreakpoints />
+																																										<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																											<OutputBreakpoints />
+																																											<CreateInformationWrapper hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</CreateInformationWrapper>
+																																											<Function_callInterrupt_lookAround hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</Function_callInterrupt_lookAround>
+																																										</Sequence>
+																																									</AtomicDecorator>
+																																								</Sequence>
+																																							</CallbackEventCatch_empty>
+																																						</PlayerLost>
+																																					</CallDecorator_crime_handlePlayersEscape>
+																																				</IfGate>
+																																			</Sequence>
+																																		</IfGate>
+																																	</Loop>
 																																	<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																		<OutputBreakpoints />
 																																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -1078,9 +1160,12 @@
 																																																								</Expression>
 																																																							</Then>
 																																																							<Else>
-																																																								<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																																									<OutputBreakpoints />
-																																																								</Function_crime_crimeBark>
+																																																									<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																										<OutputBreakpoints />
+																																																									</Function_crime_crimeBark>
+																																																								</IfCondition>
 																																																							</Else>
 																																																						</IfElseCondition>
 																																																					</Sequence>
@@ -1124,9 +1209,12 @@
 																																																<Function_crime_waitForWeaponChange hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																																	<OutputBreakpoints />
 																																																</Function_crime_waitForWeaponChange>
-																																																<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																																	<OutputBreakpoints />
-																																																</Function_crime_crimeBark>
+																																																	<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																		<OutputBreakpoints />
+																																																	</Function_crime_crimeBark>
+																																																</IfCondition>
 																																																<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																																	<OutputBreakpoints />
 																																																</Wait>
@@ -1331,6 +1419,9 @@
 								<Function_crime_limits_removeReactionLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
 								</Function_crime_limits_removeReactionLink>
+								<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</RemoveLink>
 							</Sequence>
 						</OnSuccess>
 					</FuseBox>

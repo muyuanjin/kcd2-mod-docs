@@ -118,7 +118,8 @@ function ShootingTarget.Client:OnHit(hit)
 			local hitMsgData =
 			{
 				hitScore = self.Properties.iHitScoreValue,
-				shooter = System.GetEntity(hit.attackerId).this.id
+				shooter = System.GetEntity(hit.attackerId).this.id,
+				target = XGenAIModule.GetMyWUID(self)
 			}
 			XGenAIModule.SendMessageToEntityData(listener,"shootingTargetHitData",hitMsgData)
 		end

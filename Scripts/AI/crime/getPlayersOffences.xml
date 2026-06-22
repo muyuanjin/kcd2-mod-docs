@@ -5,6 +5,7 @@
 			<Variable name="_dummyWuid" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="globalCooldowns" type="crime:globalCooldowns" values="" isPersistent="0" form="single" />
 			<Variable name="hasWeaponDrawn" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="minigame" type="enum:minigameType" values="" isPersistent="0" form="single" />
 			<Variable name="now" type="_int64" values="" isPersistent="0" form="single" />
 			<Variable name="settlementLevel" type="enum:crime_settlementLevel" values="" isPersistent="0" form="single" />
 		</Variables>
@@ -39,14 +40,18 @@
 										<Else canSkip="1">
 											<IsInsideAreaWithLabel Position="$__player" Label="&apos;crime_ignorePlayerDrawnWeaponReaction&apos;" Area="" FailSubtMissing="false" saveVersion="2">
 												<Else canSkip="1">
-													<IfCondition failOnCondition="false" condition="$globalCooldowns.lastDrawnWeaponGuardTimestamp == 0 | &#10;$now - $globalCooldowns.lastDrawnWeaponGuardTimestamp &gt; $data:script_param[&apos;crime_noOffenceWarningCooldown&apos;].value">
-														<Sequence>
-															<Function_crime_hasWeaponDrawn checkingMethod="$enum:crime_weaponCheckingMethod.perceivableState" npc="$__player" result="$hasWeaponDrawn" nodeLabel="75826468" />
-															<IfCondition failOnCondition="false" condition="$hasWeaponDrawn">
-																<Expression expressions="$offences[#offences] = $enum:crime_offence.drawnWeapon" />
+													<HasPerceivableState PerceivableState="&apos;combat&apos;" PerceivedWUID="$__player" PerceptorWUID="" FailSubtMissing="false" saveVersion="2">
+														<Else canSkip="1">
+															<IfCondition failOnCondition="false" condition="$globalCooldowns.lastDrawnWeaponGuardTimestamp == 0 | &#10;$now - $globalCooldowns.lastDrawnWeaponGuardTimestamp &gt; $data:script_param[&apos;crime_noOffenceWarningCooldown&apos;].value">
+																<Sequence>
+																	<Function_crime_hasWeaponDrawn checkingMethod="$enum:crime_weaponCheckingMethod.perceivableState" npc="$__player" result="$hasWeaponDrawn" nodeLabel="75826468" />
+																	<IfCondition failOnCondition="false" condition="$hasWeaponDrawn">
+																		<Expression expressions="$offences[#offences] = $enum:crime_offence.drawnWeapon" />
+																	</IfCondition>
+																</Sequence>
 															</IfCondition>
-														</Sequence>
-													</IfCondition>
+														</Else>
+													</HasPerceivableState>
 												</Else>
 											</IsInsideAreaWithLabel>
 										</Else>
@@ -68,7 +73,12 @@
 																			<Success />
 																		</Then>
 																		<Else canSkip="1">
-																			<Expression expressions="$offences[#offences] = $enum:crime_offence.noTorch" />
+																			<Sequence>
+																				<GetMinigame NPC="$__player" MinigameType="$minigame" />
+																				<IfCondition failOnCondition="false" condition="$minigame ~= $enum:minigameType.sharpening &amp; &#10;$minigame ~= $enum:minigameType.blacksmithing &amp; &#10;$minigame ~= $enum:minigameType.alchemy &amp; &#10;$minigame ~= $enum:minigameType.dice">
+																					<Expression expressions="$offences[#offences] = $enum:crime_offence.noTorch" />
+																				</IfCondition>
+																			</Sequence>
 																		</Else>
 																	</IsTorchDrawn>
 																</Then>
@@ -95,6 +105,7 @@
 				<Variable name="_dummyWuid" comment="" />
 				<Variable name="globalCooldowns" comment="" />
 				<Variable name="hasWeaponDrawn" comment="" />
+				<Variable name="minigame" comment="" />
 				<Variable name="now" comment="" />
 				<Variable name="settlementLevel" comment="" />
 				<Variable name="offences" comment="" />
@@ -147,21 +158,26 @@
 												<IsInsideAreaWithLabel hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 													<OutputBreakpoints />
 													<Else>
-														<IfCondition hasInputBreakpoint="0" comment="Weapon" breakpointFlags="0">
+														<HasPerceivableState hasInputBreakpoint="0" comment="KCD2-522112" breakpointFlags="0" saveVersion="2">
 															<OutputBreakpoints />
-															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																<OutputBreakpoints />
-																<Function_crime_hasWeaponDrawn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<Else>
+																<IfCondition hasInputBreakpoint="0" comment="Weapon" breakpointFlags="0">
 																	<OutputBreakpoints />
-																</Function_crime_hasWeaponDrawn>
-																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																	<OutputBreakpoints />
-																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																		<OutputBreakpoints />
-																	</Expression>
+																		<Function_crime_hasWeaponDrawn hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Function_crime_hasWeaponDrawn>
+																		<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</IfCondition>
+																	</Sequence>
 																</IfCondition>
-															</Sequence>
-														</IfCondition>
+															</Else>
+														</HasPerceivableState>
 													</Else>
 												</IsInsideAreaWithLabel>
 											</Else>
@@ -192,9 +208,18 @@
 																				</Success>
 																			</Then>
 																			<Else>
-																				<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																					<OutputBreakpoints />
-																				</Expression>
+																					<GetMinigame hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GetMinigame>
+																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																					</IfCondition>
+																				</Sequence>
 																			</Else>
 																		</IsTorchDrawn>
 																	</Then>

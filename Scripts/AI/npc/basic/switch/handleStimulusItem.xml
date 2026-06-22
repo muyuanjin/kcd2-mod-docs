@@ -3,6 +3,7 @@
 	<BehaviorTree name="switch_handleStimulusItem" is_function="1">
 		<Variables>
 			<Variable name="_chickenGuid" type="_string" values="&apos;18ff9093-2cc4-4ab3-9f34-7cb0dd7cd30a&apos;" isPersistent="0" form="single" />
+			<Variable name="alwaysPickUp" type="_bool" values="false" isPersistent="0" form="single" />
 			<Variable name="areMatesWithOwner" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="break" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="category" type="_string" values="" isPersistent="0" form="single" />
@@ -91,45 +92,60 @@
 											<IgnorePerception PerceptorObject="$this.id" PerceptibleObject="$stimulus.item" IgnoreFor="&apos;-1&apos;" TimerType="GameTime" Uninterruptible="true" Persistent="true" />
 										</Sequence>
 									</IfCondition>
-									<IfElseCondition failOnCondition="false" condition="($itemPrice &gt; $statusMultiplier * $data:script_param[&apos;crime_pickUpItem_baseMinimumPrice&apos;].value | $areMatesWithOwner) &#10; &#10;&amp; $handCheck_left == $__null &#10;&amp; $handCheck_right == $__null" saveVersion="2">
+									<EntityContextCheck context="crime_alwaysPickUpDroppedItems" target="" saveVersion="2">
+										<Then canSkip="1">
+											<Expression expressions="$alwaysPickUp = true" />
+										</Then>
+									</EntityContextCheck>
+									<IfElseCondition failOnCondition="false" condition="($itemPrice &gt; $statusMultiplier * $data:script_param[&apos;crime_pickUpItem_baseMinimumPrice&apos;].value | $areMatesWithOwner | $alwaysPickUp) &#10; &#10;&amp; $handCheck_left == $__null &#10;&amp; $handCheck_right == $__null" saveVersion="2">
 										<Then canSkip="1">
 											<Sequence>
-												<IfCondition failOnCondition="false" condition="~$createFollowUp">
-													<Selector>
-														<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
-															<LinkTagFilter tag="&apos;crime_pickUpItemReserved&apos;" prune="true" negprune="unknown" Parent="" Child="$reservedItem" Data="" />
-														</GraphSearch>
-														<GraphSearch Origin="$stimulus.item" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
-															<LinkTagFilter tag="&apos;crime_pickUpItemReserved_reverse&apos;" prune="true" negprune="unknown" Parent="" Child="$itemReservee" Data="" />
-														</GraphSearch>
-														<DistanceCondition Origin="$stimulus.item" ReferencePt="$__player" Low="$data:script_param[&apos;crime_pickUpItem_minDistanceToPlayer&apos;].value" High="$data:script_param[&apos;crime_pickUpItem_minDistanceToPlayer&apos;].value" Negation="true" ValueOnMiddle="false" failOnCondition="false">
-															<Sequence>
-																<GetSpatialInfo In="$stimulus.item" Out="$itemPos" What="Position" />
-																<CheckReactionLimit DesiredReactionType="$enum:crime_reactionType.pickUpItem" Information="" Position="$itemPos" StimulusKind="$enum:crime_stimulusKind.item" ShouldReact="$shouldReact" ShouldWatch="$dummyBool" />
-																<IfCondition failOnCondition="false" condition="$shouldReact">
-																	<Sequence>
-																		<Expression expressions="$isGoingToPickUp = true &#10;$createFollowUp = true" />
-																		<Function_callInterrupt_pickUpItem ignorePriority="false" initiator="$enum:switch_interruptInitiator.switch" item="$stimulus.item" previousReaction="$enum:crime_reactionKind.unknown" source="$enum:crime_source.direct" stimulusKind="$enum:crime_stimulusKind.item" nodeLabel="23170078" />
-																	</Sequence>
-																</IfCondition>
-															</Sequence>
-														</DistanceCondition>
-													</Selector>
-												</IfCondition>
-												<IfCondition failOnCondition="false" condition="~$isGoingToPickUp &amp; &#10;$reservedItem ~= $stimulus.item">
-													<EntityContextCheck context="crime_interruptPickUpItem" target="" saveVersion="2">
-														<Then canSkip="1">
-															<Expression expressions="$createFollowUp = true" />
-														</Then>
-													</EntityContextCheck>
-												</IfCondition>
-												<IfCondition failOnCondition="false" condition="$createFollowUp">
-													<Sequence>
-														<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
-														<Expression expressions="$followUpData.item = $stimulus.item &#10;$followUpData.timestamp = $currentTime &#10;$followUpData.ignoreExpiration = $areMatesWithOwner" />
-														<AddLink From="$this.id" To="$stimulus.item" Tag="&apos;crime_followUpBehavior_pickUpItem&apos;" Data="$followUpData" LinkOpHandleMode="OverWrite" />
-													</Sequence>
-												</IfCondition>
+												<GetSpatialInfo In="$stimulus.item" Out="$itemPos" What="Position" />
+												<IsPointOnNavMesh pos="$itemPos" posExtentHor="2.000000" posExtentVert="2.000000" navAgentType="MediumSizedCharacters" saveVersion="2">
+													<Then canSkip="1">
+														<Sequence>
+															<IfCondition failOnCondition="false" condition="~$createFollowUp">
+																<Selector>
+																	<GraphSearch Origin="$this.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																		<LinkTagFilter tag="&apos;crime_pickUpItemReserved&apos;" prune="true" negprune="unknown" Parent="" Child="$reservedItem" Data="" />
+																	</GraphSearch>
+																	<GraphSearch Origin="$stimulus.item" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																		<LinkTagFilter tag="&apos;crime_pickUpItemReserved_reverse&apos;" prune="true" negprune="unknown" Parent="" Child="$itemReservee" Data="" />
+																	</GraphSearch>
+																	<DistanceCondition Origin="$stimulus.item" ReferencePt="$__player" Low="$data:script_param[&apos;crime_pickUpItem_minDistanceToPlayer&apos;].value" High="$data:script_param[&apos;crime_pickUpItem_minDistanceToPlayer&apos;].value" Negation="true" ValueOnMiddle="false" failOnCondition="false">
+																		<Sequence>
+																			<GetSpatialInfo In="$stimulus.item" Out="$itemPos" What="Position" />
+																			<CheckReactionLimit DesiredReactionType="$enum:crime_reactionType.pickUpItem" Information="" Position="$itemPos" StimulusKind="$enum:crime_stimulusKind.item" ShouldReact="$shouldReact" ShouldWatch="$dummyBool" />
+																			<IfCondition failOnCondition="false" condition="$shouldReact">
+																				<Sequence>
+																					<Expression expressions="$isGoingToPickUp = true &#10;$createFollowUp = true" />
+																					<Function_callInterrupt_pickUpItem ignorePriority="false" initiator="$enum:switch_interruptInitiator.switch" item="$stimulus.item" previousReaction="$enum:crime_reactionKind.unknown" source="$enum:crime_source.direct" stimulusKind="$enum:crime_stimulusKind.item" nodeLabel="23170078" />
+																				</Sequence>
+																			</IfCondition>
+																		</Sequence>
+																	</DistanceCondition>
+																</Selector>
+															</IfCondition>
+															<IfCondition failOnCondition="false" condition="~$isGoingToPickUp &amp; &#10;$reservedItem ~= $stimulus.item">
+																<EntityContextCheck context="crime_interruptPickUpItem" target="" saveVersion="2">
+																	<Then canSkip="1">
+																		<Expression expressions="$createFollowUp = true" />
+																	</Then>
+																</EntityContextCheck>
+															</IfCondition>
+															<IfCondition failOnCondition="false" condition="$createFollowUp">
+																<Sequence>
+																	<GetTime TimeType="GameTime" OutVar="$currentTime" Delta="" />
+																	<Expression expressions="$followUpData.item = $stimulus.item &#10;$followUpData.timestamp = $currentTime &#10;$followUpData.ignoreExpiration = $areMatesWithOwner" />
+																	<AddLink From="$this.id" To="$stimulus.item" Tag="&apos;crime_followUpBehavior_pickUpItem&apos;" Data="$followUpData" LinkOpHandleMode="OverWrite" />
+																</Sequence>
+															</IfCondition>
+														</Sequence>
+													</Then>
+													<Else canSkip="1">
+														<Success />
+													</Else>
+												</IsPointOnNavMesh>
 											</Sequence>
 										</Then>
 									</IfElseCondition>
@@ -144,6 +160,7 @@
 		<EditorData EventSet="">
 			<Variables>
 				<Variable name="_chickenGuid" comment="" />
+				<Variable name="alwaysPickUp" comment="" />
 				<Variable name="areMatesWithOwner" comment="" />
 				<Variable name="break" comment="" />
 				<Variable name="category" comment="" />
@@ -287,79 +304,103 @@
 												</IgnorePerception>
 											</Sequence>
 										</IfCondition>
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+											<OutputBreakpoints />
+											<Then>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+											</Then>
+										</EntityContextCheck>
 										<IfElseCondition hasInputBreakpoint="0" comment="Handling item pickup itself" breakpointFlags="0" saveVersion="2">
 											<OutputBreakpoints />
 											<Then>
 												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 													<OutputBreakpoints />
-													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
 														<OutputBreakpoints />
-														<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
-															<OutputBreakpoints />
-															<GraphSearch hasInputBreakpoint="0" comment="I already have an item reserved" breakpointFlags="0">
+													</GetSpatialInfo>
+													<IsPointOnNavMesh hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																<OutputBreakpoints />
-																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																	<OutputBreakpoints />
-																</LinkTagFilter>
-															</GraphSearch>
-															<GraphSearch hasInputBreakpoint="0" comment="Item is already reserved" breakpointFlags="0">
-																<OutputBreakpoints />
-																<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																	<OutputBreakpoints />
-																</LinkTagFilter>
-															</GraphSearch>
-															<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																<OutputBreakpoints />
-																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																	<OutputBreakpoints />
-																	<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																		<OutputBreakpoints />
-																	</GetSpatialInfo>
-																	<CheckReactionLimit hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																		<OutputBreakpoints />
-																	</CheckReactionLimit>
-																	<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																		<OutputBreakpoints />
-																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<GraphSearch hasInputBreakpoint="0" comment="I already have an item reserved" breakpointFlags="0">
 																			<OutputBreakpoints />
+																			<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</LinkTagFilter>
+																		</GraphSearch>
+																		<GraphSearch hasInputBreakpoint="0" comment="Item is already reserved" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</LinkTagFilter>
+																		</GraphSearch>
+																		<DistanceCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																				<GetSpatialInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</GetSpatialInfo>
+																				<CheckReactionLimit hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																				</CheckReactionLimit>
+																				<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<OutputBreakpoints />
+																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Expression>
+																						<Function_callInterrupt_pickUpItem hasInputBreakpoint="0" comment="Item not reserved, try geting into pickUpItem" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</Function_callInterrupt_pickUpItem>
+																					</Sequence>
+																				</IfCondition>
+																			</Sequence>
+																		</DistanceCondition>
+																	</Selector>
+																</IfCondition>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
 																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																				<OutputBreakpoints />
 																			</Expression>
-																			<Function_callInterrupt_pickUpItem hasInputBreakpoint="0" comment="Item not reserved, try geting into pickUpItem" breakpointFlags="0">
-																				<OutputBreakpoints />
-																			</Function_callInterrupt_pickUpItem>
-																		</Sequence>
-																	</IfCondition>
-																</Sequence>
-															</DistanceCondition>
-														</Selector>
-													</IfCondition>
-													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-														<OutputBreakpoints />
-														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-															<OutputBreakpoints />
-															<Then>
-																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		</Then>
+																	</EntityContextCheck>
+																</IfCondition>
+																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																	<OutputBreakpoints />
-																</Expression>
-															</Then>
-														</EntityContextCheck>
-													</IfCondition>
-													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-														<OutputBreakpoints />
-														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-															<OutputBreakpoints />
-															<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</GetTime>
+																		<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</Expression>
+																		<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</AddLink>
+																	</Sequence>
+																</IfCondition>
+															</Sequence>
+														</Then>
+														<Else>
+															<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																<OutputBreakpoints />
-															</GetTime>
-															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																<OutputBreakpoints />
-															</Expression>
-															<AddLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																<OutputBreakpoints />
-															</AddLink>
-														</Sequence>
-													</IfCondition>
+															</Success>
+														</Else>
+													</IsPointOnNavMesh>
 												</Sequence>
 											</Then>
 										</IfElseCondition>

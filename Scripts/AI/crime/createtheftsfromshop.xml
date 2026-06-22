@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<BehaviorTrees>
+	<BehaviorTree name="crime_createTheftsFromShop" is_function="1">
+		<Variables>
+			<Variable name="information" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="message" type="crime:theftDetectedDuringHaggling" values="" isPersistent="0" form="single" />
+			<Variable name="stimulus" type="switch:stimulus:theft" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItems" type="_wuid" values="" isPersistent="0" form="array" />
+			<Variable name="stolenItems_value" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItems_value_isRelevant" type="_bool" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItems_value_owner" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItems_value_stolenFromHost" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItems_value_stolenFromInventory" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="stolenItems_value_stolenFromInventory_type" type="_string" values="" isPersistent="0" form="single" />
+		</Variables>
+		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
+			<Behavior canSkip="1">
+				<While doFail="false" propagateChildFail="false" condition="true">
+					<ProcessMessage Atomic="true" timeout="&apos;-1&apos;" timeType="GameTime" variable="$message" senderInfo="" inbox="&apos;crime_theftDetectedDuringHaggling&apos;" condition="" answerVar="">
+						<Sequence>
+							<Function_crime_findStolenItems filterByInventory="" stolenItems="$stolenItems" nodeLabel="73436724" />
+							<ForEach startIndex="0" step="1" array="$stolenItems" iterator="" value="$stolenItems_value" break="">
+								<Sequence>
+									<ReinitVariable variable="$stolenItems_value_isRelevant" />
+									<ReinitVariable variable="$stolenItems_value_owner" />
+									<ReinitVariable variable="$stolenItems_value_stolenFromInventory" />
+									<ReinitVariable variable="$stolenItems_value_stolenFromInventory_type" />
+									<GetOwner Object="$stolenItems_value" Owner="$stolenItems_value_owner" />
+									<IfCondition failOnCondition="false" condition="$stolenItems_value_owner ~= $__null">
+										<CheckWuidValid wuid="$stolenItems_value_owner" FailSubtMissing="false" saveVersion="2">
+											<Then canSkip="1">
+												<IfElseCondition failOnCondition="false" condition="$stolenItems_value_owner == $this.id" saveVersion="2">
+													<Then canSkip="1">
+														<Expression expressions="$stolenItems_value_isRelevant = true" />
+													</Then>
+													<Else canSkip="1">
+														<GetAreMates Npc1="$this.id" Npc2="$stolenItems_value_owner" AreMates="$stolenItems_value_isRelevant" />
+													</Else>
+												</IfElseCondition>
+											</Then>
+										</CheckWuidValid>
+									</IfCondition>
+									<IfCondition failOnCondition="false" condition="$stolenItems_value_isRelevant">
+										<Sequence>
+											<GetStolenInfo Item="$stolenItems_value" InventoryOut="$stolenItems_value_stolenFromInventory" IsStolenOut="" />
+											<IfCondition failOnCondition="false" condition="$stolenItems_value_stolenFromInventory ~= $__null">
+												<Sequence>
+													<GetType WUID="$stolenItems_value_stolenFromInventory" OutString="$stolenItems_value_stolenFromInventory_type" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+													<IfCondition failOnCondition="false" condition="$stolenItems_value_stolenFromInventory_type == &apos;UNK&apos;">
+														<Selector>
+															<Sequence>
+																<GraphSearch Origin="$stolenItems_value_owner" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																	<LinkTagFilter tag="&apos;inventory&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																	<WUIDFilter WUID="$stolenItems_value_stolenFromInventory" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																</GraphSearch>
+																<Expression expressions="$stolenItems_value_stolenFromInventory = $stolenItems_value_owner" />
+																<GetType WUID="$stolenItems_value_stolenFromInventory" OutString="$stolenItems_value_stolenFromInventory_type" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+															</Sequence>
+															<Sequence>
+																<GraphSearch Origin="$stolenItems_value_owner" Borders="" depth="4" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent&apos;" AllowedEdges="" SubGraph="&apos;home,home_area,area_union_member,home_equipment&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																	<LinkTagFilter tag="&apos;home_equipment&apos;" prune="true" negprune="unknown" Parent="" Child="$stolenItems_value_stolenFromHost" Data="" />
+																	<ExistPath Origin="$stolenItems_value_stolenFromHost" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																		<LinkTagFilter tag="&apos;inventory&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																		<WUIDFilter WUID="$stolenItems_value_stolenFromInventory" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																	</ExistPath>
+																</GraphSearch>
+																<Expression expressions="$stolenItems_value_stolenFromInventory = $stolenItems_value_stolenFromHost" />
+																<GetType WUID="$stolenItems_value_stolenFromInventory" OutString="$stolenItems_value_stolenFromInventory_type" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
+															</Sequence>
+															<Success />
+														</Selector>
+													</IfCondition>
+												</Sequence>
+											</IfCondition>
+											<IfElseCondition failOnCondition="false" condition="$stolenItems_value_stolenFromInventory_type == &apos;NPC&apos; | &#10;$stolenItems_value_stolenFromInventory_type == &apos;NHNPC&apos; | &#10;$stolenItems_value_stolenFromInventory_type == &apos;STASH&apos;" saveVersion="2">
+												<Then canSkip="1">
+													<Sequence>
+														<IfElseCondition failOnCondition="false" condition="$stolenItems_value_stolenFromInventory_type == &apos;NPC&apos; | &#10;$stolenItems_value_stolenFromInventory_type == &apos;NHNPC&apos;" saveVersion="2">
+															<Then canSkip="1">
+																<IsDeadCheck SoulWUID="$stolenItems_value_stolenFromInventory" FailSubtMissing="false" saveVersion="2">
+																	<Then canSkip="1">
+																		<Expression expressions="$stimulus.method = $enum:crime_theftMethod.lootCorpse" />
+																	</Then>
+																	<Else canSkip="1">
+																		<Expression expressions="$stimulus.method = $enum:crime_theftMethod.lootUnconsciousBody" />
+																	</Else>
+																</IsDeadCheck>
+															</Then>
+															<Else canSkip="1">
+																<Expression expressions="$stimulus.method = $enum:crime_theftMethod.loot" />
+															</Else>
+														</IfElseCondition>
+														<Expression expressions="$stimulus.owner = $stolenItems_value_owner &#10;$stimulus.pivot = $stolenItems_value_stolenFromInventory &#10;$stimulus.immediate = true &#10;$stimulus.shouldCheckHomeStashes = true &#10;$stimulus.treatAsPersonalSource = true" />
+														<Function_crime_createTheftInformation count="0" immediate="true" isNonAttributedCrime="false" kettleType="$enum:kettleType.kettle" method="$stimulus.method" owner="$stimulus.owner" pivot="$stimulus.pivot" seenEquippedItems="" information="$information" nodeLabel="80761888" />
+													</Sequence>
+												</Then>
+												<Else canSkip="1">
+													<Sequence>
+														<GetItemProperty itemId="$stolenItems_value" property="Amount" result="$stimulus.count" />
+														<Expression expressions="$stimulus.pivot = $stolenItems_value &#10;$stimulus.method = $enum:crime_theftMethod.pick &#10;$stimulus.owner = $stolenItems_value_owner &#10;$stimulus.immediate = true &#10;$stimulus.shouldCheckHomeStashes = true &#10;$stimulus.treatAsPersonalSource = true" />
+														<Function_crime_createTheftInformation count="$stimulus.count" immediate="true" isNonAttributedCrime="false" kettleType="$enum:kettleType.kettle" method="$stimulus.method" owner="$stimulus.owner" pivot="$stimulus.pivot" seenEquippedItems="" information="$information" nodeLabel="85886480" />
+													</Sequence>
+												</Else>
+											</IfElseCondition>
+											<Expression expressions="$stimulus.information = $information" />
+											<Function_switch_handleStimulusTheft stimulus="$stimulus" nodeLabel="49161659" />
+										</Sequence>
+									</IfCondition>
+								</Sequence>
+							</ForEach>
+						</Sequence>
+					</ProcessMessage>
+				</While>
+			</Behavior>
+		</Root>
+		<ForestContainer />
+		<EditorData EventSet="">
+			<Variables>
+				<Variable name="information" comment="" />
+				<Variable name="message" comment="" />
+				<Variable name="stimulus" comment="" />
+				<Variable name="stolenItems" comment="" />
+				<Variable name="stolenItems_value" comment="" />
+				<Variable name="stolenItems_value_isRelevant" comment="" />
+				<Variable name="stolenItems_value_owner" comment="" />
+				<Variable name="stolenItems_value_stolenFromHost" comment="" />
+				<Variable name="stolenItems_value_stolenFromInventory" comment="" />
+				<Variable name="stolenItems_value_stolenFromInventory_type" comment="" />
+			</Variables>
+			<ForwardDeclarations />
+			<Root hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+				<OutputBreakpoints />
+				<Behavior>
+					<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
+						<OutputBreakpoints />
+						<ProcessMessage hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+								<OutputBreakpoints />
+								<Function_crime_findStolenItems hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Function_crime_findStolenItems>
+								<ForEach hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+										<OutputBreakpoints />
+										<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ReinitVariable>
+										<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ReinitVariable>
+										<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ReinitVariable>
+										<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</ReinitVariable>
+										<GetOwner hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</GetOwner>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<CheckWuidValid hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+												<OutputBreakpoints />
+												<Then>
+													<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+														<OutputBreakpoints />
+														<Then>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+														</Then>
+														<Else>
+															<GetAreMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</GetAreMates>
+														</Else>
+													</IfElseCondition>
+												</Then>
+											</CheckWuidValid>
+										</IfCondition>
+										<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<GetStolenInfo hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</GetStolenInfo>
+												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+													<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+														<OutputBreakpoints />
+														<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetType>
+														<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</LinkTagFilter>
+																		<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</WUIDFilter>
+																	</GraphSearch>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																	<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetType>
+																</Sequence>
+																<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																	<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																		<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																		</LinkTagFilter>
+																		<ExistPath hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<OutputBreakpoints />
+																			<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</LinkTagFilter>
+																			<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</WUIDFilter>
+																		</ExistPath>
+																	</GraphSearch>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																	<GetType hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</GetType>
+																</Sequence>
+																<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Success>
+															</Selector>
+														</IfCondition>
+													</Sequence>
+												</IfCondition>
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																<OutputBreakpoints />
+																<Then>
+																	<IsDeadCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																		<OutputBreakpoints />
+																		<Then>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Then>
+																		<Else>
+																			<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<OutputBreakpoints />
+																			</Expression>
+																		</Else>
+																	</IsDeadCheck>
+																</Then>
+																<Else>
+																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<OutputBreakpoints />
+																	</Expression>
+																</Else>
+															</IfElseCondition>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<Function_crime_createTheftInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_createTheftInformation>
+														</Sequence>
+													</Then>
+													<Else>
+														<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+															<GetItemProperty hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</GetItemProperty>
+															<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Expression>
+															<Function_crime_createTheftInformation hasInputBreakpoint="0" comment="create information here, because stolenItems (array) can not be passed through stimulus" breakpointFlags="0">
+																<OutputBreakpoints />
+															</Function_crime_createTheftInformation>
+														</Sequence>
+													</Else>
+												</IfElseCondition>
+												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Expression>
+												<Function_switch_handleStimulusTheft hasInputBreakpoint="0" comment="" breakpointFlags="0">
+													<OutputBreakpoints />
+												</Function_switch_handleStimulusTheft>
+											</Sequence>
+										</IfCondition>
+									</Sequence>
+								</ForEach>
+							</Sequence>
+						</ProcessMessage>
+					</While>
+				</Behavior>
+			</Root>
+			<Forest />
+			<Comments />
+		</EditorData>
+	</BehaviorTree>
+</BehaviorTrees>

@@ -12,20 +12,47 @@
 				<Port Name="hrac_zabil_hospodskeho" Direction="In" Type="trigger">
 					<DesignName StringName="hledani_t_hrac_zabil_hosp_irG4" Text="hráč zabil hospodského" />
 				</Port>
+				<Port Name="hrac_zautocil_pred_nalezenim_tabora" Direction="Out" Type="trigger">
+					<DesignName StringName="hledani_t_hrac_zautocil_p_PRun" Text="hráč zaútočil před nalezením tábora" />
+				</Port>
 			</Ports>
 			<Nodes>
 				<AreaTrigger Name="areatrigger3" PositionY="80" PositionX="270">
 					<Asset Name="Souls" Alias="player" />
-					<Asset Name="Areas" Alias="taborBanditu" />
+					<Asset Name="Areas" Alias="taborBandituMarker" />
 					<Edge From="hledaniTabora.Active" To="IsActive" />
 				</AreaTrigger>
+				<BuffEffect Name="buff_soldierLeader_pickpocketProt" PositionY="-120" PositionX="370">
+					<Asset Name="Souls" Alias="fakeSoldier_1" />
+					<Constant Name="BuffGUID" Value="d5996d8b-611d-4cc8-bfbd-7ab2c8884cf6" />
+					<Edge From="hledaniTabora.Active" To="IsActive" />
+				</BuffEffect>
+				<AIConceptSignalTrigger Name="hitReactionTrigger_fakeSoldier_1" PositionY="450" PositionX="270" NotificationName="hitReactionNotification">
+					<Asset Name="attacker_value_filter" Alias="player" />
+					<Asset Name="victim_value_filter" Alias="fakeSoldier_1" />
+					<Edge From="hledaniTabora.Active" To="IsActive" />
+				</AIConceptSignalTrigger>
+				<AIConceptSignalTrigger Name="hitReactionTrigger_fakeSoldier_2" PositionY="670" PositionX="270" NotificationName="hitReactionNotification">
+					<Asset Name="attacker_value_filter" Alias="player" />
+					<Asset Name="victim_value_filter" Alias="fakeSoldier_2" />
+					<Edge From="hledaniTabora.Active" To="IsActive" />
+				</AIConceptSignalTrigger>
+				<AIConceptSignalTrigger Name="hitReactionTrigger_fakeSoldier_3" PositionY="890" PositionX="270" NotificationName="hitReactionNotification">
+					<Asset Name="attacker_value_filter" Alias="player" />
+					<Asset Name="victim_value_filter" Alias="fakeSoldier_3" />
+					<Edge From="hledaniTabora.Active" To="IsActive" />
+				</AIConceptSignalTrigger>
 				<State Name="hledaniTabora" PositionY="-280" PositionX="-20" RequiredForOutput="kutnohorsko" TypeT="ProgressFailable">
-					<Edge From="areatrigger3.OnEnter" To="SetDone">
+					<Edge From="if4.True" To="SetActive" />
+					<Edge From="if5.True" To="SetCanceled" />
+					<Edge From="triggersequence1.A" To="SetDone">
 						<Vertex>vertex1</Vertex>
 						<Vertex>vertex2</Vertex>
 					</Edge>
-					<Edge From="if4.True" To="SetActive" />
-					<Edge From="if5.True" To="SetCanceled" />
+					<Edge From="triggersequence2.A" To="SetDone">
+						<Vertex>vertex1</Vertex>
+						<Vertex>vertex2</Vertex>
+					</Edge>
 				</State>
 				<If Name="if4" PositionY="-270" PositionX="-300">
 					<Edge From="hledaniTabora.None" To="Condition">
@@ -41,21 +68,60 @@
 						<Vertex>MmwQb1NG</Vertex>
 					</Edge>
 				</If>
-				<najdi_tabor_vojaku Name="najdiTabor" PositionY="-260" PositionX="270" RequiredForOutput="kutnohorsko">
+				<MakeArray Name="makearray8" PositionY="1130" PositionX="20" TypeT="wh::rpgmodule::Souls">
+					<Asset Name="A" Alias="fakeSoldier_1" />
+					<Asset Name="B" Alias="fakeSoldier_2" />
+					<Asset Name="C" Alias="fakeSoldier_3" />
+				</MakeArray>
+				<najdi_tabor_vojaku Name="najdiTabor" PositionY="-330" PositionX="370" RequiredForOutput="kutnohorsko">
 					<Edge From="hledaniTabora.State" To="Progress" />
 				</najdi_tabor_vojaku>
 				<Output Name="Output">
-					<Edge From="hledaniTabora.OnDone" To="hrac_nasel_tabor" />
+					<Edge From="triggersequence1.B" To="hrac_nasel_tabor" />
+					<Edge From="triggersequence2.B" To="hrac_zautocil_pred_nalezenim_tabora" />
 				</Output>
+				<SetEntityContext Name="setentitycontext_ignoreArrowsFlyBy" PositionY="1390" PositionX="350">
+					<Constant Name="Context" Value="crime_disableArrowFlyByReaction" />
+					<Edge From="hledaniTabora.Active" To="IsActive" />
+					<Edge From="makearray8.Array" To="Souls" />
+				</SetEntityContext>
+				<SetEntityContext Name="setentitycontext_ignoreArrowsTouchDown" PositionY="1570" PositionX="320">
+					<Constant Name="Context" Value="crime_disableArrowTouchdownReaction" />
+					<Edge From="hledaniTabora.Active" To="IsActive" />
+					<Edge From="makearray8.Array" To="Souls" />
+				</SetEntityContext>
+				<SoulSkirmishTrigger Name="soulskirmishtrigger7" PositionY="1100" PositionX="420">
+					<Edge From="makearray8.Array" To="Souls" />
+					<Edge From="hledaniTabora.Active" To="IsActive" />
+				</SoulSkirmishTrigger>
+				<TriggerSequence Name="triggersequence1" PositionY="110" PositionX="710">
+					<Edge From="areatrigger3.OnEnter" To="Exec" />
+				</TriggerSequence>
+				<TriggerSequence Name="triggersequence2" PositionY="670" PositionX="720">
+					<Edge From="hitReactionTrigger_fakeSoldier_1.OnNotification" To="Exec" />
+					<Edge From="hitReactionTrigger_fakeSoldier_2.OnNotification" To="Exec" />
+					<Edge From="hitReactionTrigger_fakeSoldier_3.OnNotification" To="Exec" />
+					<Edge From="soulskirmishtrigger7.SoulJoined" To="Exec" />
+				</TriggerSequence>
 			</Nodes>
 			<EdgeVertices>
 				<EdgeVertex Name="MmwQb1NG" PositionY="-334" PositionX="-313" />
 				<EdgeVertex Name="tlESlYvH" PositionY="-333" PositionX="149" />
-				<EdgeVertex Name="vertex1" PositionY="370" PositionX="510" />
+				<EdgeVertex Name="vertex1" PositionY="370" PositionX="890" />
 				<EdgeVertex Name="vertex2" PositionY="370" PositionX="-10" />
 				<EdgeVertex Name="vertex3" PositionY="-310" PositionX="150" />
 				<EdgeVertex Name="vertex4" PositionY="-310" PositionX="-300" />
 			</EdgeVertices>
+			<Assets>
+				<SoulAsset Name="fakeSoldier_1" SharedSoulGuids="2b1c5e74-07d4-4237-9dcc-17038084ee32" />
+				<SoulAsset Name="fakeSoldier_2" SharedSoulGuids="5c15a4f6-f047-41cf-9942-41f8dcaea589" />
+				<SoulAsset Name="fakeSoldier_3" SharedSoulGuids="f1d52b2c-76ab-4a15-a0d6-19cf9586f834" />
+			</Assets>
+			<Notes>
+				<Note Name="note10" PositionY="1750" PositionX="420">
+					<Text StringName="hledani_t_note10_hcik" Text="#KCD2-542182" />
+				</Note>
+			</Notes>
 			<Text StringName="hledani_tabora_rgpB" Text="hledání tábora" />
 		</Gameplay>
 	</Skald>

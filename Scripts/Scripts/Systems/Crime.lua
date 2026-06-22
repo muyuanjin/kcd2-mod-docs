@@ -41,11 +41,22 @@ end
 
 -- =============================================================================
 function Crime.SendResolveDialogResult (dc, action)
-	local guard = dc['STRAZNY_ZATYKANI'] or dc['STRAZ_V_ZIKMUNDOVE_TABORE']
-	local entity = guard.this.id
-	local type = 'crime:resolveDialogFeedback'
-	local content = { action = action }
-	XGenAIModule.SendMessageToEntityData(entity, type, content)
+    local npc = nil
+    local rolesToCheck = {'STRAZNY_ZATYKANI', 'STRAZ_V_ZIKMUNDOVE_TABORE', 'STRAZ_KLASTER', 'ALBIK_ZATYKANI', 'OPAT_ZATYKANI'}
+
+    for _, role in ipairs(rolesToCheck) do
+        if dc[role] then
+            npc = dc[role]
+            if npc and npc.this and npc.this.id then
+    	        local entity = npc.this.id
+					local messageType = 'crime:resolveDialogFeedback'
+				local content = { action = action }
+				XGenAIModule.SendMessageToEntityData(entity, messageType, content)
+                break  
+            end
+        end
+    end
+
 end
 
 -- =============================================================================

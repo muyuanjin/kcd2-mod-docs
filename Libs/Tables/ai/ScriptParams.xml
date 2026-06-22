@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<database name="barbora" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../database.xsd">
+	<ScriptParams version="1">
+		<ScriptParam Name="test_value" Value="0.5" Comment="test" />
+
+		<!--
+			INTERRUPT BEHAVIOURS PARAMS
+		-->
+		<!-- interrupt_check -->
+		<ScriptParam Name="crime_check_anchor_maxDistance" Value="50" Comment="Max allowed distance to the anchor when following player in check" /> <!-- Should be higher than `crime_lookAround_anchor_maxDistance` because of transition between lookAround -> Check -->
+		<ScriptParam Name="crime_anchor_maxDistance_courageousMultiplier" Value="2" Comment="Multiplier for anchor for courageous NPCs." />
+		<!-- interrupt_checkHomeStashes -->
+		<ScriptParam Name="crime_checkHomeStashes_robbedValue_threshold_small" Value="50.0" Comment="Robbed value threshold for small theft" />
+		<ScriptParam Name="crime_checkHomeStashes_robbedValue_threshold_medium" Value="500.0" Comment="Robbed value threshold for medium theft" /> <!-- Anything higher is considered Large theft-->
+		<ScriptParam Name="crime_checkHomeStashes_maxDistanceToStash" Value="40.0" Comment="Measured for kmal_studfarm" /> 
+		<ScriptParam Name="crime_checkHomeStashes_maxStashesToCheck" Value="4" Comment="" />
+		<ScriptParam Name="crime_check_movementSpeedIncreaseTimer" Value="12" Comment="# of seconds before NPC increases its movementSpeed in interrupt_check; in seconds" />
+		<ScriptParam Name="crime_check_pebbleReactionCooldown" Value="8" Comment="NPC will not react to additional pebble; in seconds" />
+		<!-- interrupt_lookAround -->
+		<ScriptParam Name="crime_lookAround_anchor_maxDistance" Value="40.0" Comment="Max allowed distance to the anchor when reacting to hearingInfo" />
+		<ScriptParam Name="crime_lookAround_minIterations_sound" Value="2" Comment="no touching" /> <!-- How many points NPC randomly chooses, the range is `<min;max + additional*nervousness>` -->
+		<ScriptParam Name="crime_lookAround_maxIterations_sound" Value="2" Comment="no touching" />
+		<ScriptParam Name="crime_lookAround_minIterations_crime" Value="4" Comment="" />
+		<ScriptParam Name="crime_lookAround_maxIterations_crime" Value="6.0" Comment="" />
+		<ScriptParam Name="crime_lookAround_additionalIterationsNervousness_sound" Value="1.0" Comment="use even number" />
+		<ScriptParam Name="crime_lookAround_additionalIterationsNervousness_crime" Value="3.0" Comment="use even number" />
+		
+		<ScriptParam Name="crime_lookAround_soundPosRandomizer_exteriorDistanceMultiplier" Value="0.3" Comment="maxDistance += distanceFromNpcToSound_XYZ * this" />
+		<ScriptParam Name="crime_lookAround_soundPosRandomizer_interiorDistanceMultiplier_XY" Value="0.3" Comment="maxDistance += distanceFromNpcToSound_XY * this" />
+		<ScriptParam Name="crime_lookAround_soundPosRandomizer_interiorDistanceMultiplier_Z" Value="3" Comment="maxDistance += distanceFromNpcToSound_Z * this" />
+		<ScriptParam Name="crime_lookAround_soundPosRandomizer_interiorToExteriorBonus" Value="4" Comment="maxDistance += this" />
+
+		<!-- interrupt_report -->
+		<ScriptParam Name="crime_report_violentCrime_scoreMultiplier" Value="0.5" Comment="Guard score multiplier if the crime is violent" />
+		
+		<ScriptParam Name="crime_frisk_cooldown" Value="5400000" Comment="cooldown after player was searched (in ms)" />
+		<ScriptParam Name="crime_frisk_chanceCooldown" Value="180000" Comment="cooldown after NPC saw player but decided not to frisk him (in ms)" />
+		<ScriptParam Name="crime_smellGlobal_cooldown" Value="15000" Comment="cooldown for a smell reaction" />
+		<ScriptParam Name="crime_homeCooldowns_dogBarkReaction" Value="150000" Comment="same cooldown for dog_bark and dog's reaction to trespass" />
+		<ScriptParam Name="crime_violentSwitchBarkMaxPriority" Value="99" Comment="" />
+		<ScriptParam Name="crime_reactionToSoundWhenAloneCooldown" Value="20000.0" Comment="" />
+		<ScriptParam Name="crime_fedUpWithSoundReactionCooldown" Value="20000.0" Comment="ms" />
+		<ScriptParam Name="crime_fedUpWithSoundIgnoreBarkCooldown" Value="6000.0" Comment="ms" />
+		<ScriptParam Name="crime_fedUpWithSoundPosCount" Value="5" Comment="" />
+		<ScriptParam Name="crime_limits_additionalReactorPerFineValue" Value="20000.0" Comment="" />
+		<ScriptParam Name="crime_threatReactionLimitDistance" Value="2" Comment="only 1 NPC within this distance to player will actively react to threat" />
+		<ScriptParam Name="crime_threatDistanceHysteresis" Value="3" Comment="" />
+		<ScriptParam Name="crime_noOffenceWarningCooldown" Value="30000" Comment="" />
+		<!-- interrupt_arrest -->
+		<ScriptParam Name="crime_arrest_maxDistanceFromChatStart" Value="25.0" Comment="Max distance to the position where guard started forcing chat before he forces dialogue" />
+		<ScriptParam Name="crime_arrest_instantArrestAfterReportDistance" Value="10.0" Comment="" />
+		<!-- interrupt_selfhelp -->
+		<ScriptParam Name="crime_selfhelp_maxDistanceFromChatStart" Value="25.0" Comment="Max distance to the position where guard started forcing chat before he forces dialogue" />
+		<ScriptParam Name="crime_selfhelp_anchor_maxDistance" Value="40.0" Comment="Max allowed distance to the anchor when following player in selfhelp extendedMode" />
+		<!-- interrupt_attack -->
+		<ScriptParam Name="crime_surrender_statement_maxDistance" Value="7.0" Comment="Max allowed distance to add soul as responsible authority" />
+		<!-- interrupt_watch -->
+		<ScriptParam Name="crime_watch_anchor_distanceToFlee" Value="40.0" Comment="Max allowed distance for NPC to watch, starts to flee if distance exceeded" />
+		<ScriptParam Name="crime_watch_fleeDistance" Value="3.0" Comment="Watcher will flee if watching a combat/violent crime and its target gets this close." />
+		<!--
+			HELPER FUNCTIONS PARAMS
+		-->
+		<!-- creaetAssaultInformationsFromLastHits -->
+		<ScriptParam Name="crime_lastHit_expiration_time" Value="360000.0" Comment="Expiration time for a last-hit information, in miliseconds" />
+		<ScriptParam Name="crime_lastHit_gracePeriod" Value="3000.0" Comment="grace period for attribution, in miliseconds" />
+		<!-- getAnchor -->
+		<ScriptParam Name="crime_anchor_expiration_time" Value="45000.0" Comment="Expiration time for behaviour anchor, in miliseconds" />
+		<!-- getReportDestinationFromDistrict -->
+		<ScriptParam Name="crime_guard_ignoreScoreThreshold" Value="5.0" Comment="Under this distance, the score will be ignored and the closest guard will be chosen" />
+		<ScriptParam Name="crime_guard_score_onDuty" Value="0.0" Comment="Score for a guard that is currently just patrolling" /> <!-- Higher score = less likely to be picked -->
+		<ScriptParam Name="crime_guard_score_activeDuty" Value="15.0" Comment="Score for a guard that is already reacting to a crime" />
+		<ScriptParam Name="crime_guard_score_stationaryDuty" Value="25.0" Comment="Score for a guard that is on gate (shouldn't move)" />
+		<ScriptParam Name="crime_guard_score_offDuty" Value="45.0" Comment="Score for a guard that is offDuty (e.g. in pub)." />
+		<ScriptParam Name="crime_guard_score_offDuty_sleeping" Value="85.0" Comment="Score for a guard that is offDuty and sleeping." />
+		<ScriptParam Name="crime_guard_maxCountForEvaluation" Value="4.0" Comment="Number of closest guards to evaluate." />
+		<!-- getResolutionDialogIntroKind -->
+		<ScriptParam Name="crime_lastHit_resolution_expiration_time" Value="20000.0" Comment="" /> <!-- TODO: better explanation I guess? -->
+		<!-- addLongTermMemoryTrespass -->
+		<ScriptParam Name="crime_longTermMemoryTrespassExpiration" Value="7200.0" Comment="" />
+		<!-- handleCloseAnimalCorpses -->
+		<ScriptParam Name="crime_radiusToCheckForAnimalCorpses" Value="7.0" Comment="When being arrested, check this radius for other animal corpses (in case of a lot of corpses in a herd)" />
+		<ScriptParam Name="crime_radiusToCheckForCorpses" Value="4.0" Comment="When I see a human corpse - check this radius for other human corpses" />
+		<ScriptParam Name="crime_radiusToCheckForCorpses_interior" Value="2.0" Comment="" />
+
+		<ScriptParam Name="crime_checkPockets_reportThreshold" Value="0.0" Comment="When checking pockets, if NPC finds missing value less than this value, it will not report a crime, just bark, play the anim and move on. (in decigroschen)" />
+
+		<ScriptParam Name="crime_ignoreWatchLimitsDistance" Value="5.0" Comment="people within this distance will ignore limits when considering whether to watch the situation or not" />
+		<ScriptParam Name="crime_minimumWatchersLimit" Value="5.0" Comment="" />
+		<ScriptParam Name="crime_maximumWatchersLimit" Value="10.0" Comment="" />
+		<ScriptParam Name="crime_ignoreReportLimitsDistance" Value="2.0" Comment="people within this distance will ignore limits when considering whether to report (or flee) the situation or not" />
+
+		<ScriptParam Name="crime_veryFreshCriminalThreshold" Value="6000" Comment="miliseconds" />
+		<ScriptParam Name="crime_somewhatFreshCriminalThreshold" Value="15000" Comment="miliseconds" />
+
+		<ScriptParam Name="crime_freshViolentInformationTimer" Value="20000" Comment="react violently to violent crime information after created, 1min GT" />
+		<ScriptParam Name="crime_flee_minimalDistance" Value="30.0" Comment="" />
+		<ScriptParam Name="crime_flee_minimalDistance_customTagPoint" Value="10.0" Comment="" />
+		<ScriptParam Name="crime_flee_stayFledDuration" Value="420000.0" Comment="" />
+		<ScriptParam Name="crime_flee_customAreaPointsDistanceFilter" Value="15.0" Comment="" />
+		<ScriptParam Name="crime_alwaysReportMaximumDistance" Value="15.0" Comment="" />
+		<ScriptParam Name="crime_maximumReportDistance" Value="150.0" Comment="meters" />
+		<ScriptParam Name="crime_maximumReportDistance_security" Value="20.0" Comment="meters" />
+		<ScriptParam Name="crime_maximumReportDistance_important" Value="500.0" Comment="meters" />
+		<ScriptParam Name="crime_alwaysSelfhelpMaximumPrice" Value="750.0" Comment="" />
+		<ScriptParam Name="crime_selfhelpMoraleBoost" Value="0.15" Comment="" />
+		<ScriptParam Name="crime_selfhelpMoraleBoost_courageous" Value="3" Comment="" />
+		<ScriptParam Name="crime_selfhelpMoraleBoost_noReportAvailable" Value="3" Comment="" />
+		<ScriptParam Name="crime_goodNatured_moraleBoost" Value="0.3" Comment="@KCD2-125892 morale boost to SelfHelp decision from a perk" />
+		<ScriptParam Name="crime_lonerMoraleBoost" Value="0.2" Comment="" />
+		<ScriptParam Name="crime_courageousMoraleBoost" Value="0.3" Comment="" />
+		<ScriptParam Name="combat_moraleForCombat" Value="0.2" Comment="" />
+		<ScriptParam Name="combat_fledFromAttack" Value="60000" Comment="ms" />
+		<ScriptParam Name="crime_surrenderingMaxDistance" Value="8.0" Comment="@KCD2-235217" />
+		<ScriptParam Name="crime_forceUncertainByFar" Value="150.0" Comment="@KCD2-509050" />
+		<ScriptParam Name="crime_playerIsVeryBadassThreshold" Value="0.82" Comment="" />
+		<ScriptParam Name="crime_corpseDailyCheckNumberOfLoopsBeforeChecking" Value="3" Comment="" />
+		<ScriptParam Name="crime_chestDailyCheckNumberOfLoopsBeforeChecking" Value="2" Comment="" />
+		<ScriptParam Name="crime_corpseViolationTimer" Value="10000" Comment="this long until hitting corpse is considered corpseViolation; in ms" />
+
+		<ScriptParam Name="crime_distanceToPlayerToCheckAiming" Value="10" Comment="in meters" />
+
+		<ScriptParam Name="crime_repeatedHorseCollisionCrimePeriod" Value="30000" Comment="in ms" />
+		<ScriptParam Name="crime_horseWaitOnCombatRepositionEnd" Value="60000" Comment="in ms" />
+		
+		<ScriptParam Name="crime_homeTrespassEscalationPeriod" Value="600000" Comment="in ms" /> <!-- ten minutes -->
+		<ScriptParam Name="crime_homeTrespassPausePeriod" Value="60000" Comment="in ms" /> <!-- a minute -->
+		<ScriptParam Name="crime_semiTrespassMaxEscalationThreshold" Value="3" Comment="" />
+		<ScriptParam Name="crime_trespassEscalationThreshold" Value="12" Comment="" />
+		<ScriptParam Name="crime_campTrespassEscalationThreshold" Value="25" Comment="" />
+		<ScriptParam Name="crime_nearTrespassGracePeriodAfterLeavingTrespass" Value="20000" Comment="in ms" />
+		<ScriptParam Name="crime_checkHomeStashesAfterWatchTrespassMinimalCounterIncrement" Value="6" Comment="" />
+		<ScriptParam Name="crime_playerLostInTrespassCooldown" Value="120000" Comment="in ms" />
+
+		<ScriptParam Name="crime_arrestEscalationPeriod" Value="300000" Comment="in ms" /> <!-- five minutes -->
+		<ScriptParam Name="crime_npcReactedToCrime_guard" Value="200000" Comment="in ms" />
+		<ScriptParam Name="crime_sharePlayerPos_visualAssistanceCooldown" Value="20000" Comment="in ms" />
+		<ScriptParam Name="crime_sharePlayerPos_posShareDistance" Value="20" Comment="in m" />
+		<ScriptParam Name="crime_sharePlayerPos_directShareDistance" Value="5" Comment="in m" />
+
+		<ScriptParam Name="crime_combatSoundImmediateReactionMaxDistance" Value="5" Comment="" />
+		<ScriptParam Name="crime_skipReportRunningDistance" Value="13" Comment="if guard is initially closer than this, do not run towards him, just wait instead" />
+		
+
+		<ScriptParam Name="crime_robUnconsciousPlayerCooldown" Value="3600000.0" Comment="cooldown for taking unconscious players money and boots" />
+		<ScriptParam Name="crime_robUnconsciousPlayerChanceCooldown" Value="30000.0" Comment="cooldown for rolling a chance to take unconscious players money and boots" />
+		
+		<ScriptParam Name="crime_theft_fineMultiplier" Value="1" Comment="final theft price will be calculated as max(crime_theft_minimumFine, crime_theft_fineMultiplier * valueOfStolenItems; MUST BE > 1" />
+		<ScriptParam Name="crime_theft_autoAttributionTimer" Value="2500" Comment="in miliseconds" />
+		<ScriptParam Name="crime_theft_perceptionAttributionTimer" Value="300000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_theftVolumeDespawnTimerWhenSeen" Value="2500" Comment="in miliseconds" />
+		<ScriptParam Name="crime_assault_unarmedMultiplier" Value="0.5" Comment="If an assault is unarmed - multiple crime.xml price with this value" />
+		
+		<ScriptParam Name="crime_resolveCooldown" Value="900000.0" Comment="if guard/selfhelper finds unconscious player within this timer from the last time player refused to resolve crime peacefully, such NPC will punish or rob the player without trying to talk to him again" />
+		<!-- cooldown for returning to interrupt_watch (in ms) by crimeLevel -->
+		<ScriptParam Name="crime_watchCooldown" Value="60000.0" Comment="" />
+		<ScriptParam Name="crime_watchCooldownMultiplier_offence" Value="5.0" Comment="" />
+		<ScriptParam Name="crime_watchCooldownMultiplier_trespass" Value="5.0" Comment="" />
+		<ScriptParam Name="crime_watchCooldownMultiplier_property" Value="5.0" Comment="" />
+		<ScriptParam Name="crime_watchCooldownMultiplier_violent" Value="5" Comment="" />
+		<ScriptParam Name="crime_watchCooldownMultiplier_murder" Value="1" Comment="" />
+		<!-- durations of interrupt_watch (in ms) by crimeLevel -->
+		<ScriptParam Name="crime_watchDuration" Value="60000.0" Comment="" />
+		<ScriptParam Name="crime_watchDurationMultiplier_offence" Value="0.33" Comment="" />
+		<ScriptParam Name="crime_watchDurationMultiplier_trespass" Value="7" Comment="" />
+		<ScriptParam Name="crime_watchDurationMultiplier_property" Value="0.01" Comment="" />
+		<ScriptParam Name="crime_watchDurationMultiplier_violent" Value="10" Comment="" />
+		<ScriptParam Name="crime_watchDurationMultiplier_murder" Value="16" Comment="" />
+		
+		<ScriptParam Name="crime_watchMaximumDistance" Value="50" Comment="" />
+
+		<ScriptParam Name="crime_timeSkipInTrespass_detectionRange" Value="10" Comment="in m" />
+		<ScriptParam Name="crime_timeSkipInTrespass_detectionRange_z" Value="1.5" Comment="in m" />
+		<ScriptParam Name="crime_timeSkipInTrespass_detectionPeriod" Value="2000" Comment="in ms" />
+
+		<!-- CRIME MUSIC -->
+		<ScriptParam Name="crime_music_maxDistance" Value="10" Comment="" />
+
+		<!-- EXTRA GUARDS -->
+		<ScriptParam Name="crime_extraGuards_cooldown" Value="300" Comment="in seconds" />	
+		<ScriptParam Name="crime_extraGuards_distanceThreshold" Value="100" Comment="minimum distance to player to spawn guards" />	
+
+		<ScriptParam Name="crime_punishmentMultiplier_negative" Value="0.5" Comment="" />
+		<ScriptParam Name="crime_punishmentMultiplier_low" Value="1" Comment="" />
+		<ScriptParam Name="crime_punishmentMultiplier_high" Value="2" Comment="" />
+		<ScriptParam Name="crime_punishmentMultiplier_veryHigh" Value="4" Comment="" />
+
+
+		<ScriptParam Name="crime_punishmentSeverityThreshold_medium" Value="500" Comment="in decigroschen" />
+		<ScriptParam Name="crime_punishmentSeverityThreshold_high" Value="1000" Comment="in decigroschen" />
+
+		<ScriptParam Name="crime_punishmentFineThresholdForBranding" Value="20000" Comment="When deciding on a punishment, if fine for crime is higher than this -> instant branding/execution" />
+
+		<ScriptParam Name="crime_horseTheft_teleportHorseIsDistanceGreaterThan" Value="100" Comment="" />
+		<ScriptParam Name="crime_horseTheft_updatePlayerMountedPositionCooldown" Value="10000" Comment="" />
+
+		<ScriptParam Name="crime_animal_horseStartleCooldown" Value="10000" Comment="Horse receives this cooldown upon getting startled (not after return)" />
+
+		<!-- confiscateStolenItems (on ground around player) -->
+		<ScriptParam Name="crime_findStolenItems_groundRadius" Value="3" Comment="Radius around player that is checked for dropped stolen items" />
+
+		<ScriptParam Name="crime_pickUpItem_memoryExpiration" Value="20" Comment="Short term memory for items, when in behavior PickUpItem" />
+		<ScriptParam Name="crime_pickUpItem_maxAnchorDistance" Value="20" Comment="Max distance for pickUpItem behavior" />
+		<ScriptParam Name="crime_pickUpItem_minDistanceToPlayer" Value="2.5" Comment="Minimal distance from Item to Player for reservation" />
+		<ScriptParam Name="crime_pickUpItem_baseMinimumPrice" Value="30" Comment="" /> <!-- This value will get multiplied by 'crime_punishmentMultiplier' and compared to item's value -->
+
+		<!-- Crime kettles -->
+		<ScriptParam Name="crime_kettle_eatFine" Value="100" Comment="Crime fine for a one-time eating, will be summed if player have eaten more than once" />
+		<ScriptParam Name="crime_kettle_lastUsed_threshold" value="300000" Comment="Time to lastUsed kettle for considering being poisoned from a kettle" />
+
+		<ScriptParam Name="crime_denialDialog_basePrice" Value="50" Comment="" />
+		<ScriptParam Name="crime_distanceToIgnoreLimitsForSoundReaction" Value="4" Comment="" />
+		<ScriptParam Name="crime_gunFiredSound_highNervousnessDistance" Value="5" Comment="" />
+		<ScriptParam Name="crime_combatSound_highNervousnessDistance" Value="5" Comment="" />
+
+		<!-- IMPORTANT! technical stuff, do not change unless you know what you are doing -->
+		<ScriptParam Name="crime_bodyRecognitionDistance" Value="6" Comment="distance needed for NPC to recongnize if a body is dead/unconscious or just sleeping" />
+		<ScriptParam Name="crime_mournOutsideMaximumRainIntensity" Value="0.3" Comment="If it rains more than this, NPCs will prefer to mourn indoors." />
+		<ScriptParam Name="crime_crimeSceneSpatialSize" Value="20" Comment="All crimes within this radius (in meters) will share one reactor limit." />
+		<ScriptParam Name="crime_crimeSceneSeachRadius_widespread" Value="30" Comment="Searching NPCs will look for best navMesh points in an area this big (in meters) when searching due to most of the stimuli." />
+		<ScriptParam Name="crime_crimeSceneSeachRadius_concentrated" Value="5" Comment="Searching NPCs will look for best navMesh points in an area this big (in meters) when searching due to specific 'local' stimuli e.g. sound." />
+		<ScriptParam Name="crime_crimeSceneSeachRadius_radar" Value="15" Comment="NPCs searching for player or something related to him will magically navigate straight to him at the end of the search if he still within this distance to the original investigation position." />
+		<ScriptParam Name="crime_crimeSceneSeach_firstNpcEvalDistance" Value="10" Comment="" />
+		<ScriptParam Name="crime_flee_dontUseLedgesMaxHealth" Value="50" Comment="should be the same as wounded druh chuze condition" />
+		<!-- information emit distances -->
+		<ScriptParam Name="crime_crimeInformationEmitDistance" Value="10" Comment="emit distance for all common informations be it crimes, or helper informations like motivation, nonattributed crime etc." />
+		<ScriptParam Name="crime_alarmInformationEmitDistance" Value="25" Comment="emit distance for alarm information; by definition longer than crimeInformationEmitDistance!!" />
+		<ScriptParam Name="crime_alarmInformationImmediateCombatDistance" Value="15" Comment="distance, where NPC react to alarm from combat as if they have seen the combat" />
+		<ScriptParam Name="crime_crimeInformationEmitDistance_long" Value="40" Comment="used on special occasions, e.g. NPC shouting from their doorstep about trespass" />
+		<!-- /information emit distances -->
+		<!-- /technical stuff -->
+
+		<!-- 
+			Poaching crime fines - by crimeType per animal 
+			- always only the highest crimeType-fine gets picked
+		-->
+		<!-- ANIMALS -->
+		<ScriptParam Name="crime_animal_attackDistanceThreshold" Value="3" Comment="If target gets closer than this distance while in annoyance - attack him" />
+		<ScriptParam Name="crime_animal_cancelAttackDistanceThreshold" Value="10" Comment="If target gets further than this distance while in annoyance - leave him" />
+		<ScriptParam Name="crime_animal_wild_annoyanceToEscapeDistanceThreshold" Value="10" Comment="If player gets close during annoyance behavior - go into escape" />
+
+		<!-- Poaching -->
+		<ScriptParam Name="crime_animal_Boar_baseFine" Value="1500" Comment="" />
+		<ScriptParam Name="crime_animal_RedDeerStag_baseFine" Value="3000" Comment="" />
+		<ScriptParam Name="crime_animal_RedDeerDoe_baseFine" Value="2000" Comment="" />
+		<ScriptParam Name="crime_animal_RoeDeerBuck_baseFine" Value="2500" Comment="" />
+		<ScriptParam Name="crime_animal_RoeDeerHind_baseFine" Value="1500" Comment="" />
+		<ScriptParam Name="crime_animal_SheepEwe_baseFine" Value="550" Comment="" />
+		<ScriptParam Name="crime_animal_SheepRam_baseFine" Value="600" Comment="" />
+		<ScriptParam Name="crime_animal_Horse_baseFine" Value="1000" Comment="" /> <!-- rather use actual horse value? -->
+		<ScriptParam Name="crime_animal_Chicken_baseFine" Value="75" Comment="" />
+		<ScriptParam Name="crime_animal_CattleCow_baseFine" Value="1000" Comment="" />
+		<ScriptParam Name="crime_animal_CattleBull_baseFine" Value="1250" Comment="" />
+		<ScriptParam Name="crime_animal_Dog_baseFine" Value="500" Comment="" />
+		<ScriptParam Name="crime_animal_Pig_baseFine" Value="600" Comment="" />
+		<!-- CRIME MULTIPLIERS -->
+		<ScriptParam Name="crime_poaching_assault_multiplier" Value="0.5" Comment="" />
+		<ScriptParam Name="crime_poaching_murder_multiplier" Value="2" Comment="" />
+		<ScriptParam Name="crime_poaching_theft_multiplier" Value="1" Comment="" />
+		<ScriptParam Name="crime_assaultAnimal_multiplier" Value="0.5" Comment="" />
+		<ScriptParam Name="crime_murderAnimal_multiplier" Value="2" Comment="" />
+		<ScriptParam Name="crime_attributableDogCommandInCombatTimeout" Value="3000" Comment="ms" />
+		<ScriptParam Name="combat_surrenderHealthThresholdDelayed" Value="30.00" Comment="KCD2-67760" />
+		<ScriptParam Name="combat_surrenderHealthThresholdInstant" Value="10.00" Comment="KCD2-67760" />
+		<ScriptParam Name="combat_surrenderCooldownPublicFriend" Value="20000.00" Comment="20s" />
+		<ScriptParam Name="combat_surrenderCooldownPublicEnemy" Value="60000.00" Comment="1m" />
+		<ScriptParam Name="combat_fightStatusCooldown" Value="900000.00" Comment="15m" />
+
+		<!-- barkReaction priorities -->
+		<ScriptParam Name="crime_barkReactionPriority_companionComment_violent" Value="110" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_companionComment_corpse" Value="105" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_companionComment_nonviolent" Value="100" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_corpse" Value="95" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_carriedEnemy" Value="90" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_threat" Value="85" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_carriedFriend" Value="80" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_ignoredPickpocket" Value="80" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_kettleEating" Value="50" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_startledAnimal" Value="50" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_weaponDrawn" Value="40" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_semipublicTrespass" Value="35" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_noTorch" Value="30" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_indifferentCombat" Value="25" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_companion" Value="20" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_crouch" Value="20" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_greet" Value="10" Comment="" />
+		<ScriptParam Name="crime_barkReactionPriority_mourn" Value="10" Comment="" />
+
+		<ScriptParam Name="crime_barkReactionCooldown_companionComment" Value="4500" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_heldBodyEnemy" Value="5000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_bodyFound" Value="5500" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_heldBodyFriendly" Value="6000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_ignoredPickpocket" Value="6500" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_hasWeapon" Value="10000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_semipublicTrespass" Value="10000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_isTorchless" Value="11000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_playerInStealth" Value="12000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_kettleEatingGoodRep" Value="14000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_indifferentCombat" Value="20000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_greetPlayer" Value="40000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_companionDog" Value="45000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_mourn" Value="80000" Comment="in miliseconds" />
+		<ScriptParam Name="crime_barkReactionCooldown_companionHorse" Value="1800000" Comment="in miliseconds" />
+
+		<!-- ow cooldowns -->
+		<ScriptParam Name="owcd_npc_npcGreeting" Value="20000" Comment="in miliseconds" />
+		<ScriptParam Name="owcd_npc_npc2npcGreeting" Value="6" Comment="in hours" />
+		<ScriptParam Name="owcd_npc_npc2npcGreetingGlobal" Value="10" Comment="in seconds of game time" />
+		<ScriptParam Name="owcd_npc_personal" Value="10000" Comment="in miliseconds" />
+		<ScriptParam Name="owcd_npc_situation" Value="10000" Comment="in miliseconds" />
+
+		<ScriptParam Name="owcd_npc_postCrimeInterrupt" Value="45000" Comment="in miliseconds" />
+
+	
+		<!-- Kettle params -->
+		<ScriptParam Name="kettle_timeToShutdown" Value="86400000" Comment="24 hours in miliseconds" />
+		<ScriptParam Name="kettle_timeToBuffDisable" Value="18000000" Comment="5 hours in miliseconds" />
+		<ScriptParam Name="kettle_timeToTurnOff" Value="7200000" Comment="2 hours in miliseconds" />
+		<ScriptParam Name="kettle_mlodNpcCountToTriggerCrime" Value="2" Comment="" />
+		<ScriptParam Name="kettle_windowSmokeVariantCount" Value="2" Comment="how many variants are in prefabCategory fireplace_windowSmoke" />
+
+		<!-- Guard beh params -->
+		<ScriptParam Name="guardBehavior_playerAngleCheck" Value="-0.2" Comment="" />
+		<ScriptParam Name="guardBehavior_playerDistanceCheck" Value="5" Comment="" />
+
+		<!-- Situations params -->
+		<ScriptParam Name="situation_greetingCooldown_value" Value="10000" Comment="" />
+		<ScriptParam Name="situation_flutist_globalCooldown" Value="300000" Comment="in miliseconds" />
+		<ScriptParam Name="situation_flutist_activationDistance" Value="40" Comment="in meters" />
+		<ScriptParam Name="situation_switchGossip_maxDistance" Value="8" Comment="in meters" />
+		<ScriptParam Name="situation_storyTeller_cooldown" Value="180000" Comment="in miliseconds" />
+
+		<!-- Random events -->
+		<ScriptParam Name="event_startDistance" Value="25" Comment="At what distance to player (in meters) event start its logic" />
+		<ScriptParam Name="event_activateCooldownDistance" Value="10" Comment="At what distance to player (in meters) event activates cooldown" />
+		<ScriptParam Name="event_forceStartAfterTimer" Value="60" Comment="After how long (in seconds) event would force start event if player is farther than event_startDistance" />
+
+		<!-- Redirecting report to closer guard Skalitz drift, used in interrupt_report -->
+		<ScriptParam Name="crime_report_redirectCooldown" Value="3" Comment="How often can NPC redirect report" />
+
+		<ScriptParam Name="switch_npcEmergency_minimalDistanceToPlayer" Value="50" Comment="in meters" />
+		<ScriptParam Name="switch_autowash_minimalDistanceForNPCToWash" Value="100" Comment="in meters" />
+
+		<!-- Achievements -->
+		<ScriptParam Name="achievement_notTakenOnlyGivethAway_threshold" Value="100000" Comment="in decigroschen, so do a *10" />
+		<ScriptParam Name="achievement_henryTheHandyman_threshold" Value="100" Comment="Should be set to number of all quests in the game * 0.8" />
+		<ScriptParam Name="achievement_technicalAdvanceCrossbowHeadshotDistance_threshold" Value="20" Comment="Crossbow headshot distance in meters." />
+		<ScriptParam Name="achievement_groschenMushFlow_threshold" Value="100000" Comment="In decigroshen -> 100 means 10 groschen." />
+
+		<!-- Pilgrimage: -->
+		<ScriptParam Name="pilgrimage_reputationThreshold_good" Value="0" Comment="Good reputation threshold" />
+		<ScriptParam Name="pilgrimage_reputationThreshold_average" Value="0" Comment="Average reputation threshold" />
+
+		<!-- RPG thresholds -->
+		<ScriptParam Name="rpg_threshold_0" Value="0" Comment="DONT CHANGE" />
+		<ScriptParam Name="rpg_threshold_1" Value="1" Comment="DONT CHANGE" />
+
+		<!-- RPG: Relative charisma -->
+		<ScriptParam Name="rpg_charisma_low" Value="0.3" Comment="Relative charisma low threshold" />
+		<ScriptParam Name="rpg_charisma_medium" Value="0.6" Comment="Relative charisma medium threshold" />
+		<ScriptParam Name="rpg_charisma_high" Value="0.9" Comment="Relative charisma high threshold" />
+
+		<!-- RPG: Relative alchemy -->
+		<ScriptParam Name="rpg_alchemy_low" Value="0.3" Comment="Relative alchemy low threshold" />
+		<ScriptParam Name="rpg_alchemy_medium" Value="0.6" Comment="Relative alchemy medium threshold" />
+		<ScriptParam Name="rpg_alchemy_high" Value="0.9" Comment="Relative alchemy high threshold" />
+
+		<!-- RPG: Relative dirtiness -->
+		<ScriptParam Name="rpg_drt_low" Value="0.3" Comment="Relative dirtiness low threshold" />
+		<ScriptParam Name="rpg_drt_medium" Value="0.6" Comment="Relative dirtiness medium threshold" />
+		<ScriptParam Name="rpg_drt_high" Value="0.9" Comment="Relative dirtiness high threshold" />
+
+		<!-- RPG: Relative bloodiness -->
+		<ScriptParam Name="rpg_bld_low" Value="0.3" Comment="Relative bloodiness low threshold" />
+		<ScriptParam Name="rpg_bld_medium" Value="0.6" Comment="Relative bloodiness medium threshold" />
+		<ScriptParam Name="rpg_bld_high" Value="0.9" Comment="Relative bloodiness high threshold" />
+		
+		<!-- RPG: Relative smell -->
+		<ScriptParam Name="rpg_sml_low" Value="0.3" Comment="Relative smell low threshold" />
+		<ScriptParam Name="rpg_sml_medium" Value="0.6" Comment="Relative smell medium threshold" />
+		<ScriptParam Name="rpg_sml_high" Value="0.9" Comment="Relative smell high threshold" />
+		
+		<!-- RPG: Relative badassness -->
+		<ScriptParam Name="rpg_bad_low" Value="0.3" Comment="Relative badassness low threshold" />
+		<ScriptParam Name="rpg_bad_medium" Value="0.6" Comment="Relative badassness medium threshold" />
+		<ScriptParam Name="rpg_bad_high" Value="0.9" Comment="Relative badassness high threshold" />
+
+		<!-- RPG: Relative scholarship -->
+		<ScriptParam Name="rpg_scholarship_low" Value="0.3" Comment="Relative scholarship low threshold" />
+		<ScriptParam Name="rpg_scholarship_medium" Value="0.6" Comment="Relative scholarship medium threshold" />
+		<ScriptParam Name="rpg_scholarship_high" Value="0.9" Comment="Relative scholarship high threshold" />
+								<!-- RPG: Relative horseRiding  -->
+		<ScriptParam Name="rpg_horseRiding_low" Value="0.3" Comment="Relative horseRiding low threshold" />
+		<ScriptParam Name="rpg_horseRiding_medium" Value="0.6" Comment="Relative horseRiding medium threshold" />
+		<ScriptParam Name="rpg_horseRiding_high" Value="0.9" Comment="Relative horseRiding high threshold" />
+
+		<!-- RPG: Relative shadiness -->
+		<ScriptParam Name="rpg_shadiness_low" Value="0.3" Comment="Shadiness low threshold" />
+		<ScriptParam Name="rpg_shadiness_medium" Value="0.6" Comment="Shadiness medium threshold" />
+		<ScriptParam Name="rpg_shadiness_high" Value="0.9" Comment="Shadiness high threshold" />
+
+		<!-- RPG: Relative fencing -->
+		<ScriptParam Name="rpg_fencing_low" Value="0.3" Comment="Fencing low threshold" />
+		<ScriptParam Name="rpg_fencing_medium" Value="0.6" Comment="Fencing medium threshold" />
+		<ScriptParam Name="rpg_fencing_high" Value="0.9" Comment="Fencing high threshold" />
+
+		<!-- RPG: Relative defense -->
+		<ScriptParam Name="rpg_defense_low" Value="0.3" Comment="Defense low threshold" />
+		<ScriptParam Name="rpg_defense_medium" Value="0.6" Comment="Defense medium threshold" />
+		<ScriptParam Name="rpg_defense_high" Value="0.9" Comment="Defense high threshold" />
+
+		<!-- RPG: Relative thievery -->
+		<ScriptParam Name="rpg_thievery_low" Value="0.3" Comment="Thievery low threshold" />
+		<ScriptParam Name="rpg_thievery_medium" Value="0.6" Comment="Thievery medium threshold" />
+		<ScriptParam Name="rpg_thievery_high" Value="0.9" Comment="Thievery high threshold" />
+
+		<!-- RPG: Relative agility -->
+		<ScriptParam Name="rpg_agility_low" Value="0.3" Comment="Agility low threshold" />
+		<ScriptParam Name="rpg_agility_medium" Value="0.6" Comment="Agility medium threshold" />
+		<ScriptParam Name="rpg_agility_high" Value="0.9" Comment="Agility high threshold" />
+						<!-- Animals params -->
+		<ScriptParam Name="horseParking_playerCheck_distance" Value="10.0" Comment="" />
+		<ScriptParam Name="horseParking_playerCheck_time" Value="10" Comment="" />
+		<ScriptParam Name="horseParking_spotCheck_distance" Value="16.0" Comment="" />
+		<ScriptParam Name="horseParking_eatingSpot_distance" Value="16.0" Comment="" />
+		<ScriptParam Name="horseParking_eatingSpot_failTime" Value="10" Comment="" />
+
+		<!-- Caravans -->
+		<ScriptParam Name="caravans_levelSwitchPrice" Value="200" Comment="in groschen" />
+
+		<!-- Dice -->
+		<ScriptParam Name="dice_gameLevelBetSize_beggar" Value="3" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_wagoner" Value="10" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_farmer" Value="5" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_miner" Value="15" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_novice" Value="25" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_craftsman" Value="50" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_soldier" Value="40" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_priest" Value="70" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_knight" Value="110" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_courtier" Value="130" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_cardinal" Value="95" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_lord" Value="150" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_king" Value="180" Comment="in groschen" />
+		<ScriptParam Name="dice_gameLevelBetSize_emperor" Value="300" Comment="in groschen" />
+		
+		<ScriptParam Name="dice_shortGameMaxTime" Value="30" Comment="in seconds" />
+		<ScriptParam Name="dice_longGameMinTime" Value="300" Comment="in seconds" />
+		
+		<!-- Shop -->
+		<ScriptParam Name="shop_marketSellerInviteBarkFrequency" Value="1" Comment="relative value between 0 and 1" />
+		<ScriptParam Name="shop_preventInvitePlayerAfterCrimeCooldown" Value="120000" Comment="2 minutes, in ms" />
+		<ScriptParam Name="shop_guardDialogCooldown" Value="60000" Comment="1 minutes, in ms" />
+
+		<!-- Speech -->
+		<ScriptParam Name="speech_soliloquy_maxScheduledPriority" Value="19" Comment="" />	
+
+		<!-- Stationary Carts -->
+		<ScriptParam Name="stationaryCarts_despawnDistance" Value="50" Comment="in meters" />
+		
+		<!-- Closed castles -->
+		<ScriptParam Name="closedCastles_guardWalkWaitTime" Value="15" Comment="How long (in seconds) is NPC waiting on waipont" />
+
+		<!-- svoti debugging KCD2-403207 -->
+		<ScriptParam Name="debug_svoTI_SkyColorMultiplier_outside" Value="1" />
+		<ScriptParam Name="debug_svoTI_SkyColorMultiplier_inside" Value="0.1" />
+		<ScriptParam Name="debug_svoTI_SunGIMultiplierWH_outside" Value="1" />
+		<ScriptParam Name="debug_svoTI_SunGIMultiplierWH_inside" Value="0.1" />
+		<ScriptParam Name="debug_svoTI_steps" Value="10" />
+		<ScriptParam Name="debug_svoTI_time" Value="1000" Comment="ms" />
+
+		<!-- NPC Greetings -->
+		<ScriptParam Name="speech_greeting_lowHealthThreshold" Value="30" />
+
+		<!-- Professions params -->
+		<ScriptParam Name="professions_praying_chanceOfPrayingOutLoud" Value="0.75" Comment="Chance for the NPC to pray out loud." />
+
+		<!-- Legacy of the forge - Raven -->
+		<ScriptParam Name="legacyOfTheForge_raven_welcomeAfterAwayTime" Value="4" Comment="How long player has to be away to allow raven's greeting when he comes back in (in seconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_idleActionCooldown_base" Value="3000" Comment="How often raven does some action while idle, in range from (base + 1000ms) to (base + 1000ms + variation) (in milliseconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_idleActionCooldown_variation" Value="6000" Comment="How often raven does some action while idle, in range from (base + 1000ms) to (base + 1000ms + variation) (in milliseconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_yapCooldown_base" Value="13000" Comment="When can raven yap again after some dialog, in range from (base) to (base + variation) (in milliseconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_yapCooldown_variation" Value="25000" Comment="When can raven yap again after some dialog, in range from (base) to (base + variation) (in milliseconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_immediateReactionDelay_base" Value="100" Comment="How long does raven take to reply to players request while he is idling, in range from (base) to (base + variation) (in milliseconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_immediateReactionDelay_variation" Value="2000" Comment="How long does raven take to reply to players request while he is idling, in range from (base) to (base + variation) (in milliseconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_followingReactionDelay_base" Value="100" Comment="How long is the pause after previous action when raven postponed replying to player since he was busy (or the action overrides previous request), in range from (base) to (base + variation) (in milliseconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_followingReactionDelay_variation" Value="3000" Comment="How long is the pause after previous action when raven postponed replying to player since he was busy (or the action overrides previous request), in range from (base) to (base + variation) (in milliseconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_ignorePlayersCommandChance" Value="0.2" Comment="The probability of raven ignoring player's command to say something (float in range from 0 to 1)." />
+		<ScriptParam Name="legacyOfTheForge_raven_speakAnimationDelay_generic_short" Value="933" Comment="Time delay for matching up dialog sound and speaking animation - generic_short (in milliseconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_speakAnimationDelay_generic_long" Value="1233" Comment="Time delay for matching up dialog sound and speaking animation - generic_long (in milliseconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_speakAnimationDelay_yap_yerMa" Value="783" Comment="Time delay for matching up dialog sound and speaking animation - yap_yerMa (in milliseconds, only whole numbers)." />
+		<ScriptParam Name="legacyOfTheForge_raven_speakAnimationDelay_yap_givesAFack" Value="1833" Comment="Time delay for matching up dialog sound and speaking animation - yap_givesAFack (in milliseconds, only whole numbers)." />
+
+	</ScriptParams>
+</database>

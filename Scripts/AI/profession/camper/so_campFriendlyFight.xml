@@ -13,6 +13,7 @@
 			<Variable name="point" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="situationArea" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="smartObject" type="_wuid" values="" isPersistent="0" form="single" />
+			<Variable name="waitToSynchronizeDuration" type="_string" values="&apos;60s&apos;" isPersistent="0" form="single" />
 			<Variable name="weapon" type="_wuid" values="" isPersistent="0" form="single" />
 			<Variable name="weaponChangeMode" type="enum:weaponChange" values="enum:weaponChange.melee" isPersistent="0" form="single" />
 			<Variable name="weaponSlot" type="_wuid" values="" isPersistent="0" form="single" />
@@ -20,14 +21,10 @@
 		<Root OneTimeOnly="false" FailState="Recoverable" saveVersion="2">
 			<OnInit canSkip="1">
 				<Sequence>
+					<ExecuteLua code="local soEntity = XGenAIModule.GetEntityByWUID(data.__object.id); &#10;local value = EntityUtils.GetScriptProperty(soEntity,&apos;duration&apos;); &#10; &#10;if value ~= nil and value ~= &apos;&apos; then &#10;   data.waitToSynchronizeDuration = value; &#10;end" />
 					<IfCondition failOnCondition="false" condition="$isUnarmed">
 						<Expression expressions="$weaponChangeMode = $enum:weaponChange.unarmed &#10;$isUsingWeapon = false &#10;$behaviorName = &apos;use_unarmed&apos;" />
 					</IfCondition>
-					<SuppressFailure>
-						<InstantSynchronize SemaphoreCount="2" LockManagerType="Local" SemaphoreName="&apos;friendlyFight_waitingForFriend&apos;" RunLogic="KeepRunning">
-							<Expression expressions="$phase = 1" />
-						</InstantSynchronize>
-					</SuppressFailure>
 					<SuppressFailure>
 						<GraphSearch Origin="$__object.id" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
 							<LinkTagFilter tag="&apos;situationArea&apos;" prune="true" negprune="unknown" Parent="" Child="$situationArea" Data="" />
@@ -65,7 +62,7 @@
 												<Exec canSkip="1">
 													<Sequence>
 														<UnstanceAction unstance="LeaningBack" locationObject="$leaningSpot" slaveObject="" />
-														<Wait duration="&apos;60s&apos;" timeType="GameTime" doFail="false" variation="" />
+														<Wait duration="$waitToSynchronizeDuration" timeType="GameTime" doFail="false" variation="" />
 													</Sequence>
 												</Exec>
 											</ReserveBehavior>
@@ -117,52 +114,54 @@
 																				<EntityContextElement context="activity_friendlyFight" enabled="true">
 																					<EntityContextElement context="combat_arrangedFight" enabled="true">
 																						<EntityContext context="crime_dontGreetPlayer" target="">
-																							<AddLinkElement from="$this.id" to="$__object.id" tag="&apos;combat_anchor&apos;" data="" enabled="true">
-																								<AddBuffElement Buff="&apos;f46120bf-b45f-4ec5-95c6-03d526cb40bf&apos;" enabled="true">
-																									<AddBuffElement Buff="&apos;11f44a76-21e3-4e1a-9b25-4b9341d4b8ef&apos;" enabled="true">
-																										<AddBuffElement Buff="&apos;a2088337-e015-4c28-8ab2-043f6925c087&apos;" enabled="true">
-																											<AddBuffElement Buff="&apos;6cf0aa39-e09c-42fa-bf67-10f2d03991b7&apos;" enabled="true">
-																												<CombatMoveDecorator>
-																													<MeleeOffenseAutomationDecorator active="true">
-																														<MeleeDefenseAutomationDecorator active="true">
-																															<MeleeGuardAutomationDecorator GuardMode="automate" active="true">
-																																<WeaponAutomationDecorator WeaponChange="$weaponChangeMode" active="true">
-																																	<CombatFollowerDecorator ProbablisticDrivenSweetSpot="true" RPGSweetSpotArcDriver="true" active="true">
-																																		<Parallel successMode="Any" failureMode="Any">
-																																			<IfElseCondition failOnCondition="false" condition="$situationArea ~= $__null" saveVersion="2">
-																																				<Then canSkip="1">
-																																					<AddLinkElement from="$situationArea" to="$this.id" tag="&apos;situation_friendlyFight_fighter&apos;" data="" enabled="true">
-																																						<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
-																																					</AddLinkElement>
-																																				</Then>
-																																				<Else canSkip="1">
-																																					<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
-																																				</Else>
-																																			</IfElseCondition>
-																																			<Sequence>
-																																				<GetBehaviorHolders area="$__object.id" behaviors="$behaviorName" targetVar="$behHolders" />
-																																				<IfElseCondition failOnCondition="false" condition="$behHolders[0] == $this.id" saveVersion="2">
+																							<EntityContext context="hardcoreMode_disableDirectionsChat" target="">
+																								<AddLinkElement from="$this.id" to="$__object.id" tag="&apos;combat_anchor&apos;" data="" enabled="true">
+																									<AddBuffElement Buff="&apos;f46120bf-b45f-4ec5-95c6-03d526cb40bf&apos;" enabled="true">
+																										<AddBuffElement Buff="&apos;11f44a76-21e3-4e1a-9b25-4b9341d4b8ef&apos;" enabled="true">
+																											<AddBuffElement Buff="&apos;a2088337-e015-4c28-8ab2-043f6925c087&apos;" enabled="true">
+																												<AddBuffElement Buff="&apos;6cf0aa39-e09c-42fa-bf67-10f2d03991b7&apos;" enabled="true">
+																													<CombatMoveDecorator>
+																														<MeleeOffenseAutomationDecorator active="true">
+																															<MeleeDefenseAutomationDecorator active="true">
+																																<MeleeGuardAutomationDecorator GuardMode="automate" active="true">
+																																	<WeaponAutomationDecorator WeaponChange="$weaponChangeMode" active="true">
+																																		<CombatFollowerDecorator ProbablisticDrivenSweetSpot="true" RPGSweetSpotArcDriver="true" active="true">
+																																			<Parallel successMode="Any" failureMode="Any">
+																																				<IfElseCondition failOnCondition="false" condition="$situationArea ~= $__null" saveVersion="2">
 																																					<Then canSkip="1">
-																																						<Expression expressions="$myTarget = $behHolders[1]" />
+																																						<AddLinkElement from="$situationArea" to="$this.id" tag="&apos;situation_friendlyFight_fighter&apos;" data="" enabled="true">
+																																							<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																																						</AddLinkElement>
 																																					</Then>
 																																					<Else canSkip="1">
-																																						<Expression expressions="$myTarget = $behHolders[0]" />
+																																						<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
 																																					</Else>
 																																				</IfElseCondition>
-																																				<CombatAction TargetNPC="$myTarget" RelationOverride="Hostile" />
-																																			</Sequence>
-																																		</Parallel>
-																																	</CombatFollowerDecorator>
-																																</WeaponAutomationDecorator>
-																															</MeleeGuardAutomationDecorator>
-																														</MeleeDefenseAutomationDecorator>
-																													</MeleeOffenseAutomationDecorator>
-																												</CombatMoveDecorator>
+																																				<Sequence>
+																																					<GetBehaviorHolders area="$__object.id" behaviors="$behaviorName" targetVar="$behHolders" />
+																																					<IfElseCondition failOnCondition="false" condition="$behHolders[0] == $this.id" saveVersion="2">
+																																						<Then canSkip="1">
+																																							<Expression expressions="$myTarget = $behHolders[1]" />
+																																						</Then>
+																																						<Else canSkip="1">
+																																							<Expression expressions="$myTarget = $behHolders[0]" />
+																																						</Else>
+																																					</IfElseCondition>
+																																					<CombatAction TargetNPC="$myTarget" RelationOverride="Hostile" />
+																																				</Sequence>
+																																			</Parallel>
+																																		</CombatFollowerDecorator>
+																																	</WeaponAutomationDecorator>
+																																</MeleeGuardAutomationDecorator>
+																															</MeleeDefenseAutomationDecorator>
+																														</MeleeOffenseAutomationDecorator>
+																													</CombatMoveDecorator>
+																												</AddBuffElement>
 																											</AddBuffElement>
 																										</AddBuffElement>
 																									</AddBuffElement>
-																								</AddBuffElement>
-																							</AddLinkElement>
+																								</AddLinkElement>
+																							</EntityContext>
 																						</EntityContext>
 																					</EntityContextElement>
 																				</EntityContextElement>
@@ -234,6 +233,7 @@
 				<Variable name="point" comment="" />
 				<Variable name="situationArea" comment="" />
 				<Variable name="smartObject" comment="" />
+				<Variable name="waitToSynchronizeDuration" comment="" />
 				<Variable name="weapon" comment="" />
 				<Variable name="weaponChangeMode" comment="" />
 				<Variable name="weaponSlot" comment="" />
@@ -247,21 +247,15 @@
 				<OnInit>
 					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 						<OutputBreakpoints />
+						<ExecuteLua hasInputBreakpoint="0" comment="" breakpointFlags="0">
+							<OutputBreakpoints />
+						</ExecuteLua>
 						<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 							<OutputBreakpoints />
 							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
 							</Expression>
 						</IfCondition>
-						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-							<InstantSynchronize hasInputBreakpoint="0" comment="" breakpointFlags="0">
-								<OutputBreakpoints />
-								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-									<OutputBreakpoints />
-								</Expression>
-							</InstantSynchronize>
-						</SuppressFailure>
 						<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
 							<OutputBreakpoints />
 							<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -424,9 +418,9 @@
 																							<OutputBreakpoints />
 																							<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																								<OutputBreakpoints />
-																								<AddLinkElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<EntityContext hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																									<OutputBreakpoints />
-																									<AddBuffElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																									<AddLinkElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																										<OutputBreakpoints />
 																										<AddBuffElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																											<OutputBreakpoints />
@@ -434,70 +428,73 @@
 																												<OutputBreakpoints />
 																												<AddBuffElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																													<OutputBreakpoints />
-																													<CombatMoveDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																													<AddBuffElement hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																														<OutputBreakpoints />
-																														<MeleeOffenseAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																														<CombatMoveDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																															<OutputBreakpoints />
-																															<MeleeDefenseAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																															<MeleeOffenseAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																<OutputBreakpoints />
-																																<MeleeGuardAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																<MeleeDefenseAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																	<OutputBreakpoints />
-																																	<WeaponAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																	<MeleeGuardAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																		<OutputBreakpoints />
-																																		<CombatFollowerDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																		<WeaponAutomationDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																			<OutputBreakpoints />
-																																			<Parallel hasInputBreakpoint="0" comment="Ghetto conditional decorator" breakpointFlags="0">
+																																			<CombatFollowerDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																				<OutputBreakpoints />
-																																				<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																				<Parallel hasInputBreakpoint="0" comment="Ghetto conditional decorator" breakpointFlags="0">
 																																					<OutputBreakpoints />
-																																					<Then>
-																																						<AddLinkElement hasInputBreakpoint="0" comment="Both fighters should add link, so the audience can choose who to watch" breakpointFlags="0">
-																																							<OutputBreakpoints />
-																																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																								<OutputBreakpoints />
-																																							</Wait>
-																																						</AddLinkElement>
-																																					</Then>
-																																					<Else>
-																																						<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																							<OutputBreakpoints />
-																																						</Wait>
-																																					</Else>
-																																				</IfElseCondition>
-																																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																					<OutputBreakpoints />
-																																					<GetBehaviorHolders hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																						<OutputBreakpoints />
-																																					</GetBehaviorHolders>
 																																					<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																						<OutputBreakpoints />
 																																						<Then>
-																																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<AddLinkElement hasInputBreakpoint="0" comment="Both fighters should add link, so the audience can choose who to watch" breakpointFlags="0">
 																																								<OutputBreakpoints />
-																																							</Expression>
+																																								<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																								</Wait>
+																																							</AddLinkElement>
 																																						</Then>
 																																						<Else>
-																																							<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																								<OutputBreakpoints />
-																																							</Expression>
+																																							</Wait>
 																																						</Else>
 																																					</IfElseCondition>
-																																					<CombatAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																					<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																						<OutputBreakpoints />
-																																					</CombatAction>
-																																				</Sequence>
-																																			</Parallel>
-																																		</CombatFollowerDecorator>
-																																	</WeaponAutomationDecorator>
-																																</MeleeGuardAutomationDecorator>
-																															</MeleeDefenseAutomationDecorator>
-																														</MeleeOffenseAutomationDecorator>
-																													</CombatMoveDecorator>
+																																						<GetBehaviorHolders hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</GetBehaviorHolders>
+																																						<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																							<OutputBreakpoints />
+																																							<Then>
+																																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																								</Expression>
+																																							</Then>
+																																							<Else>
+																																								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																									<OutputBreakpoints />
+																																								</Expression>
+																																							</Else>
+																																						</IfElseCondition>
+																																						<CombatAction hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																							<OutputBreakpoints />
+																																						</CombatAction>
+																																					</Sequence>
+																																				</Parallel>
+																																			</CombatFollowerDecorator>
+																																		</WeaponAutomationDecorator>
+																																	</MeleeGuardAutomationDecorator>
+																																</MeleeDefenseAutomationDecorator>
+																															</MeleeOffenseAutomationDecorator>
+																														</CombatMoveDecorator>
+																													</AddBuffElement>
 																												</AddBuffElement>
 																											</AddBuffElement>
 																										</AddBuffElement>
-																									</AddBuffElement>
-																								</AddLinkElement>
+																									</AddLinkElement>
+																								</EntityContext>
 																							</EntityContext>
 																						</EntityContextElement>
 																					</EntityContextElement>

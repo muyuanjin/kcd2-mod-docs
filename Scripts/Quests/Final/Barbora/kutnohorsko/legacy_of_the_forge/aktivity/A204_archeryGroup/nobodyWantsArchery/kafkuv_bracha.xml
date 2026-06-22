@@ -1,0 +1,118 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Database xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="brambora">
+	<Skald>
+		<Module Name="kafkuv_bracha">
+			<Ports>
+				<Port Name="hrac_jde_resit_problem" Direction="In" Type="trigger">
+					<DesignName StringName="kafkuv_br_hrac_jde_resit__jSoW" Text="hráč jde řešit problém" />
+				</Port>
+				<Port Name="druhy_list" Direction="Out" Type="trigger">
+					<DesignName StringName="kafkuv_br_druhy_list_3XKo" Text="druhý list získán" />
+				</Port>
+				<Port Name="hrac_otevrel_stash_a_vzal_bradovy_penize" Direction="Out" Type="bool">
+					<DesignName StringName="kafkuv_br_hrac_otevrel_st_LsKs" Text="hráč otevřel stash a vzal Bradovy peníze" />
+				</Port>
+				<Port Name="end" Direction="In" Type="trigger">
+					<DesignName StringName="kafkuv_br_end_gyjP" Text="end" />
+				</Port>
+			</Ports>
+			<Definitions>
+				<Definition File="kafkuv_bracha/optional_s_pisarem_o_bradovi.xml" />
+				<Definition File="kafkuv_bracha/optional_s_rychtarem_o_bradovi.xml" />
+				<Definition File="kafkuv_bracha/hrac_vybral_stash.xml" />
+			</Definitions>
+			<Nodes>
+				<AddStashDefaultItem Name="addstashdefaultitem3" PositionY="630" PositionX="790">
+					<Constant Name="ItemClass" Value="5ef63059-322e-4e1b-abe8-926e100c770e" />
+					<Constant Name="Amount" Value="8000" />
+					<Constant Name="DisableRestock" Value="true" />
+					<Asset Name="Stashes" Alias="moneyStash" />
+					<Edge From="streamprofileshandling.profileactive" To="IsActive" />
+				</AddStashDefaultItem>
+				<State Name="askBailiffAboutBradaObjectiveState" PositionY="510" PositionX="1780" RequiredForOutput="kutnohorsko" TypeT="ProgressAbortable">
+					<Edge From="optional_s_pisarem_o_bradovi.jdi_za_rychtarem" To="SetStarted" />
+					<Edge From="if12.True" To="SetCompleted" />
+					<Edge From="end" To="SetAborted">
+						<Vertex>hS49hp9g</Vertex>
+						<Vertex>qJlGvYRf</Vertex>
+					</Edge>
+				</State>
+				<Function Name="createitemclassdescriptor7" PositionY="1270" PositionX="380" MethodName="wh::entitymodule::CreateItemClassDescriptor" DeclaringType="wh::entitymodule">
+					<Constant Name="ItemClass" Value="5ef63059-322e-4e1b-abe8-926e100c770e" />
+					<Constant Name="Amount" Value="1" />
+				</Function>
+				<hrac_vybral_stash Name="hrac_vybral_stash" PositionY="1380" PositionX="910" />
+				<If Name="if12" PositionY="730" PositionX="1340">
+					<Edge From="askBailiffAboutBradaObjectiveState.Started" To="Condition">
+						<Vertex>m4g9cX9d</Vertex>
+						<Vertex>nt4YtVPh</Vertex>
+					</Edge>
+					<Edge From="optional_s_rychtarem_o_bradovi.jindra_vi_o_listu" To="Exec" />
+				</If>
+				<ItemDescriptorTrigger Name="itemdescriptortrigger4" PositionY="1000" PositionX="790">
+					<Edge From="stashproperties5.Inventory" To="Inventory" />
+					<Edge From="streamprofileshandling.profileactive" To="IsActive" />
+					<Edge From="createitemclassdescriptor7.ItemDescriptor" To="ItemDescriptor" />
+				</ItemDescriptorTrigger>
+				<State Name="kafkaBrotherInvestigationState" TypeT="Progress">
+					<Edge From="hrac_jde_resit_problem" To="SetActive" />
+					<Edge From="end" To="SetDone" />
+				</State>
+				<zeptej_se_rychtare_na_bradu Name="objectiveVisual11" PositionY="510" PositionX="2150" RequiredForOutput="kutnohorsko">
+					<Edge From="askBailiffAboutBradaObjectiveState.State" To="Progress" />
+				</zeptej_se_rychtare_na_bradu>
+				<optional_s_pisarem_o_bradovi Name="optional_s_pisarem_o_bradovi" PositionY="230" PositionX="1210">
+					<Edge From="kafkaBrotherInvestigationState.Active" To="kafka_prozradil_bratra">
+						<Vertex>Lxc1HTlI</Vertex>
+						<Vertex>dqyEHkDh</Vertex>
+					</Edge>
+					<Edge From="optional_s_rychtarem_o_bradovi.hrac_nahlasil_kafku" To="hrac_nahlasil_kafku" />
+				</optional_s_pisarem_o_bradovi>
+				<optional_s_rychtarem_o_bradovi Name="optional_s_rychtarem_o_bradovi" PositionY="0" PositionX="360">
+					<Edge From="kafkaBrotherInvestigationState.Active" To="kafka_rekl_o_svem_bratrovi" />
+				</optional_s_rychtarem_o_bradovi>
+				<Output Name="Output">
+					<Edge From="optional_s_rychtarem_o_bradovi.jindra_vi_o_listu" To="druhy_list">
+						<Vertex>X3UGkSAm</Vertex>
+					</Edge>
+					<Edge From="stashLootedState.State" To="hrac_otevrel_stash_a_vzal_bradovy_penize" />
+				</Output>
+				<Function Name="requestmonologue13" PositionY="1200" PositionX="1260" MethodName="wh::xgenaimodule::RequestMonologue" DeclaringType="wh::xgenaimodule">
+					<Asset Name="Souls" Alias="player" />
+					<Constant Name="DecisionAlias" Value="nobodyWantsArchery_hracVybralStash" />
+					<Edge From="itemdescriptortrigger4.OnTargetAmountLose" To="Exec" />
+				</Function>
+				<State Name="stashLootedState" PositionY="970" PositionX="2140" TypeT="bool">
+					<Edge From="itemdescriptortrigger4.OnTargetAmountLose" To="SetTrue" />
+				</State>
+				<ObjectProperties Name="stashproperties5" PositionY="1030" PositionX="380" DeclaringType="wh::entitymodule::Stash">
+					<Asset Name="Stash" Alias="moneyStash" />
+				</ObjectProperties>
+				<streamprofileshandling Name="streamprofileshandling" PositionY="640" PositionX="380" Namespace="utils.streaming">
+					<Asset Name="profiles" Alias="moneyStashProfile" />
+					<Constant Name="autodeactivatenotificationafterstream" Value="false" />
+					<Edge From="kafkaBrotherInvestigationState.OnActive" To="streamprofiles" />
+				</streamprofileshandling>
+			</Nodes>
+			<EdgeVertices>
+				<EdgeVertex Name="dqyEHkDh" PositionY="570" PositionX="990" />
+				<EdgeVertex Name="hS49hp9g" PositionY="1900" PositionX="0" />
+				<EdgeVertex Name="Lxc1HTlI" PositionY="570" PositionX="360" />
+				<EdgeVertex Name="m4g9cX9d" PositionY="983" PositionX="1989" />
+				<EdgeVertex Name="nt4YtVPh" PositionY="980" PositionX="1370" />
+				<EdgeVertex Name="qJlGvYRf" PositionY="1900" PositionX="1640" />
+				<EdgeVertex Name="X3UGkSAm" PositionY="0" PositionX="850" />
+			</EdgeVertices>
+			<Assets>
+				<ProfileAsset Name="moneyStashProfile" AssetProfiles="dlc2_archery_nobodyWantsArchery_stash" />
+				<StashAsset Name="moneyStash" />
+			</Assets>
+			<Text StringName="kafkuv_bracha_iL49" Text="Kafkův brácha" />
+			<Elements>
+				<GameplayActionElement>
+					<Text StringName="kafkuv_br_dialog_s_rychta_Ktxj" Text="Hráč si může ověřit všechno, co mu Kafka řekl u rychtáře, který potvrdí, že chytil a pověsil Kafkova bratra a předá hráči i opis udávacího dopisu, díky kterému věděl, kde Bradu najde. Zároveň se hráč může vydat hledat místo předání peněz a zjistit, že tam peníze stále schované jsou." />
+				</GameplayActionElement>
+			</Elements>
+		</Module>
+	</Skald>
+</Database>

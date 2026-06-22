@@ -19,6 +19,7 @@
 			<Variable name="distanceStartToPlayer" type="_float" values="" isPersistent="0" form="single" />
 			<Variable name="emitingInformation" type="information" values="" isPersistent="0" form="single" />
 			<Variable name="escalateReaction" type="_bool" values="" isPersistent="1" form="single" />
+			<Variable name="estimatingPlayersPosition" type="_bool" values="" isPersistent="1" form="single" />
 			<Variable name="extendedMode" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="feedbackReceived" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="forceEscalation" type="_bool" values="" isPersistent="1" form="single" />
@@ -159,7 +160,7 @@
 																												<Function_crime_playerInstantRecognitionHandler nodeLabel="80967023" />
 																												<Sequence>
 																													<IfCondition failOnCondition="false" condition="$selfhelpData.information.label == &apos;murder&apos; | &#10;$selfhelpData.information.label == &apos;murderByDog&apos; | &#10;$selfhelpData.information.label == &apos;corpseViolation&apos;">
-																														<Function_crime_addCorpseLink corpse="$selfhelpData.information.perceivedWuid" corpseState="$enum:corpseState.investigated" mateReacting="false" resolve="true" storeTime="false" nodeLabel="82734989" />
+																														<Function_crime_addCorpseLink corpse="$selfhelpData.information.perceivedWuid" corpseState="$enum:corpseState.investigated" mateReacting="false" overridePublicEnemyCheck="false" resolve="true" storeTime="false" nodeLabel="82734989" />
 																													</IfCondition>
 																													<EntityContextCheck context="combat_forceUnarmedWhileInUnarmedSkirmish" target="$this.id" saveVersion="2">
 																														<Then canSkip="1">
@@ -221,7 +222,7 @@
 																																	</SubsequentLocationDecorator>
 																																</MeleeGuardAutomationDecorator>
 																															</MoveParamsDecorator>
-																															<Function_crime_estimatePlayersPosition estimatePlayersPosition="$const_true" estimationStartPos="$directionStartPos" positionShared="$lockOnFromSharedPerception" nodeLabel="16600405" />
+																															<Function_crime_estimatePlayersPosition estimateActive="$estimatingPlayersPosition" estimateEnabled="$const_true" estimationStartPos="$directionStartPos" positionShared="$lockOnFromSharedPerception" nodeLabel="16600405" />
 																															<Function_crime_emitInformation crimeInformation="$emitingInformation" emitCrimeInformation="true" longDistanceModeEnabled="$const_false" reactionKind="$enum:crime_reactionKind.selfhelp" emitAlarmInformation="$const_true" nodeLabel="37587980" />
 																															<ContinuousSwitch>
 																																<IfCondition failOnCondition="false" condition="$goIntoAttack">
@@ -292,6 +293,7 @@
 																																								<CallbackEventCatch_empty>
 																																									<Sequence>
 																																										<Function_crime_getSearchDirectionTowardsPlayer startPos="$directionStartPos" direction="$searchDirection" nodeLabel="72404337" />
+																																										<AddArrestEscalation Npc="$this.id" Reset="false" />
 																																										<Function_callInterrupt_lookAround alarmReactionType="$enum:crime_alarmReactionType.none" amIBuddy="false" corpseState="$enum:corpseState.undiscovered" directHit="false" forceSubscribedSoundReaction="false" ignorePriority="true" information_look="$selfhelpData.information" initiator="$enum:switch_interruptInitiator.scheduler" missingNpc="$__null" position="" previousReaction="$enum:crime_reactionKind.selfhelp" reactingToSoundBecauseAlone="false" reportedBy="$__null" searchDirection="$searchDirection" searchPointsFromDirection="true" shooter="$__player" soundType="$enum:sound.movement" source="$enum:crime_source.direct" stimulusAnimalAbuse="" stimulusKind="$selfhelpData.stimulusKind" nodeLabel="29770416" />
 																																									</Sequence>
 																																								</CallbackEventCatch_empty>
@@ -315,10 +317,10 @@
 																																			</SuppressFailure>
 																																		</HasActiveThreatsGate>
 																																		<Loop count="-1">
-																																			<IfGate atomic="false" condition="$escalateReaction" RunLogic="Halt">
+																																			<IfGate atomic="false" condition="$escalateReaction &amp; ~$estimatingPlayersPosition" RunLogic="Halt">
 																																				<AtomicDecorator>
 																																					<Sequence>
-																																						<DecideSkirmishReactionCrime AllowFemaleJoin="false" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="Hostile" TargetNpc="$__player" SkirmishReaction="$skirmishReaction" />
+																																						<DecideSkirmishReactionCrime AllowFemaleJoin="false" UseViolentReaction="true" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="Hostile" TargetNpc="$__player" SkirmishReaction="$skirmishReaction" />
 																																						<Switch>
 																																							<IfCondition failOnCondition="false" condition="$skirmishReaction == $enum:combat_skirmishReaction.join">
 																																								<Expression expressions="$goIntoAttack = true" />
@@ -413,26 +415,23 @@
 																																								<Loop count="-1">
 																																									<IfGate atomic="false" condition="$canUrge" RunLogic="Halt">
 																																										<Parallel successMode="Any" failureMode="Any">
-																																											<Sequence>
-																																												<SuppressFailure>
-																																													<TenseCircumstanceBarrier RunLogic="Halt">
-																																														<SubtreeDecorator saveVersion="2">
-																																															<Init canSkip="1">
-																																																<Expression expressions="$inTenseCircumstance = true" />
-																																															</Init>
-																																															<Subtree canSkip="1">
-																																																<LogToLabel Name="&apos;tense&apos;" Wuid="" Message="&apos;under TenseCircumstanceBarrier&apos;">
-																																																	<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
-																																																</LogToLabel>
-																																															</Subtree>
-																																															<Cleanup canSkip="1">
-																																																<Expression expressions="$inTenseCircumstance = false" />
-																																															</Cleanup>
-																																														</SubtreeDecorator>
-																																													</TenseCircumstanceBarrier>
-																																												</SuppressFailure>
-																																												<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
-																																											</Sequence>
+																																											<While doFail="false" propagateChildFail="false" condition="true">
+																																												<TenseCircumstanceBarrier RunLogic="Halt">
+																																													<SubtreeDecorator saveVersion="2">
+																																														<Init canSkip="1">
+																																															<Expression expressions="$inTenseCircumstance = true" />
+																																														</Init>
+																																														<Subtree canSkip="1">
+																																															<LogToLabel Name="&apos;tense&apos;" Wuid="" Message="&apos;under TenseCircumstanceBarrier&apos;">
+																																																<Wait duration="&apos;-1&apos;" timeType="GameTime" doFail="false" variation="" />
+																																															</LogToLabel>
+																																														</Subtree>
+																																														<Cleanup canSkip="1">
+																																															<Expression expressions="$inTenseCircumstance = false" />
+																																														</Cleanup>
+																																													</SubtreeDecorator>
+																																												</TenseCircumstanceBarrier>
+																																											</While>
 																																											<ContinuousSwitch>
 																																												<IfCondition failOnCondition="false" condition="$goIntoResolve &amp; ~$playerResolved">
 																																													<Sequence>
@@ -518,14 +517,16 @@
 																																																											<Expression expressions="$escalateReaction = true &#10;$forceEscalation = true" />
 																																																										</Then>
 																																																										<Else canSkip="1">
-																																																											<EntityContextCheck context="crime_isCuman" target="" saveVersion="2">
-																																																												<Then canSkip="1">
-																																																													<Function_crime_crimeBark animationApproach="$animationApproach" canBeDelayed="false" dialogContext="$barkContext" dramaticBark="true" lookAt="$__player" metarole="&apos;NPC_VYHANI_HRACE_Z_TRESPASSU&apos;" priority="$enum:crime_barkPriority.addressingPlayer" nodeLabel="35397124" />
-																																																												</Then>
-																																																												<Else canSkip="1">
-																																																													<Function_crime_crimeBark animationApproach="$animationApproach" canBeDelayed="false" dialogContext="$barkContext" dramaticBark="true" lookAt="$__player" metarole="&apos;SVEPOMOC_OPAKOVANA_VYZVA&apos;" priority="$enum:crime_barkPriority.addressingPlayer" nodeLabel="31213530" />
-																																																												</Else>
-																																																											</EntityContextCheck>
+																																																											<IfCondition failOnCondition="false" condition="~$estimatingPlayersPosition">
+																																																												<EntityContextCheck context="crime_isCuman" target="" saveVersion="2">
+																																																													<Then canSkip="1">
+																																																														<Function_crime_crimeBark animationApproach="$animationApproach" canBeDelayed="false" dialogContext="$barkContext" dramaticBark="true" lookAt="$__player" metarole="&apos;NPC_VYHANI_HRACE_Z_TRESPASSU&apos;" priority="$enum:crime_barkPriority.addressingPlayer" nodeLabel="35397124" />
+																																																													</Then>
+																																																													<Else canSkip="1">
+																																																														<Function_crime_crimeBark animationApproach="$animationApproach" canBeDelayed="false" dialogContext="$barkContext" dramaticBark="true" lookAt="$__player" metarole="&apos;SVEPOMOC_OPAKOVANA_VYZVA&apos;" priority="$enum:crime_barkPriority.addressingPlayer" nodeLabel="31213530" />
+																																																													</Else>
+																																																												</EntityContextCheck>
+																																																											</IfCondition>
 																																																										</Else>
 																																																									</IfElseCondition>
 																																																								</Sequence>
@@ -722,6 +723,7 @@
 									<Function_crime_limits_removeReactionLink information="$selfhelpData.information" reactionKind="$enum:crime_reactionKind.selfhelp" nodeLabel="30216594" />
 								</Sequence>
 							</AtomicDecorator>
+							<RemoveLink From="$__player" To="$this.id" Tag="&apos;crime_playerUrging&apos;" LinkOpHandleMode="Success" />
 						</Sequence>
 					</OnFail>
 				</FuseBox>
@@ -747,6 +749,7 @@
 				<Variable name="distanceStartToPlayer" comment="" />
 				<Variable name="emitingInformation" comment="" />
 				<Variable name="escalateReaction" comment="" />
+				<Variable name="estimatingPlayersPosition" comment="" />
 				<Variable name="extendedMode" comment="" />
 				<Variable name="feedbackReceived" comment="" />
 				<Variable name="forceEscalation" comment="" />
@@ -1215,6 +1218,9 @@
 																																											<Function_crime_getSearchDirectionTowardsPlayer hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																												<OutputBreakpoints />
 																																											</Function_crime_getSearchDirectionTowardsPlayer>
+																																											<AddArrestEscalation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<OutputBreakpoints />
+																																											</AddArrestEscalation>
 																																											<Function_callInterrupt_lookAround hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																												<OutputBreakpoints />
 																																											</Function_callInterrupt_lookAround>
@@ -1421,39 +1427,33 @@
 																																											<OutputBreakpoints />
 																																											<Parallel hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																												<OutputBreakpoints />
-																																												<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																												<While hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																													<OutputBreakpoints />
-																																													<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																													<TenseCircumstanceBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																														<OutputBreakpoints />
-																																														<TenseCircumstanceBarrier hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																														<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																																															<OutputBreakpoints />
-																																															<SubtreeDecorator hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-																																																<OutputBreakpoints />
-																																																<Init>
-																																																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																															<Init>
+																																																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																	<OutputBreakpoints />
+																																																</Expression>
+																																															</Init>
+																																															<Subtree>
+																																																<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																	<OutputBreakpoints />
+																																																	<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																																		<OutputBreakpoints />
-																																																	</Expression>
-																																																</Init>
-																																																<Subtree>
-																																																	<LogToLabel hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																																		<OutputBreakpoints />
-																																																		<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																																			<OutputBreakpoints />
-																																																		</Wait>
-																																																	</LogToLabel>
-																																																</Subtree>
-																																																<Cleanup>
-																																																	<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																																		<OutputBreakpoints />
-																																																	</Expression>
-																																																</Cleanup>
-																																															</SubtreeDecorator>
-																																														</TenseCircumstanceBarrier>
-																																													</SuppressFailure>
-																																													<Wait hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																														<OutputBreakpoints />
-																																													</Wait>
-																																												</Sequence>
+																																																	</Wait>
+																																																</LogToLabel>
+																																															</Subtree>
+																																															<Cleanup>
+																																																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																	<OutputBreakpoints />
+																																																</Expression>
+																																															</Cleanup>
+																																														</SubtreeDecorator>
+																																													</TenseCircumstanceBarrier>
+																																												</While>
 																																												<ContinuousSwitch hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																													<OutputBreakpoints />
 																																													<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
@@ -1612,19 +1612,22 @@
 																																																												</Expression>
 																																																											</Then>
 																																																											<Else>
-																																																												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																																												<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																																																													<OutputBreakpoints />
-																																																													<Then>
-																																																														<Function_crime_crimeBark hasInputBreakpoint="0" comment="no available dubbing :(" breakpointFlags="0">
-																																																															<OutputBreakpoints />
-																																																														</Function_crime_crimeBark>
-																																																													</Then>
-																																																													<Else>
-																																																														<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																																																															<OutputBreakpoints />
-																																																														</Function_crime_crimeBark>
-																																																													</Else>
-																																																												</EntityContextCheck>
+																																																													<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+																																																														<OutputBreakpoints />
+																																																														<Then>
+																																																															<Function_crime_crimeBark hasInputBreakpoint="0" comment="no available dubbing :(" breakpointFlags="0">
+																																																																<OutputBreakpoints />
+																																																															</Function_crime_crimeBark>
+																																																														</Then>
+																																																														<Else>
+																																																															<Function_crime_crimeBark hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																																																																<OutputBreakpoints />
+																																																															</Function_crime_crimeBark>
+																																																														</Else>
+																																																													</EntityContextCheck>
+																																																												</IfCondition>
 																																																											</Else>
 																																																										</IfElseCondition>
 																																																									</Sequence>
@@ -1948,6 +1951,9 @@
 										</Function_crime_limits_removeReactionLink>
 									</Sequence>
 								</AtomicDecorator>
+								<RemoveLink hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</RemoveLink>
 							</Sequence>
 						</OnFail>
 					</FuseBox>

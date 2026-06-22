@@ -14,6 +14,7 @@
 			<Variable name="isFriendWithCombatableAnimal" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="isMateWithCombatableAnimal" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="mostImportantInformation" type="information" values="" isPersistent="0" form="single" />
+			<Variable name="now" type="_int64" values="" isPersistent="0" form="single" />
 			<Variable name="npcType" type="_string" values="" isPersistent="0" form="single" />
 			<Variable name="overrideFilename" type="_string" values="" isPersistent="0" form="single" />
 			<Variable name="overrideQSO" type="_wuid" values="" isPersistent="0" form="single" />
@@ -80,10 +81,18 @@
 																<Sequence>
 																	<GetType WUID="$playerDogTarget" OutString="$playerDogTargetType" ShowTrueIdentity="false" TreatPlayerAsNPC="true" />
 																	<IfCondition failOnCondition="false" condition="$playerDogTargetType == &apos;NPC&apos;">
-																		<Sequence>
-																			<CreateCombatInformation Victim="$playerDogTarget" AttackKind="$enum:crime_attackKind.dog" DirectHit="true" AddConfiscation="false" Information="$assaultByDogInformation" />
-																			<TransferInformation source="$this.id" target="$playerDogTarget" information="$assaultByDogInformation" />
-																		</Sequence>
+																		<SuppressFailure>
+																			<Sequence>
+																				<GetTime TimeType="GameTime" OutVar="$now" Delta="" />
+																				<GraphSearch Origin="$__playerDog" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
+																					<LinkTagFilter tag="&apos;crime_dogAttackCommand&apos;" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																					<LinkDataFilter tag="&apos;crime_dogAttackCommand&apos;" condition="$__link_crime_dogAttackCommand + $data:script_param[&apos;crime_attributableDogCommandInCombatTimeout&apos;].value &gt; $now" prune="true" negprune="unknown" Parent="" Child="" Data="" />
+																					<WUIDFilter WUID="$playerDogTarget" Source="Child" prune="true" negprune="unknown" Parent="" Child="" />
+																				</GraphSearch>
+																				<CreateCombatInformation Victim="$playerDogTarget" AttackKind="$enum:crime_attackKind.dog" DirectHit="true" AddConfiscation="false" Information="$assaultByDogInformation" />
+																				<TransferInformation source="$this.id" target="$playerDogTarget" information="$assaultByDogInformation" />
+																			</Sequence>
+																		</SuppressFailure>
 																	</IfCondition>
 																</Sequence>
 															</Else>
@@ -141,25 +150,29 @@
 														</Then>
 														<Else canSkip="1">
 															<IfCondition failOnCondition="false" condition="$skirmishParticipants_value ~= $__player &amp; &#10;$skirmishParticipants_value ~= $__playerDog">
-																<SuppressFailure>
-																	<Sequence>
-																		<ReinitVariable variable="$mostImportantInformation" />
-																		<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
-																			<Then canSkip="1">
-																				<GetMostImportantCrimeInformation Npc="$skirmishParticipants_value" OnlyRelated="false" MostImportantInformation="$mostImportantInformation" />
-																			</Then>
-																			<Else canSkip="1">
-																				<GetMostImportantCrimeInformation Npc="$skirmishParticipants_value" OnlyRelated="true" MostImportantInformation="$mostImportantInformation" />
-																			</Else>
-																		</EntityContextCheck>
-																		<IfCondition failOnCondition="false" condition="$mostImportantInformation.label ~= &apos;&apos;">
-																			<Selector>
-																				<CheckInformationKnowledge Information="$mostImportantInformation" Holder="$this.id" />
-																				<TransferInformation source="$skirmishParticipants_value" target="$this.id" information="$mostImportantInformation" />
-																			</Selector>
-																		</IfCondition>
-																	</Sequence>
-																</SuppressFailure>
+																<CheckRelationshipInterval_SoulToSoul TargetSoul="$skirmishParticipants_value" Soul="$this.id" Flag="friend" saveVersion="2">
+																	<Then canSkip="1">
+																		<SuppressFailure>
+																			<Sequence>
+																				<ReinitVariable variable="$mostImportantInformation" />
+																				<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+																					<Then canSkip="1">
+																						<GetMostImportantCrimeInformation Npc="$skirmishParticipants_value" OnlyRelated="false" MostImportantInformation="$mostImportantInformation" />
+																					</Then>
+																					<Else canSkip="1">
+																						<GetMostImportantCrimeInformation Npc="$skirmishParticipants_value" OnlyRelated="true" MostImportantInformation="$mostImportantInformation" />
+																					</Else>
+																				</EntityContextCheck>
+																				<IfCondition failOnCondition="false" condition="$mostImportantInformation.label ~= &apos;&apos;">
+																					<Selector>
+																						<CheckInformationKnowledge Information="$mostImportantInformation" Holder="$this.id" />
+																						<TransferInformation source="$skirmishParticipants_value" target="$this.id" information="$mostImportantInformation" />
+																					</Selector>
+																				</IfCondition>
+																			</Sequence>
+																		</SuppressFailure>
+																	</Then>
+																</CheckRelationshipInterval_SoulToSoul>
 															</IfCondition>
 														</Else>
 													</EntityContextCheck>
@@ -305,12 +318,12 @@
 											</Flee>
 											<ReactionToRecognitionState_I canSkip="1">
 												<CallbackEventCatch_empty>
-													<Function_stealth_recognitionState_I_reaction target="$target" nodeLabel="53857427" />
+													<Function_stealth_recognitionState_I_reaction recognizingIconDisabled="false" target="$target" nodeLabel="53857427" />
 												</CallbackEventCatch_empty>
 											</ReactionToRecognitionState_I>
 											<ReactionToRecognitionState_II canSkip="1">
 												<CallbackEventCatch_empty>
-													<Function_stealth_recognitionState_II_reaction stimulusKind="$stimulusKind" target="$target" nodeLabel="89939463" />
+													<Function_stealth_recognitionState_II_reaction checkingIconDisabled="false" stimulusKind="$stimulusKind" target="$target" nodeLabel="89939463" />
 												</CallbackEventCatch_empty>
 											</ReactionToRecognitionState_II>
 											<Report canSkip="1">
@@ -411,17 +424,17 @@
 										<Switch>
 											<EntityContextCheck context="switch_recognitionLevel_I" target="" saveVersion="2">
 												<Then canSkip="1">
-													<Function_stealth_recognitionState_I_reaction target="$target" nodeLabel="88821634" />
+													<Function_stealth_recognitionState_I_reaction recognizingIconDisabled="false" target="$target" nodeLabel="88821634" />
 												</Then>
 											</EntityContextCheck>
 											<EntityContextCheck context="switch_recognitionLevel_II" target="" saveVersion="2">
 												<Then canSkip="1">
-													<Function_stealth_recognitionState_II_reaction stimulusKind="$stimulusKind" target="$target" nodeLabel="91955851" />
+													<Function_stealth_recognitionState_II_reaction checkingIconDisabled="false" stimulusKind="$stimulusKind" target="$target" nodeLabel="91955851" />
 												</Then>
 											</EntityContextCheck>
 											<DefaultBranch>
 												<Sequence>
-													<DecideSkirmishReactionCrime AllowFemaleJoin="false" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="None" TargetNpc="$target" SkirmishReaction="$skirmishReaction" />
+													<DecideSkirmishReactionCrime AllowFemaleJoin="false" UseViolentReaction="true" MoraleBoost="0.000000" Reason="Perception" ReferenceNpc="$this.id" RelationOverride="None" TargetNpc="$target" SkirmishReaction="$skirmishReaction" />
 													<Switch>
 														<IfCondition failOnCondition="false" condition="$skirmishReaction == $enum:combat_skirmishReaction.join">
 															<Function_callInterrupt_attack assaultData="$assaultData" criminalFreshness="$enum:crime_criminalFreshness.unknown" defenceMode="false" escalatedFromFailedSurrender="false" freshlyAttributedCrime="false" ignorePriority="$ignorePriority" information="" initiator="$interruptInitiator" previousReaction="$enum:crime_reactionKind.unknown" priority="160" questBehavior="false" relationOverride="false" stimulusKind="$stimulusKind" target="$target" nodeLabel="31885495" />
@@ -466,6 +479,7 @@
 				<Variable name="isFriendWithCombatableAnimal" comment="" />
 				<Variable name="isMateWithCombatableAnimal" comment="" />
 				<Variable name="mostImportantInformation" comment="" />
+				<Variable name="now" comment="" />
 				<Variable name="npcType" comment="" />
 				<Variable name="overrideFilename" comment="" />
 				<Variable name="overrideQSO" comment="" />
@@ -566,15 +580,33 @@
 																		</GetType>
 																		<IfCondition hasInputBreakpoint="0" comment="#KCD2-466115" breakpointFlags="0">
 																			<OutputBreakpoints />
-																			<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																			<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																				<OutputBreakpoints />
-																				<CreateCombatInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																					<OutputBreakpoints />
-																				</CreateCombatInformation>
-																				<TransferInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																					<OutputBreakpoints />
-																				</TransferInformation>
-																			</Sequence>
+																					<GetTime hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</GetTime>
+																					<GraphSearch hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<LinkTagFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</LinkTagFilter>
+																						<LinkDataFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</LinkDataFilter>
+																						<WUIDFilter hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																						</WUIDFilter>
+																					</GraphSearch>
+																					<CreateCombatInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</CreateCombatInformation>
+																					<TransferInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																					</TransferInformation>
+																				</Sequence>
+																			</SuppressFailure>
 																		</IfCondition>
 																	</Sequence>
 																</Else>
@@ -665,40 +697,45 @@
 															<Else>
 																<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																	<OutputBreakpoints />
-																	<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																		<OutputBreakpoints />
-																		<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																			<OutputBreakpoints />
-																			<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																		<Then>
+																			<SuppressFailure hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																				<OutputBreakpoints />
-																			</ReinitVariable>
-																			<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-																				<OutputBreakpoints />
-																				<Then>
-																					<GetMostImportantCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																						<OutputBreakpoints />
-																					</GetMostImportantCrimeInformation>
-																				</Then>
-																				<Else>
-																					<GetMostImportantCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																						<OutputBreakpoints />
-																					</GetMostImportantCrimeInformation>
-																				</Else>
-																			</EntityContextCheck>
-																			<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-																				<OutputBreakpoints />
-																				<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																				<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																					<OutputBreakpoints />
-																					<CheckInformationKnowledge hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					<ReinitVariable hasInputBreakpoint="0" comment="" breakpointFlags="0">
 																						<OutputBreakpoints />
-																					</CheckInformationKnowledge>
-																					<TransferInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																					</ReinitVariable>
+																					<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 																						<OutputBreakpoints />
-																					</TransferInformation>
-																				</Selector>
-																			</IfCondition>
-																		</Sequence>
-																	</SuppressFailure>
+																						<Then>
+																							<GetMostImportantCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</GetMostImportantCrimeInformation>
+																						</Then>
+																						<Else>
+																							<GetMostImportantCrimeInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</GetMostImportantCrimeInformation>
+																						</Else>
+																					</EntityContextCheck>
+																					<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																						<OutputBreakpoints />
+																						<Selector hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																							<OutputBreakpoints />
+																							<CheckInformationKnowledge hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</CheckInformationKnowledge>
+																							<TransferInformation hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																								<OutputBreakpoints />
+																							</TransferInformation>
+																						</Selector>
+																					</IfCondition>
+																				</Sequence>
+																			</SuppressFailure>
+																		</Then>
+																	</CheckRelationshipInterval_SoulToSoul>
 																</IfCondition>
 															</Else>
 														</EntityContextCheck>

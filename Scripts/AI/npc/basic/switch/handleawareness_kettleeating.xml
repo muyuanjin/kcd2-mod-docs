@@ -10,6 +10,7 @@
 			<Variable name="informationPrice" type="_int" values="" isPersistent="0" form="single" />
 			<Variable name="isAuthority" type="_bool" values="false" isPersistent="0" form="single" />
 			<Variable name="isMateWithOwner" type="_bool" values="false" isPersistent="0" form="single" />
+			<Variable name="isRelevant" type="_bool" values="" isPersistent="0" form="single" />
 			<Variable name="kettleType" type="enum:kettleType" values="" isPersistent="0" form="single" />
 			<Variable name="kettle_volumeData" type="kettle:link:volumeData" values="" isPersistent="0" form="single" />
 			<Variable name="owner" type="_wuid" values="" isPersistent="0" form="single" />
@@ -35,6 +36,16 @@
 							<Success />
 						</Then>
 					</EntityContextCheck>
+					<EntityContextCheck context="crime_ignorePlayerPerception" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Success />
+						</Then>
+					</EntityContextCheck>
+					<EntityContextCheck context="crime_ignorePlayersKettleEating" target="" saveVersion="2">
+						<Then canSkip="1">
+							<Success />
+						</Then>
+					</EntityContextCheck>
 					<DefaultBranch>
 						<Sequence>
 							<GraphSearch Origin="$volume" Borders="" depth="1" selection="true" SearchPattern="Depth" EdgePruning="&apos;parent,inventory&apos;" AllowedEdges="" SubGraph="&apos;kettle_volumeData&apos;" AllowSubtraph="false" includeOrigin="false" excludeOrigin="false" failOnEmpty="true" SetOperationChoice="Intersection|And" errorOnEmpty="false" shortCircuit="false" skipTraversed="true">
@@ -42,28 +53,49 @@
 							</GraphSearch>
 							<GetOwner Object="$kettle_volumeData.target" Owner="$owner" />
 							<IfCondition failOnCondition="false" condition="$owner ~= $__null">
-								<IfElseCondition failOnCondition="false" condition="$owner == $this.id" saveVersion="2">
-									<Then canSkip="1">
-										<Expression expressions="$isMateWithOwner = true" />
-									</Then>
-									<Else canSkip="1">
-										<GetAreMates Npc1="$this.id" Npc2="$owner" AreMates="$isMateWithOwner" />
-									</Else>
-								</IfElseCondition>
-							</IfCondition>
-							<EntityContextCheck context="crime_isCamper" target="$owner" saveVersion="2">
-								<Else canSkip="1">
-									<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+								<Sequence>
+									<Expression expressions="$isRelevant = true" />
+									<EntityContextCheck context="crime_friendWithBenefits_ignoreKettleEating" target="$owner" saveVersion="2">
 										<Then canSkip="1">
-											<Expression expressions="$isAuthority = true" />
+											<CheckRelationshipInterval_SoulToSoul TargetSoul="$__player" Soul="$owner" Flag="aboveDenial" saveVersion="2">
+												<Then canSkip="1">
+													<Expression expressions="$isRelevant = false" />
+												</Then>
+											</CheckRelationshipInterval_SoulToSoul>
 										</Then>
 									</EntityContextCheck>
-								</Else>
-							</EntityContextCheck>
-							<EntityContextCheck context="crime_ignorePlayerPerception" target="" saveVersion="2">
-								<Else canSkip="1">
-									<EntityContextCheck context="crime_ignorePlayersKettleEating" target="" saveVersion="2">
-										<Else canSkip="1">
+									<EntityContextCheck context="crime_friendWithBenefits_ignoreKettleEating" target="$this.id" saveVersion="2">
+										<Then canSkip="1">
+											<CheckRelationshipInterval_SoulToSoul TargetSoul="$__player" Soul="$this.id" Flag="aboveDenial" saveVersion="2">
+												<Then canSkip="1">
+													<Expression expressions="$isRelevant = false" />
+												</Then>
+											</CheckRelationshipInterval_SoulToSoul>
+										</Then>
+									</EntityContextCheck>
+								</Sequence>
+							</IfCondition>
+							<IfCondition failOnCondition="false" condition="$isRelevant">
+								<EntityContextCheck context="crime_friendWithBenefits_ignoreKettleEating" target="$owner" saveVersion="2">
+									<Else canSkip="1">
+										<Sequence>
+											<IfElseCondition failOnCondition="false" condition="$owner == $this.id" saveVersion="2">
+												<Then canSkip="1">
+													<Expression expressions="$isMateWithOwner = true" />
+												</Then>
+												<Else canSkip="1">
+													<GetAreMates Npc1="$this.id" Npc2="$owner" AreMates="$isMateWithOwner" />
+												</Else>
+											</IfElseCondition>
+											<EntityContextCheck context="crime_isCamper" target="$owner" saveVersion="2">
+												<Else canSkip="1">
+													<EntityContextCheck context="crime_isAuthority" target="" saveVersion="2">
+														<Then canSkip="1">
+															<Expression expressions="$isAuthority = true" />
+														</Then>
+													</EntityContextCheck>
+												</Else>
+											</EntityContextCheck>
 											<EntityContextCheck context="crime_bff" target="" saveVersion="2">
 												<Then canSkip="1">
 													<Function_crime_addBffIntermediateBarkData corpse="" isCorpse="false" isViolent="false" reactionIntermediateData="$reactionIntermediateData" nodeLabel="44562002" />
@@ -80,49 +112,16 @@
 													</IfCondition>
 												</Else>
 											</EntityContextCheck>
-										</Else>
-									</EntityContextCheck>
-								</Else>
-							</EntityContextCheck>
+										</Sequence>
+									</Else>
+								</EntityContextCheck>
+							</IfCondition>
 						</Sequence>
 					</DefaultBranch>
 				</Switch>
 			</Behavior>
 		</Root>
-		<ForestContainer>
-			<IfElseCondition failOnCondition="false" condition="$ignoreReputationCheck" saveVersion="2">
-				<Then canSkip="1">
-					<Expression expressions="$goIntoTheft = true" />
-				</Then>
-				<Else canSkip="1">
-					<CheckRelationshipInterval_SoulToSoul TargetSoul="$__player" Soul="$this.id" Flag="atLeast_5_great" saveVersion="2">
-						<Then canSkip="1">
-							<Expression expressions="$goIntoTheft = false" />
-						</Then>
-						<Else canSkip="1">
-							<Expression expressions="$goIntoTheft = true" />
-						</Else>
-					</CheckRelationshipInterval_SoulToSoul>
-				</Else>
-			</IfElseCondition>
-			<IfElseCondition failOnCondition="false" condition="$goIntoTheft" saveVersion="2">
-				<Else canSkip="1">
-					<Sequence>
-						<AffectFeelings Npc="$this.id" Token="&apos;witness_crime_theft&apos;" AffectNervousness="false" AffectReputation="true" />
-						<IfCondition failOnCondition="false" condition="$reactionIntermediateData.barkData.priority &lt; $data:script_param[&apos;crime_barkReactionPriority_kettleEating&apos;].value">
-							<IfElseCondition failOnCondition="false" condition="$kettle_volumeData.type == $enum:kettleType.kettle" saveVersion="2">
-								<Then canSkip="1">
-									<Expression expressions="$reactionIntermediateData.barkData.metarole = &apos;NPC_VIDI_HRACE_JAK_MU_JI_Z_KOTLIKU_DOBRA_REPUTACE&apos; &#10;$reactionIntermediateData.barkData.isDramatic = false &#10;$reactionIntermediateData.barkData.priority = $data:script_param[&apos;crime_barkReactionPriority_kettleEating&apos;].value &#10;$reactionIntermediateData.barkData.lookAt = $__player &#10;$reactionIntermediateData.barkData.barkKind = $enum:crime_barkReactionKind.kettleEatingGoodRep &#10;$reactionIntermediateData.barkData.genderData.isGenderSpecific = false" />
-								</Then>
-								<Else canSkip="1">
-									<Expression expressions="$reactionIntermediateData.barkData.metarole = &apos;NPC_VIDI_HRACE_JAK_MU_PIJE_ZE_SOUDKU_DOBRA_REPUTACE&apos; &#10;$reactionIntermediateData.barkData.isDramatic = false &#10;$reactionIntermediateData.barkData.priority = $data:script_param[&apos;crime_barkReactionPriority_kettleEating&apos;].value &#10;$reactionIntermediateData.barkData.lookAt = $__player &#10;$reactionIntermediateData.barkData.barkKind = $enum:crime_barkReactionKind.kettleEatingGoodRep &#10;$reactionIntermediateData.barkData.genderData.isGenderSpecific = false" />
-								</Else>
-							</IfElseCondition>
-						</IfCondition>
-					</Sequence>
-				</Else>
-			</IfElseCondition>
-		</ForestContainer>
+		<ForestContainer />
 		<EditorData EventSet="">
 			<Variables>
 				<Variable name="dummyBool" comment="" />
@@ -133,6 +132,7 @@
 				<Variable name="informationPrice" comment="" />
 				<Variable name="isAuthority" comment="" />
 				<Variable name="isMateWithOwner" comment="" />
+				<Variable name="isRelevant" comment="" />
 				<Variable name="kettleType" comment="" />
 				<Variable name="kettle_volumeData" comment="" />
 				<Variable name="owner" comment="" />
@@ -165,6 +165,22 @@
 								</Success>
 							</Then>
 						</EntityContextCheck>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Then>
+						</EntityContextCheck>
+						<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+							<OutputBreakpoints />
+							<Then>
+								<Success hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+								</Success>
+							</Then>
+						</EntityContextCheck>
 						<DefaultBranch>
 							<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 								<OutputBreakpoints />
@@ -179,39 +195,72 @@
 								</GetOwner>
 								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
 									<OutputBreakpoints />
-									<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+									<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
 										<OutputBreakpoints />
-										<Then>
-											<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-												<OutputBreakpoints />
-											</Expression>
-										</Then>
-										<Else>
-											<GetAreMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
-												<OutputBreakpoints />
-											</GetAreMates>
-										</Else>
-									</IfElseCondition>
-								</IfCondition>
-								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-									<OutputBreakpoints />
-									<Else>
+										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+											<OutputBreakpoints />
+										</Expression>
 										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 											<OutputBreakpoints />
 											<Then>
-												<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 													<OutputBreakpoints />
-												</Expression>
+													<Then>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Then>
+												</CheckRelationshipInterval_SoulToSoul>
 											</Then>
 										</EntityContextCheck>
-									</Else>
-								</EntityContextCheck>
-								<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-									<OutputBreakpoints />
-									<Else>
-										<EntityContextCheck hasInputBreakpoint="0" comment="Override reaction" breakpointFlags="0" saveVersion="2">
+										<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 											<OutputBreakpoints />
-											<Else>
+											<Then>
+												<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Then>
+												</CheckRelationshipInterval_SoulToSoul>
+											</Then>
+										</EntityContextCheck>
+									</Sequence>
+								</IfCondition>
+								<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
+									<OutputBreakpoints />
+									<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+										<OutputBreakpoints />
+										<Else>
+											<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
+												<OutputBreakpoints />
+												<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Then>
+														<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</Expression>
+													</Then>
+													<Else>
+														<GetAreMates hasInputBreakpoint="0" comment="" breakpointFlags="0">
+															<OutputBreakpoints />
+														</GetAreMates>
+													</Else>
+												</IfElseCondition>
+												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+													<OutputBreakpoints />
+													<Else>
+														<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
+															<OutputBreakpoints />
+															<Then>
+																<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
+																	<OutputBreakpoints />
+																</Expression>
+															</Then>
+														</EntityContextCheck>
+													</Else>
+												</EntityContextCheck>
 												<EntityContextCheck hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
 													<OutputBreakpoints />
 													<Then>
@@ -240,67 +289,16 @@
 														</IfCondition>
 													</Else>
 												</EntityContextCheck>
-											</Else>
-										</EntityContextCheck>
-									</Else>
-								</EntityContextCheck>
+											</Sequence>
+										</Else>
+									</EntityContextCheck>
+								</IfCondition>
 							</Sequence>
 						</DefaultBranch>
 					</Switch>
 				</Behavior>
 			</Root>
-			<Forest>
-				<IfElseCondition editorPosX="2420" editorPosY="280" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-					<OutputBreakpoints />
-					<Then>
-						<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-						</Expression>
-					</Then>
-					<Else>
-						<CheckRelationshipInterval_SoulToSoul hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-							<OutputBreakpoints />
-							<Then>
-								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-									<OutputBreakpoints />
-								</Expression>
-							</Then>
-							<Else>
-								<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-									<OutputBreakpoints />
-								</Expression>
-							</Else>
-						</CheckRelationshipInterval_SoulToSoul>
-					</Else>
-				</IfElseCondition>
-				<IfElseCondition editorPosX="2330" editorPosY="890" hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-					<OutputBreakpoints />
-					<Else>
-						<Sequence hasInputBreakpoint="0" comment="" breakpointFlags="0">
-							<OutputBreakpoints />
-							<AffectFeelings hasInputBreakpoint="0" comment="" breakpointFlags="0">
-								<OutputBreakpoints />
-							</AffectFeelings>
-							<IfCondition hasInputBreakpoint="0" comment="" breakpointFlags="0">
-								<OutputBreakpoints />
-								<IfElseCondition hasInputBreakpoint="0" comment="" breakpointFlags="0" saveVersion="2">
-									<OutputBreakpoints />
-									<Then>
-										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-											<OutputBreakpoints />
-										</Expression>
-									</Then>
-									<Else>
-										<Expression hasInputBreakpoint="0" comment="" breakpointFlags="0">
-											<OutputBreakpoints />
-										</Expression>
-									</Else>
-								</IfElseCondition>
-							</IfCondition>
-						</Sequence>
-					</Else>
-				</IfElseCondition>
-			</Forest>
+			<Forest />
 			<Comments />
 		</EditorData>
 	</BehaviorTree>
