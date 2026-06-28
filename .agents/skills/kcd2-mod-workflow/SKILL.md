@@ -31,6 +31,8 @@ Use this skill to work on regular KCD2 data mods from source inspection through 
 
 List the root files, read the manifest, inspect pak entries, and summarize what game-relative paths are changed. Use:
 
+When invoking bundled scripts, resolve `scripts/kcd2_pak.py` relative to this skill directory;
+
 ```bash
 python scripts/kcd2_pak.py check /path/to/mod_folder
 python scripts/kcd2_pak.py list /path/to/mod_folder/data/some.pak
